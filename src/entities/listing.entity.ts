@@ -96,4 +96,27 @@ export class Listing {
 
   @UpdateDateColumn({ type: 'timestamptz' })
   updatedAt: Date;
+
+  get availabilityPeriodDates(): { startDate: Date; endDate: Date }[] {
+    return this.availability.map((periodString) => {
+      if (!/^\[[^,]+,[^,]+\)$/.test(periodString.trim())) {
+        throw new Error(`Invalid listing availability period stored in database: ${periodString.trim()}`);
+      }
+      const cleanStr = periodString.replace(/[\[\)]/g, '');
+      const parts = cleanStr.split(',').map(date => date.trim());
+      return {
+        startDate: new Date(parts[0]),
+        endDate: new Date(parts[1]),
+      };
+    });
+  }
+
+  isAvailablePeriod(periodStart: Date, periodEnd: Date): boolean {
+    const start = periodStart.getTime();
+    const end = periodEnd.getTime();
+    
+    return this.availabilityPeriodDates.some(({ startDate, endDate }) => {
+      return startDate.getTime() <= start && end < endDate.getTime();
+    });
+  }
 }
