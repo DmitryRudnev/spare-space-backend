@@ -130,7 +130,7 @@ export class TelegramService {
         await this.telegramSenderService.answerCallbackQuery(callbackId);
         const action = data.split(':')[1];
         const bookingId = Number(data.split(':')[2]);
-        await this.bookingsHandlerService.handleBookingStatusUpdate(chatId, userId, bookingId, action);
+        await this.bookingsHandlerService.handleBookingStatusUpdate(chatId, messageId, userId, bookingId, action);
         return;
       }
 

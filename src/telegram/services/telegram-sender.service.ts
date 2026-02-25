@@ -33,21 +33,32 @@ export class TelegramSenderService {
     }
   }
 
-  
-  async editMessageWithKeyboard(
+
+  async editMessage(
     chatId: number,
     messageId: number,
-    text: string,
-    keyboard: any,
-    parseMode: 'Markdown' | 'HTML' = 'Markdown'
+    text?: string,
+    replyMarkup?: InlineKeyboardMarkup,
+    parseMode: 'Markdown' | 'HTML' = 'Markdown',
   ): Promise<boolean> {
     try {
-      await this.bot.telegram.editMessageText(chatId, messageId, undefined, text, {
-        parse_mode: parseMode,
-        reply_markup: keyboard.reply_markup,
-      });
+      // Если передан новый текст, редактируем сообщение полностью
+      if (text !== undefined) {
+        await this.bot.telegram.editMessageText(chatId, messageId, undefined, text, {
+          parse_mode: parseMode,
+          reply_markup: replyMarkup,
+        });
+      } 
+      // Если текст не передан, но нужно обновить только клавиатуру
+      else if (replyMarkup !== undefined) {
+        await this.bot.telegram.editMessageReplyMarkup(chatId, messageId, undefined, replyMarkup);
+      }
       return true;
     } catch (error) {
+      // Игнорируем ошибку "Message not modified" [citation:1]
+      if (error.message?.includes('Message not modified')) {
+        return true; // Считаем успешным выполнением
+      }
       this.logger.error(`Ошибка редактирования сообщения: ${error.message}`);
       return false;
     }

@@ -47,11 +47,11 @@ export class TelegramListingsHandlerService {
     if (listingsCount === 0) {
       const noListingsMessage = '📭 У вас пока нет объявлений';
       if (messageId) {
-        await this.telegramSenderService.editMessageWithKeyboard(
+        await this.telegramSenderService.editMessage(
           chatId,
           messageId,
           noListingsMessage,
-          { reply_markup: { inline_keyboard: [] } }
+          { inline_keyboard: [] }
         );
       } else {
         await this.telegramSenderService.sendMessage(chatId, noListingsMessage);
@@ -68,7 +68,7 @@ export class TelegramListingsHandlerService {
     const message = this.buildListingsMessage(result.listings, page, result.total);
     const keyboard = this.paginationService.createPaginationKeyboard(page, totalPages, 'listings');
     if (messageId) {
-      await this.telegramSenderService.editMessageWithKeyboard(chatId, messageId, message, keyboard);
+      await this.telegramSenderService.editMessage(chatId, messageId, message, keyboard.reply_markup);
     } else {
       await this.telegramSenderService.sendMessage(chatId, message, keyboard.reply_markup);
     }

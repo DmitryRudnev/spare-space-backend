@@ -63,8 +63,8 @@ export class TelegramBookingsHandlerService {
         ? '📭 Вы ничего не сдавали в аренду.' 
         : '📭 Вы ничего не арендовали.';
       
-      await this.telegramSenderService.editMessageWithKeyboard(
-        chatId, messageId, emptyText, { reply_markup: { inline_keyboard: [] } }
+      await this.telegramSenderService.editMessage(
+        chatId, messageId, emptyText, { inline_keyboard: [] }
       );
       return;
     }
@@ -78,12 +78,13 @@ export class TelegramBookingsHandlerService {
     const message = this.buildBookingsMessage(result.bookings, page, result.total, role);
     const roleStr = role === UserRoleType.LANDLORD ? 'landlord' : 'renter';
     const keyboard = this.paginationService.createPaginationKeyboard(page, totalPages, 'bookings', roleStr);
-    await this.telegramSenderService.editMessageWithKeyboard(chatId, messageId, message, keyboard);
+    await this.telegramSenderService.editMessage(chatId, messageId, message, keyboard.reply_markup);
   }
 
 
   async handleBookingStatusUpdate(
     chatId: number,
+    messageId: number,
     userId: number,
     bookingId: number,
     action: string,
@@ -91,11 +92,13 @@ export class TelegramBookingsHandlerService {
     switch (action) {
       case 'approve':
         await this.bookingsService.handleConfirm(userId, bookingId);
-        await this.telegramSenderService.sendMessage(chatId, 'Бронирование подтверждено!');
+        await this.telegramSenderService.sendMessage(chatId, '✅ Бронирование подтверждено!');
+        await this.telegramSenderService.editMessage(chatId, messageId, undefined, { inline_keyboard: [] })
         break;
       case 'reject':
         await this.bookingsService.handleCancel(userId, bookingId);
-        await this.telegramSenderService.sendMessage(chatId, 'Бронирование отклонено!');
+        await this.telegramSenderService.sendMessage(chatId, '↩️ Бронирование отклонено!');
+        await this.telegramSenderService.editMessage(chatId, messageId, undefined, { inline_keyboard: [] })
         break;
       default:
         throw new Error('⚠️ Неизвестный тип обновления стаутса бронирования');
