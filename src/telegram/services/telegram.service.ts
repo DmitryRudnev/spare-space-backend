@@ -12,11 +12,10 @@ import { TelegramStartHandlerService,
 import { PaginationCallbackData } from '../dto/callback-data.dto';
 import { UserRoleType } from '../../common/enums/user-role-type.enum';
 
+
 @Injectable()
 export class TelegramService {
   private readonly logger = new Logger(TelegramService.name);
-
-
   constructor(
     private readonly telegramSenderService: TelegramSenderService,
     private readonly startHandlerService: TelegramStartHandlerService,
@@ -47,6 +46,11 @@ export class TelegramService {
   }
 
   
+  // ==========================================================================
+  // ================================ PRIVATE =================================
+  // ==========================================================================
+
+
   private async handleMessage(message: TelegramMessage): Promise<void> {
     if (!message.from || !message.text) {
       this.logger.error('Отсутствует информация об отправителе или тексте сообщения');
@@ -71,23 +75,26 @@ export class TelegramService {
       return;
     }
 
-    const userExists = await this.validateTelegramUser(telegramId, chatId, command);
-    if (!userExists) {
+    let userId: number;
+    try {
+      userId = Number((await this.usersService.findByTelegramId(telegramId)).id);
+    } catch (error) {
+      await this.startHandlerService.sendBindingInstructions(chatId);
       return;
     }
 
     if (command.startsWith('/profile')) {
-      await this.profileHandlerService.handle(telegramId, chatId);
+      await this.profileHandlerService.handle(chatId, userId);
     } else if (command.startsWith('/listings')) {
-      await this.listingsHandlerService.handle(telegramId, chatId);
+      await this.listingsHandlerService.handle(chatId, userId);
     } else if (command.startsWith('/bookings')) {
-      await this.bookingsHandlerService.handle(telegramId, chatId);
+      await this.bookingsHandlerService.handle(chatId, userId);
     } else if (command.startsWith('/subscription')) {
-      await this.subscriptionHandlerService.handle(telegramId, chatId);
+      await this.subscriptionHandlerService.handle(chatId, userId);
     } else if (command.startsWith('/wallet')) {
-      await this.walletHandlerService.handle(telegramId, chatId);
+      await this.walletHandlerService.handle(chatId, userId);
     } else {
-      await this.telegramSenderService.sendMessage(chatId, 'Неизвестная команда. Используйте /help для списка команд.');
+      await this.sendHelpMessage(chatId);
     }
   }
 
@@ -100,120 +107,64 @@ export class TelegramService {
       const messageId = message?.message_id;
 
       if (!data || !chatId || !messageId) {
-        this.logger.error('Недостаточно данных в callback query');
         await this.telegramSenderService.answerCallbackQuery(callbackId, '⚠️ Ошибка обработки запроса');
+        this.logger.error('Недостаточно данных в callback query');
         return;
       }
-
       if (data === 'noop') {
         await this.telegramSenderService.answerCallbackQuery(callbackId);
         return;
       }
 
-      // 1. Обработка выбора роли (нажатие кнопок "Я арендатор" / "Я арендодатель")
-      if (data.startsWith('bookings:role:')) {
-        const userExists = await this.validateTelegramUser(telegramId, chatId, data);
-        if (!userExists) {
-          await this.telegramSenderService.answerCallbackQuery(callbackId, '❌ Сначала привяжите аккаунт');
-          return;
-        }
-         const roleStr = data.split(':')[2];
-         const role = roleStr === 'landlord' ? UserRoleType.LANDLORD : UserRoleType.RENTER;
-         
-         // Загружаем первую страницу для выбранной роли
-         await this.bookingsHandlerService.sendBookingsPage(telegramId, chatId, role, 1, messageId);
-         await this.telegramSenderService.answerCallbackQuery(callbackId);
-         return;
+      let userId: number;
+      try {
+        userId = Number((await this.usersService.findByTelegramId(telegramId)).id);
+      } catch (error) {
+        await this.telegramSenderService.answerCallbackQuery(callbackId, '❌ Сначала привяжите аккаунт');
+        await this.startHandlerService.sendBindingInstructions(chatId);
+        return;
       }
 
-      // 2. Обработка пагинации (listings или bookings)
-      if (data.startsWith('listings:') || data.startsWith('bookings:')) {
-        const userExists = await this.validateTelegramUser(telegramId, chatId, data);
-        if (!userExists) {
-          await this.telegramSenderService.answerCallbackQuery(callbackId, '❌ Сначала привяжите аккаунт');
-          return;
-        }
 
+      if (data.startsWith('booking:')) {
+        await this.telegramSenderService.answerCallbackQuery(callbackId);
+        const action = data.split(':')[1];
+        const bookingId = Number(data.split(':')[2]);
+        await this.bookingsHandlerService.handleBookingStatusUpdate(chatId, userId, bookingId, action);
+        return;
+      }
+
+      if (data.startsWith('bookings:role:')) {
+        await this.telegramSenderService.answerCallbackQuery(callbackId);
+        const roleStr = data.split(':')[2];
+        const role = roleStr === 'landlord' ? UserRoleType.LANDLORD : UserRoleType.RENTER;
+        await this.bookingsHandlerService.sendBookingsPage(chatId, messageId, userId, role, 1);
+        return;
+      }
+
+      if (data.startsWith('listings:') || data.startsWith('bookings:')) {
         const callbackData = PaginationCallbackData.fromString(data);
-        
-        // Проверяем, не пытаемся ли мы уйти в минус (хотя кнопки должны быть заблокированы)
-        if (callbackData.page < 1) {
-          await this.telegramSenderService.answerCallbackQuery(callbackId, '⚠️ Вы уже на первой странице');
-          return;
-        }
 
         // --- Обработка объявлений ---
         if (callbackData.entity === 'listings') {
-          await this.handleListingsPagination(
-            callbackId, chatId, messageId, callbackData.page, telegramId
-          );
+          await this.telegramSenderService.answerCallbackQuery(callbackId);
+          await this.listingsHandlerService.sendListingsPage(chatId, userId, callbackData.page, messageId);
         }
         
         // --- Обработка бронирований ---
         else if (callbackData.entity === 'bookings') {
-          // Извлекаем роль из поля 'extra'
-          const roleStr = callbackData.extra; 
-          const role = roleStr === 'landlord' ? UserRoleType.LANDLORD : UserRoleType.RENTER;
-
-          await this.bookingsHandlerService.sendBookingsPage(
-             telegramId, 
-             chatId, 
-             role, 
-             callbackData.page, 
-             messageId
-          );
           await this.telegramSenderService.answerCallbackQuery(callbackId);
+          const role = callbackData.extra === 'landlord' ? UserRoleType.LANDLORD : UserRoleType.RENTER;
+          await this.bookingsHandlerService.sendBookingsPage(chatId, messageId, userId, role, callbackData.page);
         }
       }
     } catch (error) {
       this.logger.error(`Ошибка обработки callback query: ${error.message}`);
-      try {
-        await this.telegramSenderService.answerCallbackQuery(callbackQuery.id, '⚠️ Произошла ошибка');
-      } catch (answerError) { /* ignore */ }
+      await this.telegramSenderService.answerCallbackQuery(callbackQuery.id, error.message, true);
     }
   }
 
 
-  private async handleListingsPagination(
-    callbackId: string,
-    chatId: number,
-    messageId: number,
-    page: number,
-    telegramId: number,
-    extra?: string
-  ): Promise<void> {
-    try {
-      await this.listingsHandlerService.handleCallback(
-        chatId,
-        messageId,
-        page,
-        telegramId
-      );
-      await this.telegramSenderService.answerCallbackQuery(callbackId);
-    } catch (error) {
-      this.logger.warn(`Ошибка пагинации listings: ${error.message}`);
-      
-      if (error.message.includes('первой странице') || error.message.includes('последней странице')) {
-        await this.telegramSenderService.answerCallbackQuery(callbackId, error.message);
-      } else {
-        await this.telegramSenderService.answerCallbackQuery(callbackId, '⚠️ Не удалось загрузить страницу');
-      }
-    }
-  }
-
-  
-  private async validateTelegramUser(telegramId: number, chatId: number, command: string): Promise<boolean> {
-    try {
-      await this.usersService.findByTelegramId(telegramId);
-      return true;
-    } catch (error) {
-      this.logger.log(`Непривязанный пользователь ${telegramId} попытался использовать команду: ${command}`);
-      await this.startHandlerService.sendBindingInstructions(chatId);
-      return false;
-    }
-  }
-
-  
   private async sendHelpMessage(chatId: number): Promise<void> {
     const message = `🆘 *Доступные команды:*\n\n` +
       `🔹 /start - Начало работы с ботом\n` +
@@ -224,6 +175,6 @@ export class TelegramService {
       `💰 /wallet - Баланс и транзакции\n` +
       `🆘 /help - Эта справка`;
 
-    await this.telegramSenderService.sendMarkdownMessage(chatId, message);
+    await this.telegramSenderService.sendMessage(chatId, message);
   }
 }

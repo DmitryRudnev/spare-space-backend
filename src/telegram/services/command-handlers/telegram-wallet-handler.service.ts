@@ -10,8 +10,6 @@ import { CurrencyType } from 'src/common/enums/currency-type.enum';
 @Injectable()
 export class TelegramWalletHandlerService {
   private readonly logger = new Logger(TelegramWalletHandlerService.name);
-  
-
   constructor(
     private readonly telegramSenderService: TelegramSenderService,
     private readonly usersService: UsersService,
@@ -19,19 +17,23 @@ export class TelegramWalletHandlerService {
   ) {}
 
   
-  async handle(telegramId: number, chatId: number): Promise<void> {
+  async handle(chatId: number, userId: number): Promise<void> {
     try {
-      const user = await this.usersService.findByTelegramId(telegramId);
-      const balances = await this.walletsService.getBalances(user.id, {});
-      const transactions = await this.walletsService.findTransactionsByUserId(user.id);
+      const balances = await this.walletsService.getBalances(userId, {});
+      const transactions = await this.walletsService.findTransactionsByUserId(userId);
 
       const message = this.buildWalletMessage(balances, transactions);
-      await this.telegramSenderService.sendMarkdownMessage(chatId, message);
+      await this.telegramSenderService.sendMessage(chatId, message);
     } catch (error) {
       this.logger.error(`Ошибка получения кошелька: ${error.message}`);
       await this.telegramSenderService.sendMessage(chatId, '❌ Не удалось загрузить информацию о кошельке');
     }
   }
+
+
+  // ==========================================================================
+  // ================================ PRIVATE =================================
+  // ==========================================================================
 
 
   private buildWalletMessage(balances: WalletBalance[], transactions: Transaction[]): string {

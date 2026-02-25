@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Telegraf } from 'telegraf';
+import { InlineKeyboardMarkup } from 'telegraf/types';
 import { TelegramSetupService } from './telegram-setup.service';
 
 @Injectable()
@@ -13,47 +14,21 @@ export class TelegramSenderService {
     this.bot = telegramSetupService.getBotInstance();
   }
 
-
-  async sendMessage(chatId: number, text: string): Promise<boolean> {
-    try {
-      await this.bot.telegram.sendMessage(chatId, text);
-      this.logger.log(`Сообщение отправлено в чат ${chatId}`);
-      return true;
-    } catch (error) {
-      this.logger.error(`Ошибка отправки сообщения в чат ${chatId}: ${error.message}`);
-      return false;
-    }
-  }
-
-  
-  async sendMarkdownMessage(chatId: number, text: string): Promise<boolean> {
-    try {
-      await this.bot.telegram.sendMessage(chatId, text, { parse_mode: 'Markdown' });
-      this.logger.log(`Сообщение отправлено в чат ${chatId} в формате Markdown`);
-      return true;
-    } catch (error) {
-      this.logger.error(`Ошибка отправки markdown сообщения: ${error.message};\n
-        Пытаемся отправить в обычном формате`);
-      // Fallback к обычному сообщению
-      return this.sendMessage(chatId, text);
-    }
-  }
-
-  
-  async sendMessageWithKeyboard(
+  async sendMessage(
     chatId: number, 
-    text: string, 
-    keyboard: any,
-    parseMode: 'Markdown' | 'HTML' = 'Markdown'
+    text: string,
+    replyMarkup?: InlineKeyboardMarkup,
+    parseMode: 'Markdown' | 'HTML' | 'MarkdownV2' = 'Markdown',
   ): Promise<boolean> {
     try {
       await this.bot.telegram.sendMessage(chatId, text, {
         parse_mode: parseMode,
-        reply_markup: keyboard.reply_markup,
+        reply_markup: replyMarkup,
       });
+      this.logger.log(`Сообщение отправлено в чат ${chatId}`);
       return true;
     } catch (error) {
-      this.logger.error(`Ошибка отправки сообщения с клавиатурой: ${error.message}`);
+      this.logger.error(`Ошибка отправки сообщения в чат ${chatId}: ${error.message}`);
       return false;
     }
   }
@@ -95,14 +70,14 @@ export class TelegramSenderService {
   }
   
   
-  async answerCallbackQuery(callbackQueryId: string, text?: string): Promise<void> {
+  async answerCallbackQuery(callbackQueryId: string, text?: string, showAlert?: boolean): Promise<void> {
     try {
       await this.bot.telegram.answerCbQuery(callbackQueryId, text, {
-        show_alert: !!text,
+        show_alert: showAlert,
         cache_time: 5,
       });
-      
-    } catch (error) {
+    }
+    catch (error) {
       this.logger.error(`Ошибка отправки answerCallbackQuery: ${error.message}`);
     }
   }

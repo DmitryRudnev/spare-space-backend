@@ -2,6 +2,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Markup } from 'telegraf';
+import { InlineKeyboardMarkup } from 'telegraf/types';
 import { PaginationCallbackData } from '../dto/callback-data.dto';
 
 @Injectable()
@@ -17,7 +18,7 @@ export class TelegramPaginationService {
     totalPages: number,
     entity: string,
     extra?: string
-  ) {
+  ): Markup.Markup<InlineKeyboardMarkup> {
 
     // Кнопка "Назад" - если первая страница, то делаем "noop"
     const prevPage = Math.max(1, currentPage - 1);
@@ -34,12 +35,12 @@ export class TelegramPaginationService {
     return Markup.inlineKeyboard([
       [
         Markup.button.callback(
-          currentPage === 1 ? '◀️' : '◀️', // Можно изменить эмодзи для неактивной
+          currentPage === 1 ? ' ' : '◀️',
           prevCallback
         ),
         Markup.button.callback(`${currentPage}/${totalPages}`, 'noop'),
         Markup.button.callback(
-          currentPage === totalPages ? '▶️' : '▶️',
+          currentPage === totalPages ? ' ' : '▶️',
           nextCallback
         )
       ]

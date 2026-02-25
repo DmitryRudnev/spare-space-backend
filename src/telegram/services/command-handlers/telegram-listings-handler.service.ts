@@ -11,7 +11,6 @@ import { CurrencyType } from '../../../common/enums/currency-type.enum';
 @Injectable()
 export class TelegramListingsHandlerService {
   private readonly logger = new Logger(TelegramListingsHandlerService.name);
-
   constructor(
     private readonly telegramSenderService: TelegramSenderService,
     private readonly paginationService: TelegramPaginationService,
@@ -20,113 +19,84 @@ export class TelegramListingsHandlerService {
   ) {}
 
   
-  async handle(telegramId: number, chatId: number): Promise<void> {
+  async handle(chatId: number, userId: number): Promise<void> {
     try {
-      const user = await this.usersService.findByTelegramId(telegramId);
-      const page = 1;
-      await this.sendListingsPage(telegramId, chatId, page);
+      await this.sendListingsPage(chatId, userId, 1);
     } catch (error) {
       this.logger.error(`Ошибка получения объявлений: ${error.message}`);
       await this.telegramSenderService.sendMessage(chatId, '❌ Не удалось загрузить объявления');
     }
   }
-
+  
   
   async sendListingsPage(
-    telegramId: number,
     chatId: number,
+    userId: number,
     page: number,
-    messageId?: number
+    messageId?: number,
   ): Promise<void> {
-    try {
-      // Валидация номера страницы
-      if (page < 1) {
-        throw new Error('Вы уже на первой странице');
-      }
-
-      const user = await this.usersService.findByTelegramId(telegramId);
-      const listingCount = await this.listingsService.countUserListings(user.id);
-      const totalPages = this.paginationService.calculateTotalPages(listingCount);
-      
-      // Проверяем, существует ли запрашиваемая страница
-      if (page > totalPages && totalPages > 0) {
-        throw new Error('Вы уже на последней странице');
-      }
-
-      // Получаем данные для страницы
-      const searchDto: SearchListingsDto = {
-        limit: this.paginationService.getItemsPerPage(),
-        offset: (page - 1) * this.paginationService.getItemsPerPage(),
-      };
-
-      const result = await this.listingsService.findByUser(user.id, searchDto, user.id);
-      
-      if (result.listings.length === 0 && page > 1) {
-        // Если страница пустая, но не первая - возвращаемся на первую
-        page = 1;
-        return this.sendListingsPage(telegramId, chatId, page, messageId);
-      }
-      
-      if (result.listings.length === 0) {
-        if (messageId) {
-          await this.telegramSenderService.editMessageWithKeyboard(
-            chatId,
-            messageId,
-            '📭 У вас пока нет объявлений',
-            this.createEmptyKeyboard()
-          );
-        } else {
-          await this.telegramSenderService.sendMessage(chatId, '📭 У вас пока нет объявлений');
-        }
-        return;
-      }
-
-      const message = this.buildListingsMessage(result.listings, page, result.total);
-      const keyboard = this.paginationService.createPaginationKeyboard(page, totalPages, 'listings');
-
+    const listingsCount = await this.listingsService.countByUser(userId);
+    const totalPages = this.paginationService.calculateTotalPages(listingsCount);
+    
+    if (page < 1) {
+      throw new Error('⚠️ Вы уже на первой странице');
+    }
+    if (page > totalPages && totalPages > 0) {
+      throw new Error('⚠️ Вы уже на последней странице');
+    }
+    if (listingsCount === 0) {
+      const noListingsMessage = '📭 У вас пока нет объявлений';
       if (messageId) {
-        await this.telegramSenderService.editMessageWithKeyboard(chatId, messageId, message, keyboard);
+        await this.telegramSenderService.editMessageWithKeyboard(
+          chatId,
+          messageId,
+          noListingsMessage,
+          { reply_markup: { inline_keyboard: [] } }
+        );
       } else {
-        await this.telegramSenderService.sendMessageWithKeyboard(chatId, message, keyboard);
+        await this.telegramSenderService.sendMessage(chatId, noListingsMessage);
       }
-    } catch (error) {
-      this.logger.error(`Ошибка получения объявлений: ${error.message}`);
-      throw error; // Пробрасываем ошибку для обработки в TelegramService
+      return;
+    }
+
+    // Получаем данные для страницы
+    const searchDto: SearchListingsDto = {
+      limit: this.paginationService.getItemsPerPage(),
+      offset: (page - 1) * this.paginationService.getItemsPerPage(),
+    };
+    const result = await this.listingsService.findAll(searchDto, undefined, userId);
+    const message = this.buildListingsMessage(result.listings, page, result.total);
+    const keyboard = this.paginationService.createPaginationKeyboard(page, totalPages, 'listings');
+    if (messageId) {
+      await this.telegramSenderService.editMessageWithKeyboard(chatId, messageId, message, keyboard);
+    } else {
+      await this.telegramSenderService.sendMessage(chatId, message, keyboard.reply_markup);
     }
   }
 
-  
-  async handleCallback(
-    chatId: number,
-    messageId: number,
-    page: number,
-    telegramId: number
-  ): Promise<void> {
-    await this.sendListingsPage(telegramId, chatId, page, messageId);
-  }
 
-  
-  private createEmptyKeyboard() {
-    return { reply_markup: { inline_keyboard: [] } };
-  }
+  // ==========================================================================
+  // ================================ PRIVATE =================================
+  // ==========================================================================
 
 
   private buildListingsMessage(listings: any[], page: number, total: number): string {
-    let message = `🏠 *Ваши объявления* (стр. ${page})\n\n`;
+    let message = `🏠 *Ваши объявления* (всего ${total})\n\n`;
     
     listings.forEach((listing, index) => {
+      const totalIndex = (page - 1) * this.paginationService.getItemsPerPage() + index + 1;
       const price = this.isFiat(listing.currency) ? Number(listing.price).toFixed(2)  : listing.price;
-      message += `${index + 1}. *${listing.title}*\n` +
-        `📊 Статус: ${this.getStatusEmoji(listing.status)} ${this.getStatusText(listing.status)}\n` +
-        `💰 Цена: ${price} ${listing.currency} / ${listing.pricePeriod}\n` +
+      message += 
+        `${totalIndex}. *${listing.title}*\n` +
+        `📊 Статус: ${this.getStatusText(listing.status)}\n` +
         `📍 Адрес: ${listing.address}\n` +
-        `📝 Описание: ${this.getListingDescription(listing.description)}\n` +
-        `👁️ Просмотры: ${listing.viewsCount}\n` +
-        `🔄 Репосты: ${listing.repostsCount}\n` +
-        `⭐ Избранные: ${listing.favoritesCount}\n\n`;
+        `💰 Цена: ${price} ${listing.currency} / ${listing.pricePeriod}\n` +
+        // `📝 Описание: ${this.getListingDescription(listing.description)}\n` +
+        // `👁️ Просмотры: ${listing.viewsCount}\n` +
+        // `🔄 Репосты: ${listing.repostsCount}\n` +
+        // `⭐ Избранные: ${listing.favoritesCount}\n` +
+        `\n`;
     });
-
-    message += `Всего объявлений: ${total}`;
     return message;
   }
 
@@ -147,22 +117,14 @@ export class TelegramListingsHandlerService {
   }
 
 
-  private getStatusEmoji(status: ListingStatus): string {
-    const emojiMap = {
-      [ListingStatus.DRAFT]: '📝',
-      [ListingStatus.ACTIVE]: '✅',
-      [ListingStatus.INACTIVE]: '❌',
-    };
-    return emojiMap[status] || '📄';
-  }
-
-
   private getStatusText(status: ListingStatus): string {
     const statusMap = {
-      [ListingStatus.DRAFT]: 'Черновик',
-      [ListingStatus.ACTIVE]: 'Активно',
-      [ListingStatus.INACTIVE]: 'Неактивно',
+      [ListingStatus.DRAFT]: '📝 Черновик',
+      [ListingStatus.PENDING_APPROVAL]: '⌛ Ждёт подтверждения',
+      [ListingStatus.ACTIVE]: '✅ Активно',
+      [ListingStatus.REJECTED]: '🚫 Отклонено',
+      [ListingStatus.INACTIVE]: '❌ Неактивно',
     };
-    return statusMap[status] || status;
+    return statusMap[status] || `📄 ${status}`;
   }
 }

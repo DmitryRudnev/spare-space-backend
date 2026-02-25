@@ -54,6 +54,7 @@ export class TelegramAccountService {
     }
 
     await this.usersService.updateTelegramId(userId, null);
+    await this.usersService.updateTelegramChatId(userId, null);
     this.logger.log(`Telegram аккаунт ${telegramId} отвязан от пользователя ${userId}`);
   }
 }

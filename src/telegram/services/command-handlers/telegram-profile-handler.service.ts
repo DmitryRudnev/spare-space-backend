@@ -6,8 +6,6 @@ import { TelegramSenderService } from '../telegram-sender.service';
 @Injectable()
 export class TelegramProfileHandlerService {
   private readonly logger = new Logger(TelegramProfileHandlerService.name);
-
-
   constructor(
     private readonly telegramSenderService: TelegramSenderService,
     private readonly usersService: UsersService,
@@ -15,9 +13,9 @@ export class TelegramProfileHandlerService {
   ) {}
 
 
-  async handle(telegramId: number, chatId: number): Promise<void> {
+  async handle(chatId: number, userId: number): Promise<void> {
     try {
-      const user = await this.usersService.findByTelegramId(telegramId);
+      const user = await this.usersService.findById(userId);
       const rating = await this.getRatingString(user.rating, user.id);
 
       const message = `📋 *Ваш профиль*\n\n` +
@@ -28,12 +26,17 @@ export class TelegramProfileHandlerService {
         `🔐 2FA: ${user.twoFaEnabled ? '🟢 Включена' : '🔴 Выключена'}\n` +
         `🆔 Верифицирован: ${user.verified ? '✅ Да' : '❌ Нет'}`;
 
-      await this.telegramSenderService.sendMarkdownMessage(chatId, message);
+      await this.telegramSenderService.sendMessage(chatId, message);
     } catch (error) {
       this.logger.error(`Ошибка получения профиля: ${error.message}`);
       await this.telegramSenderService.sendMessage(chatId, '❌ He удалось загрузить профиль');
     }
   }
+
+
+  // ==========================================================================
+  // ================================ PRIVATE =================================
+  // ==========================================================================
 
 
   private async getRatingString(rating: number | null, userId: number): Promise<string> {

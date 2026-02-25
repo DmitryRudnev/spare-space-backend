@@ -8,7 +8,6 @@ import { User } from '../../../entities/user.entity';
 @Injectable()
 export class TelegramStartHandlerService {
   private readonly logger = new Logger(TelegramStartHandlerService.name);
-
   constructor(
     private readonly telegramSenderService: TelegramSenderService,
     private readonly verificationService: TelegramVerificationService,
@@ -35,6 +34,11 @@ export class TelegramStartHandlerService {
   }
 
   
+  // ==========================================================================
+  // ================================ PRIVATE =================================
+  // ==========================================================================
+
+
   private async handleExistingUserScenario(
     existingUser: User,
     telegramId: number,
@@ -144,7 +148,7 @@ export class TelegramStartHandlerService {
       `💰 /wallet\n  - Баланс и транзакции\n\n` +
       `🆘 /help\n  - Помощь`;
 
-    return this.telegramSenderService.sendMarkdownMessage(chatId, message);
+    return this.telegramSenderService.sendMessage(chatId, message);
   }
 
   

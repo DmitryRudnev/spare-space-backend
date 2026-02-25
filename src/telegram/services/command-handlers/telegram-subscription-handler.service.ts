@@ -8,27 +8,24 @@ import { CurrencyType } from 'src/common/enums/currency-type.enum';
 @Injectable()
 export class TelegramSubscriptionHandlerService {
   private readonly logger = new Logger(TelegramSubscriptionHandlerService.name);
-
-
   constructor(
     private readonly telegramSenderService: TelegramSenderService,
     private readonly usersService: UsersService,
     private readonly subscriptionsService: SubscriptionsService,
   ) {}
 
-  
-  async handle(telegramId: number, chatId: number): Promise<void> {
-    try {
-      const user = await this.usersService.findByTelegramId(telegramId);
-      const subscription = await this.subscriptionsService.findActiveSubscription(user.id);
 
+  async handle(chatId: number, userId: number): Promise<void> {
+    try {
+      const subscription = await this.subscriptionsService.findActiveSubscription(userId);
+      
       if (!subscription) {
         await this.sendNoSubscriptionMessage(chatId);
         return;
       }
-
+      
       const message = this.buildSubscriptionMessage(subscription);
-      await this.telegramSenderService.sendMarkdownMessage(chatId, message);
+      await this.telegramSenderService.sendMessage(chatId, message);
     } catch (error) {
       this.logger.error(`Ошибка получения подписки: ${error.message}`);
       await this.telegramSenderService.sendMessage(chatId, '❌ Не удалось загрузить информацию о подписке');
@@ -36,6 +33,11 @@ export class TelegramSubscriptionHandlerService {
   }
 
 
+  // ==========================================================================
+  // ================================ PRIVATE =================================
+  // ==========================================================================
+
+  
   private buildSubscriptionMessage(subscription: UserSubscription): string {
     const plan = subscription.plan;
     const formattedPrice = this.isFiat(plan.currency) ? 
@@ -45,7 +47,7 @@ export class TelegramSubscriptionHandlerService {
     const daysLeft = this.calculateDaysLeft(subscription.endDate);
     
     let message = `🎫 *Ваша текущая подписка*\n\n` +
-      `📋 *План:* ${plan.name}\n` +
+      `📋 *План:* ${this.sanitizeMarkdown(plan.name)}\n` +
       `💰 *Стоимость:* ${formattedPrice} ${plan.currency}\n` +
       `🕒 *Период:* ${period}\n` +
       `${daysLeft}\n\n` +
@@ -57,7 +59,7 @@ export class TelegramSubscriptionHandlerService {
     if (plan.extraFeatures && Object.keys(plan.extraFeatures).length > 0) {
       message += `\n🎁 *Дополнительно:*\n`;
       Object.entries(plan.extraFeatures).forEach(([key, value]) => {
-        message += `• ${key}: ${value}\n`;
+        message += `• ${this.sanitizeMarkdown(key)}: ${this.sanitizeMarkdown(String(value))}\n`;
       });
     }
     
@@ -99,6 +101,14 @@ export class TelegramSubscriptionHandlerService {
     return 'дней';
   }
 
+
+  private sanitizeMarkdown(text: string): string {
+    return text
+      .replace(/[_*[\]()~`]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
   
   private async sendNoSubscriptionMessage(chatId: number): Promise<void> {
     const message = `📭 *У вас нет активной подписки*\n\n` +
@@ -110,6 +120,6 @@ export class TelegramSubscriptionHandlerService {
       `• Расширенные статистики\n\n` +
       `Оформить подписку можно в веб-приложении в разделе "Подписки".`;
 
-    await this.telegramSenderService.sendMarkdownMessage(chatId, message);
+    await this.telegramSenderService.sendMessage(chatId, message);
   }
 }
