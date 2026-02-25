@@ -17,12 +17,12 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 import { ChatModule } from './chat/chat.module';
 import { TelegramModule } from './telegram/telegram.module';
+import telegramConfig from './telegram/config/telegram.config';
 import { WebSocketModule } from './websocket/websocket.module';
 import { FavoritesModule } from './favorites/favorites.module';
 import { QuestionsModule } from './questions/questions.module';
 import { DevicesModule } from './devices/devices.module';
-import telegramConfig from './telegram/config/telegram.config';
-
+import { TwoFactorModule } from './two-factor/two-factor.module';
 
 @Module({
   imports: [
@@ -73,6 +73,7 @@ import telegramConfig from './telegram/config/telegram.config';
     FavoritesModule,
     QuestionsModule,
     DevicesModule,
+    TwoFactorModule,
   ],
 })
 export class AppModule {}
