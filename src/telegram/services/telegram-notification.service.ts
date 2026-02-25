@@ -1,8 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Markup } from 'telegraf';
 import { TelegramSenderService } from './telegram-sender.service';
-import { NotificationType } from 'src/common/enums/notification-type.enum';
-import { AnyNotificationPayload, BookingPayload } from 'src/common/interfaces/notification-payloads.interface';
+import { NotificationType } from '../../common/enums/notification-type.enum';
+import { CurrencyType } from '../../common/enums/currency-type.enum';
+import { AnyNotificationPayload, BookingPayload } from '../../common/interfaces/notification-payloads.interface';
 
 @Injectable()
 export class TelegramNotificationService {
@@ -31,16 +32,18 @@ export class TelegramNotificationService {
 
   private async handleNotificationBookingNew(chatId: number, payload: BookingPayload): Promise<void> {
     try {
-      let message = `🔔 *Новая заявка на бронирование!*\n\n`;
+      let message = `📬 *Новая заявка на бронирование!*\n\n`;
       message += `🏠 *Объект:* ${payload.listingTitle}\n`;
       if (payload.renterName && payload.renterRating) {
-        message += `👤 *Арендатор:* ${payload.renterName} (рейтинг ${payload.renterRating})\n`;
+        const verifiedString = payload.renterVerified ? 'верифицирован 🟢' : 'не верифицирован 🔴';
+        message += `👤 *Арендатор:* ${payload.renterName} — Рейтинг ${payload.renterRating}, ${verifiedString}\n`;
       }
       if (payload.startDate && payload.endDate) {
         message += `📅 *Период:* ${new Date(payload.startDate).toLocaleDateString('ru-RU')} - ${new Date(payload.endDate).toLocaleDateString('ru-RU')}\n`;
       }
       if (payload.price && payload.currency) {
-        message += `💰 *Сумма:* ${payload.price} ${payload.currency}\n\n`;
+        const formattedPrice = this.isFiat(payload.currency) ? Number(payload.price).toFixed(2) : payload.price;
+        message += `💰 *Сумма:* ${formattedPrice} ${payload.currency}\n\n`;
       }
 
       const keyboard = Markup.inlineKeyboard([
@@ -54,5 +57,9 @@ export class TelegramNotificationService {
     } catch (error) {
       this.logger.error(`Ошибка при отправке уведомления о бронировании: ${error.message}`);
     }
+  }
+
+  private isFiat(currency: CurrencyType): boolean {
+    return currency === CurrencyType.RUB || currency === CurrencyType.USD;
   }
 }

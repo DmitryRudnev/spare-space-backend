@@ -119,8 +119,10 @@ export class NotificationMessageBuilder {
     if (payload.endDate) {
       body += ` по ${this.formatDate(payload.endDate)}`;
     }
-    if (payload.renterName && payload.renterRating) {
-      body += `\nАрендатор: ${payload.renterName} (рейтинг ${payload.renterRating})`;
+    if (payload.renterName && payload.renterRating && payload.renterVerified) {
+      body += `\nАрендатор: ${payload.renterName}, 
+      рейтинг ${payload.renterRating}, 
+      пользователь ${payload.renterVerified ? '' : 'не '}верифицирован`;
     }
     return { title, body };
   }

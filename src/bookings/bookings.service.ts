@@ -67,6 +67,7 @@ export class BookingsService {
         listingTitle: booking.listing.title,
         renterName: `${renter.firstName} ${renter.lastName}`,
         renterRating: renter.rating,
+        renterVerified: renter.verified,
         startDate,
         endDate,
         price: booking.totalPrice,

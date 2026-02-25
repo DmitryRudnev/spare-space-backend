@@ -16,6 +16,7 @@ export interface BookingPayload {
   listingTitle: string;    // Название объекта (чтобы не путать брони)
   renterName?: string;     // Имя арендатора (для BOOKING_NEW)
   renterRating?: number;   // Рейтинг арендатора (для BOOKING_NEW)
+  renterVerified?: number; // Верифицирован ли арендатор (для BOOKING_NEW)
   startDate?: Date;        // Для BOOKING_REMINDER
   endDate?: Date;          // Для BOOKING_EXPIRING
   price?: number;          // Сумма сделки
