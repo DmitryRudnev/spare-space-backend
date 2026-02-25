@@ -14,12 +14,6 @@ export class User {
   @PrimaryGeneratedColumn({ type: 'bigint' })
   id: number;
 
-  @Column({ type: 'bigint', nullable: true })
-  telegramId: number | null;
-
-  @Column({ type: 'bigint', nullable: true })
-  telegramChatId: number | null;
-
   @Column({ type: 'varchar', length: 255, unique: true })
   email: string;
 
@@ -42,16 +36,31 @@ export class User {
   rating: number | null;
 
   @Column({ default: false })
-  twoFaEnabled: boolean;
+  isOnline: boolean;
+
+  @CreateDateColumn({ type: 'timestamptz' })
+  lastSeenAt: Date;
+
+  @Column({ type: 'bigint', nullable: true })
+  telegramId: number | null;
+
+  @Column({ type: 'bigint', nullable: true })
+  telegramChatId: number | null;
 
   @Column({ default: false })
   verified: boolean;
 
   @Column({ default: false })
-  isOnline: boolean;
+  twoFaEnabled: boolean;
 
-  @CreateDateColumn({ type: 'timestamptz' })
-  lastSeenAt: Date;
+  @Column({ type: 'text', nullable: true })
+  twoFaSecret: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  twoFaTempSecret: string | null;
+
+  @Column({ type: 'jsonb', nullable: true })
+  twoFaRecoveryCodesHashes: string[] | null;
 
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
