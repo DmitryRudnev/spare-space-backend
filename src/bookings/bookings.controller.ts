@@ -27,6 +27,7 @@ import {
 } from '@nestjs/swagger';
 
 import { BookingsService } from './bookings.service';
+import { BookingStatus } from 'src/common/enums/booking-status.enum';
 import { CreateBookingDto } from './dto/requests/create-booking.dto';
 import { UpdateBookingPeriodDto } from './dto/requests/update-booking-period.dto';
 import { UpdateBookingStatusDto } from './dto/requests/update-booking-status.dto';
@@ -65,7 +66,7 @@ export class BookingsController {
     @Query() searchDto: SearchBookingsDto, 
     @User('userId') userId: number
   ): Promise<BookingListResponseDto> {
-    const result = await this.bookingsService.findAll(searchDto, userId);
+    const result = await this.bookingsService.handleFindAll(userId, searchDto);
     return BookingMapper.toListResponseDto(
       result.bookings,
       result.total,
@@ -85,10 +86,10 @@ export class BookingsController {
   @ApiOkResponse({ description: 'Бронирование найдено', type: BookingDetailResponseDto })
   @ApiNotFoundResponse({ description: 'Бронирование не найдено' })
   async findById(
-    @Param('id') id: string,
+    @Param('id') bookingId: string,
     @User('userId') userId: number
   ): Promise<BookingDetailResponseDto> {
-    const booking = await this.bookingsService.findById(+id, userId);
+    const booking = await this.bookingsService.handleFindById(userId, Number(bookingId));
     return BookingMapper.toDetailResponseDto(booking);
   }
 
@@ -107,7 +108,7 @@ export class BookingsController {
     @Body() createBookingDto: CreateBookingDto,
     @User('userId') userId: number
   ): Promise<BookingDetailResponseDto> {
-    const booking = await this.bookingsService.create(createBookingDto, userId);
+    const booking = await this.bookingsService.handleCreate(userId, createBookingDto);
     return BookingMapper.toDetailResponseDto(booking);
   }
 
@@ -125,11 +126,11 @@ export class BookingsController {
   @ApiBadRequestResponse({ description: 'Некорректные данные запроса' })
   @ApiConflictResponse({ description: 'Конфликт: объект недоступен для новых дат' })
   async update(
-    @Param('id') id: string,
+    @Param('id') bookingId: string,
     @Body() updateBookingDto: UpdateBookingPeriodDto,
     @User('userId') userId: number
   ): Promise<BookingDetailResponseDto> {
-    const booking = await this.bookingsService.update(+id, updateBookingDto, userId);
+    const booking = await this.bookingsService.handleUpdatePeriod(userId, Number(bookingId), updateBookingDto);
     return BookingMapper.toDetailResponseDto(booking);
   }
 
@@ -146,11 +147,11 @@ export class BookingsController {
   @ApiNotFoundResponse({ description: 'Бронирование не найдено' })
   @ApiBadRequestResponse({ description: 'Некорректный статус или операция' })
   async updateStatus(
-    @Param('id') id: string,
+    @Param('id') bookingId: string,
     @Body() changeStatusDto: UpdateBookingStatusDto,
     @User('userId') userId: number
   ): Promise<BookingDetailResponseDto> {
-    const booking = await this.bookingsService.updateStatus(+id, changeStatusDto.status, userId);
+    const booking = await this.bookingsService.handleConfirm(userId, Number(bookingId));
     return BookingMapper.toDetailResponseDto(booking);
   }
 
@@ -165,7 +166,10 @@ export class BookingsController {
   @ApiNoContentResponse({ description: 'Бронирование успешно отменено' })
   @ApiNotFoundResponse({ description: 'Бронирование не найдено' })
   @ApiBadRequestResponse({ description: 'Невозможно отменить бронирование' })
-  async remove(@Param('id') bookingId: string, @User('userId') userId: number): Promise<void> {
-    await this.bookingsService.remove(+bookingId, userId);
+  async remove(
+    @Param('id') bookingId: string,
+    @User('userId') userId: number
+  ): Promise<void> {
+    await this.bookingsService.handleCancel(userId, Number(bookingId));
   }
 }

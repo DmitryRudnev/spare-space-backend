@@ -8,6 +8,7 @@ import { ListingMapper } from '../../listings/mappers/listing.mapper';
 export class BookingMapper {
   static toResponseDto(booking: Booking): BookingResponseDto {
     const dto = new BookingResponseDto();
+    const periodDates = booking.periodDates;
     
     dto.id = booking.id;
     dto.listingId = booking.listing.id;
@@ -20,13 +21,19 @@ export class BookingMapper {
     dto.totalPrice = booking.totalPrice;
     dto.currency = booking.currency;
     dto.status = booking.status;
-    dto.period = this.parsePeriodString(booking.period);
+    dto.period = {
+      start: periodDates.startDate.toISOString(),
+      end: periodDates.endDate.toISOString()
+    };
     dto.createdAt = new Date(booking.createdAt).toISOString();
+
     return dto;
   }
 
+
   static toDetailResponseDto(booking: Booking): BookingDetailResponseDto {
     const dto = new BookingDetailResponseDto();
+    const periodDates = booking.periodDates;
 
     dto.id = booking.id;
     dto.listing = ListingMapper.toResponseDto(booking.listing);
@@ -35,12 +42,17 @@ export class BookingMapper {
     dto.totalPrice = booking.totalPrice;
     dto.currency = booking.currency;
     dto.status = booking.status;
-    dto.period = this.parsePeriodString(booking.period);
+    dto.period = {
+      start: periodDates.startDate.toISOString(),
+      end: periodDates.endDate.toISOString()
+    };
     dto.createdAt = new Date(booking.createdAt).toISOString();
     dto.updatedAt = new Date(booking.updatedAt).toISOString();
+
     return dto;
   }
 
+  
   static toListResponseDto(
     bookings: Booking[], 
     total: number, 
@@ -53,20 +65,7 @@ export class BookingMapper {
     dto.total = total;
     dto.limit = limit;
     dto.offset = offset;
-    return dto;
-  }
 
-  private static parsePeriodString(periodString: string): { start: string; end: string } {
-    if (!periodString || periodString === '[]') {
-      throw new Error('Invalid period string');
-    }
-    const cleanStr = periodString.replace(/[\[\)]/g, '').trim();
-    const parts = cleanStr.split(',').map(date => date.trim());
-    if (parts.length !== 2) {
-      throw new Error(`Invalid booking period format: ${periodString}`);
-    }
-    const start = new Date(parts[0]).toISOString();
-    const end = new Date(parts[1]).toISOString();
-    return { start, end };
+    return dto;
   }
 }

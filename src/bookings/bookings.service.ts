@@ -1,317 +1,377 @@
 import {
   Injectable,
   NotFoundException,
-  UnauthorizedException,
   BadRequestException,
-  ConflictException
+  ConflictException,
+  UnauthorizedException
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, SelectQueryBuilder } from 'typeorm';
+import { Repository, FindOptionsWhere, In, Raw, Not } from 'typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
+import { ListingsService } from '../listings/listings.service';
+import { UsersService } from '../users/services/users.service';
+import { Booking } from '../entities/booking.entity';
 import { BookingStatus } from '../common/enums/booking-status.enum';
 import { ListingStatus } from '../common/enums/listing-status.enum';
+import { ListingPeriodType } from '../common/enums/listing-period-type.enum';
 import { UserRoleType } from '../common/enums/user-role-type.enum';
-import { Booking } from '../entities/booking.entity';
-import { Listing } from '../entities/listing.entity';
-import { User } from '../entities/user.entity';
-import { UsersService } from '../users/services/users.service';
+import { NotificationType } from '../common/enums/notification-type.enum';
 
 import { CreateBookingDto } from './dto/requests/create-booking.dto';
 import { SearchBookingsDto } from './dto/requests/search-bookings.dto';
 import { UpdateBookingPeriodDto } from './dto/requests/update-booking-period.dto';
 
+
 @Injectable()
 export class BookingsService {
   constructor(
     @InjectRepository(Booking) private readonly bookingRepository: Repository<Booking>,
-    @InjectRepository(Listing) private readonly listingRepository: Repository<Listing>,
-    @InjectRepository(User) private readonly userRepository: Repository<User>,
-    private readonly userService: UsersService,
+    private readonly listingsService: ListingsService,
+    private readonly usersService: UsersService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
-  /**
-   * Retrieves bookings with search filters.
-   * @param searchDto - The search DTO.
-   * @param userId - The user ID for filtering.
-   * @returns Paginated bookings with metadata.
-   */
-  async findAll(
-    searchDto: SearchBookingsDto,
+
+  // ==========================================================================
+  // =============================== USE CASES ================================
+  // ==========================================================================
+
+
+  async handleFindAll(
     userId: number,
-  ): Promise<{ bookings: Booking[]; total: number; limit: number; offset: number; }> {
-    const [bookings, total] = await this.buildSearchQuery(searchDto, userId).getManyAndCount();
+    searchDto: SearchBookingsDto,
+  ): Promise<{ bookings: Booking[]; total: number; limit: number; offset: number }> {
+    return this.findAll(userId, searchDto);
+  }
+
+
+  async handleFindById(userId: number, bookingId: number): Promise<Booking> {
+    await this.validateUserParticipation(bookingId, userId);
+    return this.findById(bookingId);
+  }
+
+
+  async handleCreate(userId: number, createDto: CreateBookingDto): Promise<Booking> {
+    const booking = await this.create(userId, createDto);
+
+    const renter = await this.usersService.findById(userId);
+    const { startDate, endDate } = booking.periodDates;
+    this.eventEmitter.emit('notification.signal', {
+      userId: Number(booking.listing.user.id),
+      type: NotificationType.BOOKING_NEW,
+      referenceId: Number(booking.id),
+      payload: {
+        bookingId: Number(booking.id),
+        listingId: Number(booking.listing.id),
+        listingTitle: booking.listing.title,
+        renterName: `${renter.firstName} ${renter.lastName}`,
+        renterRating: renter.rating,
+        startDate,
+        endDate,
+        price: booking.totalPrice,
+        currency: booking.listing.currency,
+      },
+    });
+
+    return booking;
+  }
+
+
+  async handleUpdatePeriod(userId: number, bookingId: number, updateDto: UpdateBookingPeriodDto): Promise<Booking> {
+    const booking = await this.findById(bookingId);
+    if (userId !== Number(booking.renter.id)) {  
+      throw new UnauthorizedException(`Only renter can update booking's period`);
+    }
+    if (booking.status !== BookingStatus.PENDING) {
+      throw new BadRequestException(`Only pending booking's period can be updated`);
+    }
+    const updatedBooking = await this.updatePeriod(bookingId, updateDto);
+
+    const renter = await this.usersService.findById(userId);
+    const { startDate, endDate } = updatedBooking.periodDates;
+    
+    this.eventEmitter.emit('notification.signal', {
+      userId: Number(updatedBooking.listing.user.id),
+      type: NotificationType.BOOKING_CONFIRMED,
+      referenceId: Number(updatedBooking.id),
+      payload: {
+        bookingId: Number(updatedBooking.id),
+        listingId: Number(updatedBooking.listing.id),
+        listingTitle: updatedBooking.listing.title,
+        renterName: `${renter.firstName} ${renter.lastName}`,
+        renterRating: renter.rating,
+        startDate,
+        endDate,
+        price: updatedBooking.totalPrice,
+        currency: updatedBooking.currency,
+      },
+    });
+
+    return updatedBooking;
+  }
+
+
+  async handleConfirm(userId: number, bookingId: number): Promise<Booking> {    
+    const booking = await this.findById(bookingId);
+    if (userId !== Number(booking.listing.user.id)) {
+      throw new UnauthorizedException('Only landlord can confirm booking');
+    }
+    if (booking.status !== BookingStatus.PENDING) {
+      throw new BadRequestException('Only pending booking can be confirmed');
+    }
+    const confirmedBooking = await this.updateStatus(bookingId, BookingStatus.CONFIRMED);
+  
+    const { startDate, endDate } = confirmedBooking.periodDates;
+    this.eventEmitter.emit('notification.signal', {
+      userId: Number(confirmedBooking.renter.id),
+      type: NotificationType.BOOKING_CONFIRMED,
+      referenceId: Number(confirmedBooking.id),
+      payload: {
+        bookingId: Number(confirmedBooking.id),
+        listingId: Number(confirmedBooking.listing.id),
+        listingTitle: confirmedBooking.listing.title,
+        startDate,
+        endDate,
+        price: confirmedBooking.totalPrice,
+        currency: confirmedBooking.currency,
+      },
+    });
+    
+    return confirmedBooking;
+  }
+
+
+  async handleCancel(userId: number, bookingId: number): Promise<Booking> {
+    await this.validateUserParticipation(bookingId, userId);
+    
+    const booking = await this.findById(bookingId);
+    if (booking.status !== BookingStatus.PENDING) {
+      throw new BadRequestException('Only pending booking can be cancelled');
+    }
+    const cancelledBooking = await this.updateStatus(bookingId, BookingStatus.CANCELLED);
+  
+    const targetUserId = userId === Number(cancelledBooking.renter.id)
+      ? Number(cancelledBooking.listing.user.id) 
+      : Number(cancelledBooking.renter.id);
+    const { startDate, endDate } = cancelledBooking.periodDates;
+
+    this.eventEmitter.emit('notification.signal', {
+      userId: targetUserId,
+      type: NotificationType.BOOKING_CANCELLED,
+      referenceId: Number(cancelledBooking.id),
+      payload: {
+        bookingId: Number(cancelledBooking.id),
+        listingId: Number(cancelledBooking.listing.id),
+        listingTitle: cancelledBooking.listing.title,
+        startDate,
+        endDate,
+        price: cancelledBooking.totalPrice,
+        currency: cancelledBooking.currency,
+      },
+    });
+    
+    return cancelledBooking;
+  }
+
+
+  // ==========================================================================
+  // =============================== PUBLIC API ===============================
+  // ==========================================================================
+
+
+  async findAll(
+    userId: number,
+    searchDto: SearchBookingsDto,
+  ): Promise<{ bookings: Booking[]; total: number; limit: number; offset: number }> {
+    const baseFilters: FindOptionsWhere<Booking> = {};
+    if (searchDto.status) {
+      baseFilters.status = searchDto.status;
+    }
+
+    const where: FindOptionsWhere<Booking>[] = [];
+    switch (searchDto.userRole) {
+      case UserRoleType.RENTER:
+        where.push({ ...baseFilters, renter: { id: userId } });
+        break;
+      case UserRoleType.LANDLORD:
+        where.push({ ...baseFilters, listing: { user: { id: userId } } });
+        break;
+      default:
+        where.push(
+          { ...baseFilters, renter: { id: userId } },
+          { ...baseFilters, listing: { user: { id: userId } } }
+        );
+    }
+
+    const [bookings, total] = await this.bookingRepository.findAndCount({
+      where,
+      relations: {
+          listing: { user: true },
+          renter: true,
+      },
+      order: { updatedAt: 'DESC' },
+      skip: searchDto.offset,
+      take: searchDto.limit,
+    });
+
     return { bookings, total, limit: searchDto.limit, offset: searchDto.offset };
   }
 
 
-  async countByRole(userId: number, roleType: UserRoleType): Promise<number> {
-    if (roleType == UserRoleType.RENTER) {
-      return await this.bookingRepository.countBy({
-        renter: { id: userId },
-      });
-    }
-
-    return await this.bookingRepository.countBy({
-      listing: { user: { id: userId } },
-    });
-  }
-
-  
-  /**
-   * Retrieves a single booking by ID.
-   * @param bookingId - The booking ID.
-   * @returns The booking entity.
-   * @throws NotFoundException if booking not found.
-   * @throws UnauthorizedException if user is not member of booking.
-   */
-  async findById(bookingId: number, userId: number): Promise<Booking> {
+  async findById(bookingId: number): Promise<Booking> {
     const booking = await this.bookingRepository.findOne({
       where: { id: bookingId },
-      relations: ['listing', 'renter', 'listing.user']
+      relations: {
+        listing: { user: true },
+        renter: true,
+      }
     });
     if (!booking) {
       throw new NotFoundException('Booking not found');
     }
-    if (Number(booking.renter.id) !== userId && Number(booking.listing.user.id) !== userId) {
-      throw new UnauthorizedException('Not authorized to cancel this booking');
-    }
     return booking;
   }
 
-  /**
-   * Creates a new booking.
-   * @param dto - The creation DTO.
-   * @param userId - The creating user ID.
-   * @returns The saved booking entity.
-   */
-  async create(dto: CreateBookingDto, userId: number): Promise<Booking> {
-    const startDate = new Date(dto.period.start);
-    const endDate = new Date(dto.period.end);
-    this.validateBookingDates(startDate, endDate);
-    const renter = await this.validateRenter(userId);
-    const listing = await this.validateListing(dto.listingId);
-    await this.validateListingAvailability(listing.id, startDate, endDate);
+
+  async create(renterId: number, createDto: CreateBookingDto): Promise<Booking> {
+    const hasRenter = await this.usersService.hasRole(renterId, UserRoleType.RENTER);
+    if (!hasRenter) {
+      throw new UnauthorizedException('Only renters can create bookings');
+    }
+    const listing = await this.listingsService.findById(createDto.listingId);
+    if (listing.status !== ListingStatus.ACTIVE) {
+      throw new BadRequestException('Cannot book an inactive listing');
+    }
+    if (renterId === Number(listing.user.id)) {
+      throw new BadRequestException('Cannot book owned listing');
+    }
+    
+    const startDate = new Date(createDto.period.start);
+    const endDate = new Date(createDto.period.end);
+    await this.validateBookingDates(startDate, endDate, listing.id, listing.availability);
 
     const duration = this.calculateDuration(startDate, endDate, listing.pricePeriod);
     const totalPrice = listing.price * duration;
     const period = `[${startDate.toISOString()},${endDate.toISOString()})`;
+
     const booking = this.bookingRepository.create({
       listing,
-      renter,
+      renter: { id: renterId },
       period,
       totalPrice,
       currency: listing.currency,
-      status: BookingStatus.PENDING
+      status: BookingStatus.PENDING,
     });
-    return this.bookingRepository.save(booking);
+    await this.bookingRepository.save(booking);
+    return this.findById(booking.id);
   }
 
-  /**
-   * Updates an existing booking.
-   * @param bookingId - The booking ID.
-   * @param dto - The update DTO.
-   * @param userId - The updating user ID.
-   * @returns The saved booking entity.
-   */
-  async update(bookingId: number, dto: UpdateBookingPeriodDto, userId: number): Promise<Booking> {
-    const booking = await this.findById(bookingId, userId);
-    if (Number(booking.renter.id) !== userId) {
-      throw new UnauthorizedException('Only renter can update this booking');
-    }
-    if (booking.status !== BookingStatus.PENDING) {
-      throw new BadRequestException('Only pending bookings can be updated');
-    }
-    const startDate = new Date(dto.period.start);
-    const endDate = new Date(dto.period.end);
-    this.validateBookingDates(startDate, endDate);
-    await this.validateListingAvailability(booking.listing.id, startDate, endDate, bookingId);
 
-    const periodString = `[${startDate.toISOString()},${endDate.toISOString()})`;
+  async updatePeriod(bookingId: number, updatePeriodDto: UpdateBookingPeriodDto): Promise<Booking> {
+    const booking = await this.findById(bookingId);
+
+    const startDate = new Date(updatePeriodDto.period.start);
+    const endDate = new Date(updatePeriodDto.period.end);
+    await this.validateBookingDates(startDate, endDate, booking.listing.id, booking.listing.availability, bookingId);
+
     const duration = this.calculateDuration(startDate, endDate, booking.listing.pricePeriod);
-    booking.period = periodString;
+    booking.period = `[${startDate.toISOString()},${endDate.toISOString()})`;
     booking.totalPrice = booking.listing.price * duration;
+
     return this.bookingRepository.save(booking);
   }
 
-  /**
-   * Changes booking status.
-   * @param bookingId - The booking ID.
-   * @param newStatus - The new status.
-   * @param userId - The user ID changing status.
-   * @returns The saved booking entity.
-   */
-  async updateStatus(bookingId: number, newStatus: BookingStatus, userId: number): Promise<Booking> {
-    const booking = await this.findById(bookingId, userId);
-    await this.validateLandlordOwnership(booking, userId);
-    if (booking.status === BookingStatus.COMPLETED || booking.status === BookingStatus.CANCELLED) {
-      throw new BadRequestException('Cannot change completed or cancelled booking');
-    }
+
+  async updateStatus(bookingId: number, newStatus: BookingStatus): Promise<Booking> {
+    const booking = await this.findById(bookingId);
     booking.status = newStatus;
     return this.bookingRepository.save(booking);
   }
 
-  /**
-   * Cancels a booking.
-   * @param bookingId - The booking ID.
-   * @param userId - The cancelling user ID.
-   * @returns The saved booking entity.
-   */
-  async remove(bookingId: number, userId: number): Promise<Booking> {
-    const booking = await this.findById(bookingId, userId);
-    if (booking.status !== BookingStatus.PENDING) {
-      throw new BadRequestException('Only pending bookings can be cancelled');
-    }
-    booking.status = BookingStatus.CANCELLED;
-    return this.bookingRepository.save(booking);
-  }
 
-  /**
-   * Validates user existence and renter role.
-   * @param userId - The user ID to validate.
-   * @returns The found user entity.
-   * @throws UnauthorizedException if user not found or not a renter.
-   */
-  private async validateRenter(userId: number): Promise<User> {
-    const user = await this.userRepository.findOneBy({ id: userId });
-    if (!user) {
-      throw new UnauthorizedException('User not found');
-    }
-    const hasRenter = await this.userService.hasRole(user.id, UserRoleType.RENTER);
-    if (!hasRenter) {
-      throw new UnauthorizedException('Only renters can create bookings');
-    }
-    return user;
-  }
+  async validateUserParticipation(bookingId: number, userId: number): Promise<void> {
+    const booking = await this.findById(bookingId);
+    const isRenter = Number(booking.renter.id) === userId;
+    const isLandlord = Number(booking.listing.user.id) === userId;
 
-  /**
-   * Validates listing existence and active status.
-   * @param listingId - The listing ID to validate.
-   * @returns The found listing entity.
-   * @throws BadRequestException if listing not found or not active.
-   */
-  private async validateListing(listingId: number): Promise<Listing> {
-    const listing = await this.listingRepository.findOne({
-      where: { id: listingId },
-      relations: ['user']
-    });
-    if (!listing) {
-      throw new BadRequestException('Listing not found');
-    }
-    if (listing.status !== ListingStatus.ACTIVE) {
-      throw new BadRequestException('Cannot rent inactive listing');
-    }
-    return listing;
-  }
-
-  /**
-   * Validates landlord ownership of booking's listing.
-   * @param booking - The booking entity.
-   * @param userId - The user ID to validate ownership.
-   * @throws UnauthorizedException if not authorized.
-   */
-  private async validateLandlordOwnership(booking: Booking, userId: number): Promise<void> {
-    const hasLandlord = await this.userService.hasRole(userId, UserRoleType.LANDLORD);
-    if (!hasLandlord || Number(booking.listing.user.id) !== userId) {
-      throw new UnauthorizedException('Not authorized to modify this booking');
+    if (!isRenter && !isLandlord) {
+      throw new UnauthorizedException('User is not a participant of this booking');
     }
   }
 
-  /**
-   * Validates booking dates.
-   * @param startDate - Start date.
-   * @param endDate - End date.
-   * @throws BadRequestException for invalid dates.
-   */
-  private validateBookingDates(startDate: Date, endDate: Date): void {
+
+  async countByUser(userId: number, roleType: UserRoleType): Promise<number> {
+    if (roleType === UserRoleType.RENTER) {
+      return await this.bookingRepository.countBy({ renter: { id: userId } });
+    }
+    return await this.bookingRepository.countBy({ listing: { user: { id: userId } } });
+  }
+
+
+  // ==========================================================================
+  // ================================ PRIVATE =================================
+  // ==========================================================================
+
+
+  private async validateBookingDates(
+    startDate: Date,
+    endDate: Date,
+    listingId: number,
+    listingAvailabilityRanges: string[],
+    excludeBookingId?: number,
+  ): Promise<void> {
+    // Проверка 1: даты должны быть актуальными и в правильном порядке
     if (startDate < new Date()) {
       throw new BadRequestException('Start date cannot be in the past');
     }
     if (endDate <= startDate) {
-      throw new BadRequestException('End date cannot be before start date');
+      throw new BadRequestException('End date must be after start date');
     }
-  }
 
-  /**
-   * Validates listing availability for given period.
-   * @param listingId - The listing ID.
-   * @param start - Start date.
-   * @param end - End date.
-   * @param excludeBookingId - Optional booking ID to exclude from check.
-   * @throws ConflictException if booking overlapps with other one.
-   */
-  private async validateListingAvailability(
-    listingId: number,
-    start: Date,
-    end: Date,
-    excludeBookingId?: number
-  ): Promise<void> {
-    const query = this.bookingRepository
-      .createQueryBuilder('booking')
-      .where('booking.listing_id = :listingId', { listingId })
-      .andWhere('booking.status IN (:...statuses)', {
-        statuses: [BookingStatus.PENDING, BookingStatus.CONFIRMED]
-      })
-      .andWhere('booking.period && tstzrange(:start, :end)', { start, end });
-    if (excludeBookingId) {
-      query.andWhere('booking.id != :excludeBookingId', { excludeBookingId });
+    // Проверка 2: период бронирования должен укладываться в доступный диапазон дат объявления
+    const periodStr = `[${startDate.toISOString()},${endDate.toISOString()})`;
+    const [{ contained }] = await this.bookingRepository.query(
+      `SELECT EXISTS (
+        SELECT 1
+        FROM unnest($1::tstzrange[]) AS r
+        WHERE $2::tstzrange <@ r
+      ) as contained`,
+      [listingAvailabilityRanges, periodStr]
+    );
+    if (!contained) {
+      throw new BadRequestException(
+        `Booking period must be completely within one of the listing's availability slots`,
+      );
     }
-    const overlapping = await query.getOne();
-    if (!!overlapping) {
-      throw new ConflictException('Listing not available for selected period');
-    }
-  }
-
-  /**
-   * Builds search query for bookings with filters.
-   * @param searchDto - The search DTO.
-   * @param userId - The user ID for filtering.
-   * @returns Configured query builder.
-   */
-  private buildSearchQuery(
-    searchDto: SearchBookingsDto,
-    userId: number
-  ): SelectQueryBuilder<Booking> {
-    const query = this.bookingRepository
-      .createQueryBuilder('booking')
-      .leftJoinAndSelect('booking.listing', 'listing')
-      .leftJoinAndSelect('booking.renter', 'renter')
-      .leftJoinAndSelect('listing.user', 'landlord');
     
-    switch (searchDto.userRole) {
-      case UserRoleType.RENTER:
-        query.where('booking.renter.id = :userId', { userId });
-        break;
-      case UserRoleType.LANDLORD:
-        query.where('listing.user.id = :userId', { userId });
-        break;
-      default:
-        query.where('(booking.renter.id = :userId OR listing.user.id = :userId)', { userId });
+    // Проверка 3: период не пересекается с другими бронированиями
+    const where: FindOptionsWhere<Booking> = {
+      listing: { id: listingId },
+      status: In([BookingStatus.PENDING, BookingStatus.CONFIRMED]),
+      period: Raw((alias) => `${alias} && tstzrange(:start, :end)`, { 
+        start: startDate.toISOString(), 
+        end: endDate.toISOString() 
+      })
+    };
+    if (excludeBookingId) {
+      where.id = Not(excludeBookingId);
     }
-    if (searchDto.status) {
-      query.andWhere('booking.status = :status', { status: searchDto.status });
+    const overlapping = await this.bookingRepository.exists({ where });
+    if (overlapping) {
+      throw new ConflictException('Listing is not available for the selected period');
     }
-    return query
-      .orderBy('booking.created_at', 'DESC')
-      .limit(searchDto.limit)
-      .offset(searchDto.offset);
   }
 
-  /**
-   * Calculates booking duration based on price period.
-   * @param start - Start date.
-   * @param end - End date.
-   * @param pricePeriod - The price period unit.
-   * @returns Calculated duration.
-   * @throws BadRequestException for invalid price period.
-   */
-  private calculateDuration(start: Date, end: Date, pricePeriod: string): number {
-    const durationMs = end.getTime() - start.getTime();
+
+  private calculateDuration(start: Date, end: Date, pricePeriod: ListingPeriodType): number {
+    const ms = end.getTime() - start.getTime();
     switch (pricePeriod) {
-      case 'HOUR':  return Math.ceil(durationMs / (1000 * 60 * 60));
-      case 'DAY':   return Math.ceil(durationMs / (1000 * 60 * 60 * 24));
-      case 'WEEK':  return Math.ceil(durationMs / (1000 * 60 * 60 * 24 * 7));
-      case 'MONTH': return Math.ceil(durationMs / (1000 * 60 * 60 * 24 * 30));
-      default: throw new BadRequestException('Invalid price period');
+      case ListingPeriodType.HOUR:  return Math.ceil(ms / (1000 * 60 * 60));
+      case ListingPeriodType.DAY:   return Math.ceil(ms / (1000 * 60 * 60 * 24));
+      case ListingPeriodType.WEEK:  return Math.ceil(ms / (1000 * 60 * 60 * 24 * 7));
+      case ListingPeriodType.MONTH: return Math.ceil(ms / (1000 * 60 * 60 * 24 * 30));
+      default: throw new BadRequestException('Unknown price period');
     }
   }
 }

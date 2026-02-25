@@ -34,4 +34,24 @@ export class Booking {
 
   @UpdateDateColumn({ type: 'timestamptz' })
   updatedAt: Date;
+
+  get periodDates(): { startDate: Date; endDate: Date } {
+    if (!/^\[[^,]+,[^,]+\)$/.test(this.period.trim())) {
+      throw new Error(`Invalid booking period stored in database: ${this.period.trim()}`);
+    }
+    const cleanStr = this.period.replace(/[\[\)]/g, '');
+    const parts = cleanStr.split(',').map(date => date.trim());
+    return {
+      startDate: new Date(parts[0]),
+      endDate: new Date(parts[1]),
+    };
+  }
+
+  get startDate(): Date {
+    return this.periodDates.startDate;
+  }
+
+  get endDate(): Date {
+    return this.periodDates.endDate;
+  }
 }
