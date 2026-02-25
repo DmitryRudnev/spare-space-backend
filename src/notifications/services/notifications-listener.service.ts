@@ -133,6 +133,6 @@ export class NotificationsListenerService {
     );
 
     const { title, body } = this.notificationMessageBuilder.build(type, payload);
-    await this.telegramNotificationService.sendNotification(user.telegramChatId, type, title, body, payload);
+    await this.telegramNotificationService.sendNotification(user.telegramChatId, title, body, type, payload);
   }
 }
