@@ -56,7 +56,7 @@ export class QuestionsService {
   ): Promise<{ questions: Question[]; total: number; limit: number; offset: number }> {
     // Проверяем существование активного объявления через сервис
     try {
-      await this.listingsService.findById(listingId, undefined);
+      await this.listingsService.validateListingExistence(listingId);
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw new NotFoundException('Listing not found or not active');
@@ -94,7 +94,7 @@ export class QuestionsService {
     // Проверяем существование активного объявления через сервис
     let listing;
     try {
-      listing = await this.listingsService.findById(createQuestionDto.listingId, undefined);
+      listing = await this.listingsService.findById(createQuestionDto.listingId);
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw new NotFoundException('Listing not found or not active');
