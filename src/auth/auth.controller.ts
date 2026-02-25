@@ -1,13 +1,15 @@
 import { Controller, Post, Body, HttpCode, BadRequestException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody, ApiCreatedResponse, ApiOkResponse, ApiNoContentResponse, ApiUnauthorizedResponse, ApiBadRequestResponse, ApiConflictResponse } from '@nestjs/swagger';
 
+import { JwtAuthGuard } from './jwt-auth.guard';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/requests/login.dto';
 import { RegisterDto } from './dto/requests/register.dto';
 import { TokenOperationDto } from './dto/requests/token-operation.dto';
 import { CheckPhoneDto } from './dto/requests/check-phone.dto';
 import { AuthResponseDto } from './dto/responses/auth-response.dto';
-import { JwtAuthGuard } from './jwt-auth.guard';
+import { LoginResponseDto } from './dto/responses/login-response.dto';
+import { VerifyTwoFactorDto } from './dto/requests/verify-two-factor.dto';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -40,12 +42,25 @@ export class AuthController {
   @ApiBody({ type: LoginDto, description: 'Данные для входа' })
   @ApiOkResponse({ 
     description: 'Успешная аутентификация', 
-    type: AuthResponseDto 
+    type: LoginResponseDto 
   })
   @ApiUnauthorizedResponse({ description: 'Неверные учетные данные' })
   @ApiBadRequestResponse({ description: 'Некорректные данные запроса' })
-  async login(@Body() dto: LoginDto): Promise<AuthResponseDto> {
+  async login(@Body() dto: LoginDto): Promise<LoginResponseDto> {
     return this.authService.login(dto);
+  }
+
+  @Post('verify-2fa')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Подтверждение двухфакторной аутентификации',
+    description: 'Завершает вход с 2FA и возвращает токены доступа'
+  })
+  @ApiBody({ type: VerifyTwoFactorDto })
+  @ApiOkResponse({ type: AuthResponseDto })
+  @ApiUnauthorizedResponse({ description: 'Неверный код или токен' })
+  async verifyTwoFactor(@Body() dto: VerifyTwoFactorDto): Promise<AuthResponseDto> {
+    return this.authService.verifyTwoFactor(dto.twoFactorToken, dto.code);
   }
 
   @Post('check-phone-login')

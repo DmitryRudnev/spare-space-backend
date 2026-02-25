@@ -18,6 +18,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: any) {
+    if (payload.type === '2fa') {
+      throw new UnauthorizedException('Invalid token type');
+    }
     const userId = parseInt(payload.sub, 10);
     if (!userId || isNaN(userId)) {
       throw new UnauthorizedException('Invalid token payload');

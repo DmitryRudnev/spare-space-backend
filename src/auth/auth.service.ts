@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
@@ -7,13 +7,15 @@ import * as crypto from 'crypto';
 import { ConfigService } from '@nestjs/config';
 
 import { UsersService } from '../users/services/users.service';
-import { RefreshToken } from '../entities/refresh-token.entity';
+import { TwoFactorService } from '../two-factor/two-factor.service';
 import { User } from '../entities/user.entity';
 import { UserRoleType } from '../common/enums/user-role-type.enum';
+import { RefreshToken } from '../entities/refresh-token.entity';
 
 import { RegisterDto } from './dto/requests/register.dto';
 import { LoginDto } from './dto/requests/login.dto';
 import { AuthResponseDto } from './dto/responses/auth-response.dto';
+import { LoginResponseDto } from './dto/responses/login-response.dto';
 
 /**
  * Service responsible for authentication-related operations
@@ -35,9 +37,10 @@ export class AuthService {
   constructor(
     @InjectRepository(User) private readonly userRepository: Repository<User>,
     @InjectRepository(RefreshToken) private readonly tokenRepository: Repository<RefreshToken>,
-    private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly jwtService: JwtService,
     private readonly userService: UsersService,
+    private readonly twoFactorService: TwoFactorService,
   ) {}
 
   /**
@@ -47,7 +50,7 @@ export class AuthService {
    * @throws {ConflictException} If email or phone already exists
    */
   async register(dto: RegisterDto): Promise<AuthResponseDto> {
-    await this.validateRegistrationData(dto);
+    await this.validateUniqueness(dto.phone, dto.email);
     const user = await this.createUserWithRole(dto);
     return this.issueTokens(user.id);
   }
@@ -58,9 +61,45 @@ export class AuthService {
    * @returns Authentication tokens
    * @throws {UnauthorizedException} If credentials are invalid
    */
-  async login(dto: LoginDto): Promise<AuthResponseDto> {
+  async login(dto: LoginDto): Promise<LoginResponseDto> {
     const user = await this.validateCredentials(dto);
+
+    if (user.twoFaEnabled) {
+      const twoFactorToken = this.generateTwoFactorToken(user.id);
+      return {
+        requiresTwoFactor: true,
+        twoFactorToken,
+      };
+    }
+
     return this.issueTokens(user.id);
+  }
+
+  async verifyTwoFactor(twoFactorToken: string, code: string): Promise<AuthResponseDto> {
+    if (code.length !== 6 && code.length !== 10) {
+      throw new BadRequestException(`Code length must be 6 symbols(TOTP code) or 10 symbols(Recovery code). Actual code length: ${code.length}`);
+    }
+
+    let payload: any;
+    try {
+      payload = this.jwtService.verify(twoFactorToken);
+    } catch {
+      throw new UnauthorizedException('Invalid or expired two-factor token');
+    }
+    
+    if (payload.type !== '2fa') {
+      throw new UnauthorizedException('Invalid token type');
+    }
+    
+    const userId = payload.sub;
+    
+    const isTotpValid = await this.twoFactorService.validateTwoFactorCode(userId, code);
+    const isRecoveryValid = await this.twoFactorService.validateRecoveryCode(userId, code);
+    if (!isTotpValid && !isRecoveryValid) {
+      throw new UnauthorizedException('Invalid code');
+    }
+    
+    return this.issueTokens(userId);
   }
 
   /**
@@ -109,10 +148,10 @@ export class AuthService {
    * @throws {ConflictException} If email or phone already exists
    * @private
    */
-  private async validateRegistrationData(dto: RegisterDto): Promise<void> {
+  private async validateUniqueness(phone: string, email: string): Promise<void> {
     const [emailExists, phoneExists] = await Promise.all([
-      this.userRepository.existsBy({ email: dto.email }),
-      this.userRepository.existsBy({ phone: dto.phone })
+      this.userRepository.existsBy({ phone }),
+      this.userRepository.existsBy({ email }),
     ]);
     if (emailExists) {
       throw new ConflictException('Email already exists');
@@ -202,6 +241,11 @@ export class AuthService {
     return this.jwtService.sign(payload);
   }
 
+  private generateTwoFactorToken(userId: number): string {
+    const payload = { sub: userId, type: '2fa' };
+    return this.jwtService.sign(payload, { expiresIn: '5m' });
+  }
+
   /**
    * Generates cryptographically secure refresh token
    * @returns Refresh token string
@@ -256,10 +300,7 @@ export class AuthService {
    */
   private async findValidToken(refreshToken: string): Promise<RefreshToken | null> {
     const refreshTokenHash = this.hashRefreshToken(refreshToken);
-    return this.tokenRepository.findOne({
-      where: { tokenHash: refreshTokenHash },
-      relations: ['user']
-    });
+    return this.tokenRepository.findOneBy({ tokenHash: refreshTokenHash });
   }
 
   /**
