@@ -12,6 +12,7 @@ import { NotificationsController } from './notifications.controller';
 import { NotificationsService } from './services/notifications.service';
 import { NotificationsListenerService } from './services/notifications-listener.service';
 import { FcmNotificationsService } from './services/fcm-notifications.service';
+import { ExpoNotificationsService } from './services/expo-notifications.service';
 import { NotificationMessageBuilder } from './services/notification-message-builder.service';
 
 @Module({
@@ -27,6 +28,7 @@ import { NotificationMessageBuilder } from './services/notification-message-buil
     NotificationsService,
     NotificationsListenerService,
     FcmNotificationsService,
+    ExpoNotificationsService,
     NotificationMessageBuilder,
   ],
   exports: [NotificationsService],

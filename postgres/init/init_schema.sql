@@ -9,7 +9,7 @@ CREATE TYPE payment_method AS ENUM ('CARD', 'SBP', 'USDT', 'ETH', 'TRX');
 CREATE TYPE payment_status AS ENUM ('PENDING', 'BLOCKED', 'COMPLETED', 'REFUNDED');
 CREATE TYPE transaction_type AS ENUM ('TOPUP', 'CHARGE', 'PAYOUT', 'COMMISSION');
 CREATE TYPE currency_type AS ENUM ('RUB', 'USD', 'USDT', 'ETH', 'TRX');
-CREATE TYPE notification_channel AS ENUM ('WEBSOCKET', 'FCM', 'EMAIL', 'SMS', 'TG_BOT');
+CREATE TYPE notification_channel AS ENUM ('WEBSOCKET', 'FCM', 'EMAIL', 'SMS', 'TG_BOT', 'EXPO');
 CREATE TYPE notification_type AS ENUM (
     -- Сообщения
     'MESSAGE_NEW',      -- Новое сообщение в чате

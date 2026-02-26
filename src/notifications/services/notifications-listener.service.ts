@@ -9,6 +9,7 @@ import { MainWebSocketGateway } from '../../websocket/websocket.gateway';
 import { TelegramNotificationService } from '../../telegram/services/telegram-notification.service';
 import { NotificationMapper } from '.././mappers/notification.mapper';
 import { FcmNotificationsService } from './fcm-notifications.service';
+import { ExpoNotificationsService } from './expo-notifications.service';
 import { AnyNotificationPayload } from '../../common/interfaces/notification-payloads.interface';
 import { NotificationMessageBuilder } from './notification-message-builder.service';
 
@@ -22,6 +23,7 @@ export class NotificationsListenerService {
     private readonly mainWsGateway: MainWebSocketGateway,
     private readonly telegramNotificationService: TelegramNotificationService,
     private readonly fcmNotificationsService: FcmNotificationsService,
+    private readonly expoNotificationsService: ExpoNotificationsService,
     private readonly notificationMessageBuilder: NotificationMessageBuilder,
   ) {}
 
@@ -44,9 +46,10 @@ export class NotificationsListenerService {
       // Получаем пользовательские настройки уведомлений
       const settings = await this.notificationsService.getUserNotificationSettings(userId);
 
-      // FCM
+      // FCM или EXPO
       if (settings.sendPush) {
-        this.handleFcmNotification(userId, type, referenceId, payload);
+        // this.handleFcmNotification(userId, type, referenceId, payload);
+        await this.handlePushNotification(userId, type, referenceId, payload);
       }
 
       // TG bot
@@ -79,16 +82,53 @@ export class NotificationsListenerService {
   }
 
 
-  private async handleFcmNotification(
+  private async handlePushNotification(
     userId: number,
     type: NotificationType,
     referenceId?: number,
     payload?: AnyNotificationPayload,
   ): Promise<void> {
     const tokens = await this.devicesService.getUserTokens(userId);
-    
+
     if (tokens.length === 0) {
       this.logger.warn(`No push tokens found for user ${userId}`);
+      return;
+    }
+
+    // Разделяем токены по типу
+    const expoTokens = tokens.filter(t => this.expoNotificationsService.isExpoToken(t));
+    const fcmTokens = tokens.filter(t => !this.expoNotificationsService.isExpoToken(t));
+
+    // Создаем массив промисов с явным указанием типа
+    const promises: Promise<any>[] = [];
+
+    if (fcmTokens.length > 0) {
+      promises.push(
+        this.handleFcmNotification(fcmTokens, userId, type, referenceId, payload)
+      );
+    }
+
+    if (expoTokens.length > 0) {
+      promises.push(
+        this.handleExpoNotification(expoTokens, userId, type, referenceId, payload)
+      );
+    }
+
+    if (promises.length > 0) {
+      await Promise.allSettled(promises);
+    }
+  }
+
+
+  private async handleFcmNotification(
+    tokens: string[],
+    userId: number,
+    type: NotificationType,
+    referenceId?: number,
+    payload?: AnyNotificationPayload,
+  ): Promise<void> {
+    if (tokens.length === 0) {
+      this.logger.warn(`No FCM tokens provided in method handleFcmNotification (user ${userId})`);
       return;
     }
 
@@ -102,15 +142,38 @@ export class NotificationsListenerService {
 
     const { title, body } = this.notificationMessageBuilder.build(type, payload);
     await this.fcmNotificationsService.sendPush(
-      tokens,
-      title,
-      body,
-      type,
-      payload,
+      tokens, title, body, type, payload,
     );
   }
 
 
+  private async handleExpoNotification(
+    tokens: string[],
+    userId: number,
+    type: NotificationType,
+    referenceId?: number,
+    payload?: AnyNotificationPayload,
+  ): Promise<void> {
+    if (tokens.length === 0) {
+      this.logger.warn(`No EXPO tokens provided in method handleExpoNotification (user ${userId})`);
+      return;
+    }
+
+    await this.notificationsService.create(
+      userId,
+      type,
+      NotificationChannel.EXPO,
+      referenceId,
+      payload
+    );
+
+    const { title, body } = this.notificationMessageBuilder.build(type, payload);
+    await this.expoNotificationsService.sendPush(
+      tokens, title, body, type, payload,
+    );
+  }
+  
+  
   private async handleTelegramNotification(
     userId: number,
     type: NotificationType,

@@ -4,4 +4,5 @@ export enum NotificationChannel {
   EMAIL = 'EMAIL',
   SMS = 'SMS',
   TG_BOT = 'TG_BOT',
+  EXPO = 'EXPO',
 }
