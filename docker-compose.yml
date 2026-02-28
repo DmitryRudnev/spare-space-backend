@@ -11,7 +11,7 @@ services:
       POSTGRES_DB: spare_space
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./postgres/init:/docker-entrypoint-initdb.d
+      - /home/SpaceSpace/spare-space-backend/postgres/init:/docker-entrypoint-initdb.d
     ports:
       - "5432:5432"
     networks:
@@ -38,6 +38,7 @@ services:
       - JWT_EXPIRES_IN=${JWT_EXPIRES_IN}
       - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET}
       - REFRESH_TOKEN_EXPIRY_DAYS=${REFRESH_TOKEN_EXPIRY_DAYS}
+      - TWO_FA_ENCRYPTION_SECRET=${TWO_FA_ENCRYPTION_SECRET}
       - TELEGRAM_ITEMS_PER_PAGE=${TELEGRAM_ITEMS_PER_PAGE}
       - FCM_CREDENTIALS_BASE64=${FCM_CREDENTIALS_BASE64}
     ports:
