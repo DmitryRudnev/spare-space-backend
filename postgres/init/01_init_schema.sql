@@ -46,6 +46,7 @@ CREATE TYPE notification_type AS ENUM (
     -- Безопасность
     'LOGIN_NEW'         -- Вход с нового устройства
 );
+CREATE TYPE subscription_plan_status AS ENUM('ACTIVE', 'INACTIVE');
 CREATE TYPE subscription_status AS ENUM('ACTIVE', 'EXPIRED', 'CANCELLED');
 CREATE TYPE moderation_entity_type AS ENUM ('LISTING', 'REVIEW', 'USER');
 CREATE TYPE moderation_action AS ENUM ('APPROVE', 'REJECT', 'EDIT', 'BAN');
@@ -68,7 +69,6 @@ CREATE TABLE users (
     verified BOOLEAN NOT NULL DEFAULT FALSE,
     two_fa_enabled BOOLEAN NOT NULL DEFAULT FALSE,
     two_fa_secret TEXT,
-    two_fa_temp_secret TEXT,
     two_fa_recovery_codes_hashes JSONB,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -171,6 +171,7 @@ CREATE TABLE bookings (
     total_price DECIMAL(26,16) NOT NULL,  -- [цена за единицу времени] * [кол-во дней/недель/месяцев]
     currency currency_type NOT NULL DEFAULT 'RUB',
     status booking_status NOT NULL DEFAULT 'PENDING',
+    completion_job_id VARCHAR(255),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -245,6 +246,7 @@ CREATE INDEX idx_transactions_created_at ON transactions(created_at);
 CREATE TABLE subscription_plans (
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL UNIQUE,  -- Название тарифа, например, "Basic", "Pro"
+    status subscription_plan_status NOT NULL DEFAULT 'ACTIVE',
     price DECIMAL(26,16) NOT NULL,
     currency currency_type NOT NULL DEFAULT 'RUB',
     max_listings INTEGER NOT NULL,
@@ -252,7 +254,8 @@ CREATE TABLE subscription_plans (
     boosts_per_month INTEGER NOT NULL,  -- Количество доступных поднятий в месяц
     description TEXT,
     extra_features JSONB,  -- Для редко используемых или будущих фич
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_subscription_plans_name ON subscription_plans(name);
@@ -329,16 +332,15 @@ CREATE INDEX idx_notifications_type ON notifications(type);
 
 CREATE TABLE reviews (
     id BIGSERIAL PRIMARY KEY,
-    listing_id BIGINT NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
-    from_user_id BIGINT NOT NULL REFERENCES users(id),
-    to_user_id BIGINT NOT NULL REFERENCES users(id),
+    booking_id BIGINT NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+    reviewer_id BIGINT NOT NULL REFERENCES users(id),
     rating INTEGER NOT NULL,
     text TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_reviews_listing_id ON reviews(listing_id);
-CREATE INDEX idx_reviews_to_user_id ON reviews(to_user_id);
+CREATE INDEX idx_reviews_listing_id ON reviews(booking_id);
+CREATE INDEX idx_reviews_to_user_id ON reviews(reviewer_id);
 
 
 
