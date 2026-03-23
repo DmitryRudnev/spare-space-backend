@@ -10,4 +10,7 @@ export class UserPrivateResponseDto extends UserPublicResponseDto {
 
   @ApiProperty({ type: Boolean, description: 'Включена ли двухфакторная аутентификация', example: false })
   twoFaEnabled: boolean;
+
+  @ApiProperty({ type: String, description: 'Дата обновления (ISO8601)', example: '2025-01-02T00:00:00.000Z' })
+  updatedAt: string;
 }

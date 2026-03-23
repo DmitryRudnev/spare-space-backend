@@ -13,21 +13,21 @@ export class UserMapper {
     dto.rating = user.rating;
     dto.verified = user.verified;
     dto.isOnline = user.isOnline;
-    dto.lastSeenAt = new Date(user.lastSeenAt).toISOString();
-    dto.createdAt = new Date(user.createdAt).toISOString();
+    dto.lastSeenAt = user.lastSeenAt.toISOString();
+    dto.createdAt = user.createdAt.toISOString();
     
     return dto;
   }
 
   static toPrivateResponseDto(user: User): UserPrivateResponseDto {
-    const baseDto = this.toPublicResponseDto(user);
     const dto = new UserPrivateResponseDto();
-    
+    const baseDto = this.toPublicResponseDto(user);
     Object.assign(dto, baseDto);
     
     dto.email = user.email;
     dto.phone = user.phone;
     dto.twoFaEnabled = user.twoFaEnabled;
+    dto.updatedAt = new Date(user.updatedAt).toISOString();
 
     return dto;
   }

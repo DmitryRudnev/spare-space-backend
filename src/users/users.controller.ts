@@ -74,7 +74,7 @@ export class UsersController {
 
 
   @UseGuards(JwtAuthGuard)
-  @Patch(':id')
+  @Patch('profile/me')
   @HttpCode(200)
   @ApiBearerAuth()
   @ApiOperation({
@@ -92,14 +92,10 @@ export class UsersController {
   @ApiBadRequestResponse({ description: 'Некорректные данные запроса' })
   @ApiConflictResponse({ description: 'Email или телефон уже используется' })
   async update(
-    @Param('id') id: string,
     @Body() updateUserDto: UpdateUserDto,
     @User('userId') currentUserId: number
   ): Promise<UserPrivateResponseDto> {
-    if (+id !== currentUserId) {
-      throw new UnauthorizedException('Access denied');
-    }
-    const user = await this.usersService.update(+id, updateUserDto);
+    const user = await this.usersService.update(currentUserId, updateUserDto);
     return UserMapper.toPrivateResponseDto(user);
   }
 }

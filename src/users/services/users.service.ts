@@ -1,67 +1,178 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DeepPartial, Repository } from 'typeorm';
 
 import { User } from '../../entities/user.entity';
 import { UserRole } from '../../entities/user-role.entity';
 import { UserRoleType } from '../../common/enums/user-role-type.enum';
-import { UpdateUserDto } from '../dto/requests/update-user.dto';
+import { RedisService } from '../../common/redis/redis.service';
 
 @Injectable()
 export class UsersService {
+  private readonly USER_PROFILE_CACHE_PREFIX = 'user:profile:';
+  private readonly USER_STATUS_CACHE_PREFIX = 'user:status:';
+  private readonly USER_ROLES_CACHE_PREFIX = 'user:roles:';
+  private readonly USER_PROFILE_CACHE_TTL_SEC = 3600; // 1 час; можно и больше, т. к. при любых изменениях ключ инвалидируется
+  private readonly USER_STATUS_CACHE_TTL_SEC = 3600; // аналогично предыдущему
+  private readonly USER_ROLES_CACHE_TTL_SEC = 3600; // аналогично предыдущему
+
   constructor(
     @InjectRepository(User) 
     private readonly userRepository: Repository<User>,
     @InjectRepository(UserRole) 
     private readonly userRoleRepository: Repository<UserRole>,
+    private readonly redisService: RedisService,
   ) {}
 
   async findById(userId: number): Promise<User> {
-    const user = await this.userRepository.findOneBy({ id: userId });
-    if (!user) {
+    // 1. Получаем профиль (все поля кроме isOnline, lastSeenAt)
+    const profileData = await this.redisService.getOrSet(
+      `${this.USER_PROFILE_CACHE_PREFIX}${userId}`,
+      this.USER_PROFILE_CACHE_TTL_SEC,
+      () => this.userRepository.findOne({
+        where: { id: userId },
+        select: {
+          id: true,
+          email: true,
+          phone: true,
+          firstName: true,
+          lastName: true,
+          patronymic: true,
+          passwordHash: true,
+          rating: true,
+          telegramId: true,
+          telegramChatId: true,
+          verified: true,
+          twoFaEnabled: true,
+          twoFaSecret: true,
+          twoFaRecoveryCodesHashes: true,
+          createdAt: true,
+          updatedAt: true,
+        }
+      }),
+      User
+    );
+    if (!profileData) {
       throw new NotFoundException(`User ${userId} not found`);
     }
-    return user;
+
+    // 2. Получаем статус (isOnline, lastSeenAt)
+    const statusData = await this.redisService.getOrSet(
+      `${this.USER_STATUS_CACHE_PREFIX}${userId}`,
+      this.USER_STATUS_CACHE_TTL_SEC,
+      () => this.userRepository.findOne({
+        where: { id: userId },
+        select: {
+          isOnline: true,
+          lastSeenAt: true,
+        }
+      }),
+      User
+    );
+    if (!statusData) {
+      throw new NotFoundException(`User ${userId} not found`);
+    }
+
+    // 3. Объединяем данные
+    const merged = {
+      ...profileData,
+      isOnline: statusData.isOnline,
+      lastSeenAt: statusData.lastSeenAt,
+    };
+
+    // 4. Возвращаем полноценный экземпляр User
+    return this.userRepository.create(merged);
   }
 
-  async userExists(userId: number): Promise<boolean> {
+  async findByEmail(email: string): Promise<User | null> {
+    return this.userRepository.findOneBy({ email });
+  }
+
+  async findByPhone(phone: string): Promise<User | null> {
+    return this.userRepository.findOneBy({ phone });
+  }
+
+  async exists(userId: number): Promise<boolean> {
     return this.userRepository.existsBy({ id: userId });
   }
 
-  async validateUserExistence(userId: number): Promise<void> {
-    if (! await this.userExists(userId)) {
+  async validateExistence(userId: number): Promise<void> {
+    if (! await this.exists(userId)) {
       throw new NotFoundException(`User ${userId} not found`);
     }
   }
+
+  async existsByEmail(email: string): Promise<boolean> {
+    return this.userRepository.existsBy({ email });
+  }
+
+  async existsByPhone(phone: string): Promise<boolean> {
+    return this.userRepository.existsBy({ phone });
+  }
+
+  async create(
+    firstName: string,
+    lastName: string,
+    phone: string,
+    email: string,
+    passwordHash: string,
+    patronymic?: string,
+  ): Promise<User> {
+    const data: DeepPartial<User> = {
+      firstName,
+      lastName,
+      phone,
+      email,
+      passwordHash,
+      patronymic,
+      rating: 0,
+    };
+
+    const user = this.userRepository.create(data);
+    return this.userRepository.save(user);
+  }
   
-  async update(userId: number, dto: UpdateUserDto): Promise<User> {
-    const user = await this.findById(userId);
-    
-    if (dto.firstName !== undefined) {
-      user.firstName = dto.firstName;
-    }
-    if (dto.lastName !== undefined) {
-      user.lastName = dto.lastName;
-    }
-    if (dto.patronymic !== undefined) {
-      user.patronymic = dto.patronymic;
-    }
-    if (dto.phone !== undefined) { 
-      const phoneExists = await this.userRepository.findOneBy({ phone: dto.phone });
-      if (phoneExists && phoneExists.id !== userId) {
+  async update(userId: number, update: Partial<User>): Promise<User> {
+    if (update.phone) {
+      const phoneExists = await this.userRepository.existsBy({ phone: update.phone });
+      if (phoneExists) {
         throw new ConflictException('Phone already exists');
       }
-      user.phone = dto.phone;
     }
-    if (dto.email !== undefined) {
-      const emailExists = await this.userRepository.findOneBy({ email: dto.email });
-      if (emailExists && emailExists.id !== userId) {
+    if (update.email) {
+      const emailExists = await this.userRepository.existsBy({ email: update.email });
+      if (emailExists) {
         throw new ConflictException('Email already exists');
       }
-      user.email = dto.email;
+    }
+    if (update.telegramId) {
+      const tgUserExists = await this.userRepository.existsBy({ telegramId: update.telegramId });
+      if (tgUserExists) {
+        throw new ConflictException('Telegram id already exists');
+      }
+    }
+    if (update.telegramChatId) {
+      const tgChatExists = await this.userRepository.existsBy({ telegramChatId: update.telegramChatId });
+      if (tgChatExists) {
+        throw new ConflictException('Telegram chat already exists');
+      }
     }
     
+    const user = await this.findById(userId);
+    await this.redisService.delete(`${this.USER_PROFILE_CACHE_PREFIX}${userId}`);
+    Object.assign(user, update);
     return this.userRepository.save(user);
+  }
+
+  async updateOnlineStatus(userId: number, isOnline: boolean): Promise<void> {
+    await this.userRepository.update(
+      { id: userId },
+      {
+        isOnline,
+        lastSeenAt: new Date(),
+      }
+    );
+    await this.redisService.delete(`${this.USER_STATUS_CACHE_PREFIX}${userId}`);
   }
 
   // ==========================================================================
@@ -69,11 +180,17 @@ export class UsersService {
   // ==========================================================================
 
   async getUserRoles(userId: number): Promise<UserRoleType[]> {
-    const roles = await this.userRoleRepository.find({
-      where: { user: { id: userId } },
-      select: { role: true }
-    });
-    return roles.map((userRole) => userRole.role);
+    return this.redisService.getOrSet<UserRoleType[]>(
+      `${this.USER_ROLES_CACHE_PREFIX}${userId}`,
+      this.USER_ROLES_CACHE_TTL_SEC,
+      async () => {
+        const roles = await this.userRoleRepository.find({
+          where: { user: { id: userId } },
+          select: { role: true }
+        });
+        return roles.map((userRole) => userRole.role);
+      }
+    );
   }
 
   async hasRole(userId: number, role: UserRoleType): Promise<boolean> {
@@ -91,6 +208,7 @@ export class UsersService {
       role 
     });
     await this.userRoleRepository.save(userRole);
+    await this.redisService.delete(`${this.USER_ROLES_CACHE_PREFIX}${userId}`);
   }
 
   async removeRole(userId: number, role: UserRoleType): Promise<void> {
@@ -98,6 +216,7 @@ export class UsersService {
       user: { id: userId }, 
       role 
     });
+    await this.redisService.delete(`${this.USER_ROLES_CACHE_PREFIX}${userId}`);
   }
 
   // ==========================================================================
@@ -110,65 +229,5 @@ export class UsersService {
       throw new NotFoundException(`User with telegram id ${telegramId} not found`);
     }
     return user;
-  }
-  
-  async updateTelegramId(userId: number, newTelegramId: number | null): Promise<User> {
-    const user = await this.findById(userId);
-    user.telegramId = newTelegramId;
-    return this.userRepository.save(user);
-  }
-
-  async updateTelegramChatId(userId: number, newTelegramChatId: number | null): Promise<User> {
-    const user = await this.findById(userId);
-    user.telegramChatId = newTelegramChatId;
-    return this.userRepository.save(user);
-  }
-
-  // ==========================================================================
-  // ================================== 2FA ===================================
-  // ==========================================================================
-
-  async getTwoFactorSecret(userId: number): Promise<string | null> {
-    const user = await this.findById(userId);
-    return user.twoFaSecret;
-  }
-
-  async setTwoFactorSecret(userId: number, secret: string | null): Promise<User> {
-    const user = await this.findById(userId);
-    user.twoFaSecret = secret;
-    return this.userRepository.save(user);
-  }
-
-  async getTwoFactorTempSecret(userId: number): Promise<string | null> {
-    const user = await this.findById(userId);
-    return user.twoFaTempSecret;
-  }
-
-  async setTwoFactorTempSecret(userId: number, secret: string | null): Promise<User> {
-    const user = await this.findById(userId);
-    user.twoFaTempSecret = secret;
-    return this.userRepository.save(user);
-  }
-
-  async isTwoFactorEnabled(userId: number): Promise<boolean> {
-    const user = await this.findById(userId);
-    return user.twoFaEnabled;
-  }
-
-  async setTwoFactorEnabled(userId: number, enabled: boolean): Promise<User> {
-    const user = await this.findById(userId);
-    user.twoFaEnabled = enabled;
-    return this.userRepository.save(user);
-  }
-
-  async getTwoFactorRecoveryCodesHashes(userId: number): Promise<string[] | null> {
-    const user = await this.findById(userId);
-    return user.twoFaRecoveryCodesHashes;
-  }
-
-  async setTwoFactorRecoveryCodesHashes(userId: number, hashes: string[] | null): Promise<User> {
-    const user = await this.findById(userId);
-    user.twoFaRecoveryCodesHashes = hashes;
-    return this.userRepository.save(user);
   }
 }
