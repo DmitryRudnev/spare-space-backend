@@ -1,23 +1,22 @@
 import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, JoinColumn, CreateDateColumn } from 'typeorm';
+import { Type } from 'class-transformer';
 import { User } from './user.entity';
-import { Listing } from './listing.entity';
+import { Booking } from './booking.entity';
 
 @Entity('reviews')
 export class Review {
   @PrimaryGeneratedColumn({ type: 'bigint' })
   id: number;
 
-  @ManyToOne(() => Listing, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'listing_id' })
-  listing: Listing;
+  @Type(() => Booking)
+  @ManyToOne(() => Booking, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'booking_id' })
+  booking: Booking;
 
+  @Type(() => User)
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'from_user_id' })
-  fromUser: User;
-
-  @ManyToOne(() => User, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'to_user_id' })
-  toUser: User;
+  @JoinColumn({ name: 'reviewer_id' })
+  reviewer: User;
 
   @Column({ type: 'int' })
   rating: number;
@@ -25,6 +24,7 @@ export class Review {
   @Column({ type: 'text', nullable: true })
   text: string | null;
 
+  @Type(() => Date)
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
 }

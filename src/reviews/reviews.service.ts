@@ -1,113 +1,221 @@
-import { Injectable, NotFoundException, UnauthorizedException, BadRequestException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { FindOptionsWhere, Not, Repository } from 'typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+
 import { Review } from '../entities/review.entity';
-import { Booking } from '../entities/booking.entity';
-import { User } from '../entities/user.entity';
-import { CreateReviewDto } from './dto/create-review.dto';
-import { SearchReviewsDto } from './dto/search-reviews.dto';
+import { CreateReviewDto } from './dto/requests/create-review.dto';
 import { BookingStatus } from '../common/enums/booking-status.enum';
+import { BookingsService } from '../bookings/bookings.service';
+import { ListingsService } from '../listings/listings.service';
+import { UsersService } from '../users/services/users.service';
+import { NotificationType } from '../common/enums/notification-type.enum';
+import { RedisService } from '../common/redis/redis.service';
+import { PaginatedReviewsDto } from './dto/paginated-reviews.dto';
 
 @Injectable()
 export class ReviewsService {
+  private readonly REVIEWS_LISTING_CACHE_PREFIX = 'reviews:listing:';
+  private readonly REVIEWS_USER_CACHE_PREFIX = 'reviews:user:';
+  private readonly REVIEWS_CACHE_TTL_SEC = 3600; // 1 час
+
   constructor(
     @InjectRepository(Review) private reviewRepository: Repository<Review>,
-    @InjectRepository(Booking) private bookingRepository: Repository<Booking>,
-    @InjectRepository(User) private userRepository: Repository<User>,
+    private readonly bookingsService: BookingsService,
+    private readonly listingsService: ListingsService,
+    private readonly usersService: UsersService,
+    private readonly eventEmitter: EventEmitter2,
+    private readonly redisService: RedisService,
   ) {}
 
-  private async validateBookingForReview(bookingId: number, userId: number) {
-    const booking = await this.bookingRepository.findOne({
-      where: { id: bookingId },
-      relations: ['listing', 'renter', 'listing.user'],
-    });
-    if (!booking) throw new NotFoundException('Booking not found');
-    if (booking.status !== BookingStatus.COMPLETED) throw new BadRequestException('Only completed bookings can be reviewed');
-
-    const isRenter = booking.renter.id === userId;
-    const isLandlord = booking.listing.user.id === userId;
-    if (!isRenter && !isLandlord) throw new UnauthorizedException('Not authorized to review this booking');
-
-    return booking;
+  // ==========================================================================
+  // ================================= REDIS ==================================
+  // ==========================================================================
+  
+  private getListingCacheKey(listingId: number, limit: number, offset: number): string {
+    return `${this.REVIEWS_LISTING_CACHE_PREFIX}${listingId}:limit:${limit}:offset:${offset}`;
   }
 
-  private async validateNoExistingReview(booking: Booking, userId: number) {
-    const toUserId = booking.renter.id === userId ? booking.listing.user.id : booking.renter.id;
-    
-    const existingReview = await this.reviewRepository.findOne({
-      where: {
-        listing: { id: booking.listing.id },
-        fromUser: { id: userId },
-        toUser: { id: toUserId },
+  private getUserCacheKey(userId: number, limit: number, offset: number): string {
+    return `${this.REVIEWS_USER_CACHE_PREFIX}${userId}:limit:${limit}:offset:${offset}`;
+  }
+
+  private async invalidateListingCache(listingId: number): Promise<void> {
+    const pattern = `${this.REVIEWS_LISTING_CACHE_PREFIX}${listingId}:*`;
+    await this.redisService.deleteByPattern(pattern);
+  }
+
+  private async invalidateUserCache(userId: number): Promise<void> {
+    const pattern = `${this.REVIEWS_USER_CACHE_PREFIX}${userId}:*`;
+    await this.redisService.deleteByPattern(pattern);
+  }
+
+  async findByListingWithCache(
+    listingId: number,
+    limit: number,
+    offset: number,
+  ): Promise<PaginatedReviewsDto> {
+    return this.redisService.getOrSet(
+      this.getListingCacheKey(listingId, limit, offset),
+      this.REVIEWS_CACHE_TTL_SEC,
+      () => this.findByListing(listingId, limit, offset),
+      PaginatedReviewsDto
+    );
+  }
+
+  async findByUserWithCache(
+    userId: number,
+    limit: number,
+    offset: number,
+  ): Promise<PaginatedReviewsDto> {
+    return this.redisService.getOrSet(
+      this.getUserCacheKey(userId, limit, offset),
+      this.REVIEWS_CACHE_TTL_SEC,
+      () => this.findByUser(userId, limit, offset),
+      PaginatedReviewsDto
+    );
+  }
+
+  async findByListing(
+    listingId: number,
+    limit: number,
+    offset: number,
+  ): Promise<PaginatedReviewsDto> {
+    const listing = await this.listingsService.findByIdWithCache(listingId);
+    const where: FindOptionsWhere<Review> = {
+      booking: { listing: { id: listingId } },
+      reviewer: Not(listing.user.id)
+    };
+    return this.findAll(where, limit, offset);
+  }
+  
+  async findByUser(
+    userId: number,
+    limit: number,
+    offset: number,
+  ): Promise<PaginatedReviewsDto> {
+    const where: FindOptionsWhere<Review> = {
+      booking: { listing: { user: { id: userId } } },
+      reviewer: Not(userId),
+    };
+    return this.findAll(where, limit, offset);
+  }
+
+  // ==========================================================================
+  // =========================== REPOSITORY METHODS ===========================
+  // ==========================================================================
+
+  async findAll(
+    where: FindOptionsWhere<Review>,
+    limit: number,
+    offset: number,
+  ): Promise<PaginatedReviewsDto> {
+    const [reviews, total] = await this.reviewRepository.findAndCount({
+      where,
+      relations: {
+        booking: { listing: true },
+        reviewer: true,
+      },
+      order: { createdAt: 'DESC' },
+      take: limit,
+      skip: offset,
+    });
+    return { reviews, total, limit, offset };
+  }
+
+  async countByUser(userId: number): Promise<number> {
+    return this.reviewRepository.count({
+      where: { booking: { listing: { user: { id: userId } } } }
+    });
+  }
+
+  async findById(reviewIid: number): Promise<Review> {
+    const review = await this.reviewRepository.findOne({
+      where: { id: reviewIid },
+      relations: {
+        booking: { listing: true },
+        reviewer: true,
       },
     });
-    if (existingReview) throw new ConflictException('Review already exists for this booking');
-  }
-
-  private async createReviewEntity(dto: CreateReviewDto, booking: Booking, userId: number) {
-    const toUserId = booking.renter.id === userId ? booking.listing.user.id : booking.renter.id;
-    
-    return this.reviewRepository.create({
-      listing: booking.listing,
-      fromUser: { id: userId },
-      toUser: { id: toUserId },
-      rating: dto.rating,
-      text: dto.text,
-    });
-  }
-
-  private buildSearchQuery(searchDto: SearchReviewsDto) {
-    const query = this.reviewRepository.createQueryBuilder('review')
-      .leftJoinAndSelect('review.fromUser', 'fromUser')
-      .leftJoinAndSelect('review.toUser', 'toUser')
-      .leftJoinAndSelect('review.listing', 'listing');
-
-    if (searchDto.toUserId) {
-      query.andWhere({ toUser: { id: searchDto.toUserId } });
+    if (!review) {
+      throw new NotFoundException('Review not found');
     }
-
-    if (searchDto.listingId) {
-      query.andWhere({ listing: { id: searchDto.listingId } });
-    }
-
-    if (searchDto.limit) {
-      query.limit(searchDto.limit);
-    }
-
-    if (searchDto.offset) {
-      query.offset(searchDto.offset);
-    }
-
-    return query;
-  }
-
-  async create(dto: CreateReviewDto, userId: number) {
-    const booking = await this.validateBookingForReview(dto.bookingId, userId);
-    await this.validateNoExistingReview(booking, userId);
-    
-    const review = await this.createReviewEntity(dto, booking, userId);
-    return this.reviewRepository.save(review);
-  }
-
-  async findAll(searchDto: SearchReviewsDto) {
-    const query = this.buildSearchQuery(searchDto);
-    const [reviews, total] = await query.getManyAndCount();
-    return { reviews, total, limit: searchDto.limit, offset: searchDto.offset };
-  }
-
-  async findOne(id: number) {
-    const review = await this.reviewRepository.findOne({
-      where: { id },
-      relations: ['fromUser', 'toUser', 'listing'],
-    });
-    if (!review) throw new NotFoundException('Review not found');
     return review;
   }
 
-  async getReviewsCountByUserId(userId: number): Promise<number> {
-    return await this.reviewRepository
-      .createQueryBuilder('review')
-      .where('review.toUser.id = :userId', { userId })
-      .getCount();
+  async create(reviewerId: number, dto: CreateReviewDto): Promise<Review> {
+    // Проверяем, что пользователь является участником бронирования и что это бронирование уже завершено
+    await this.bookingsService.validateUserParticipation(dto.bookingId, reviewerId);
+    const booking = await this.bookingsService.findById(dto.bookingId);
+    if (booking.status !== BookingStatus.COMPLETED) {
+      throw new BadRequestException('Only completed bookings can be reviewed');
+    }
+
+    // Проверяем, что пользователь ещё не оставлял отзыв по этому бронированию
+    const existingReview = await this.reviewRepository.findOne({ where: {
+      booking: { id: dto.bookingId },
+      reviewer: { id: reviewerId },
+    }});
+    if (existingReview) {
+      throw new ConflictException('Review already exists for this booking');
+    }
+    
+    // Создаём сам отзыв
+    const reviewEntity = this.reviewRepository.create({
+      booking: { id: dto.bookingId },
+      reviewer: { id: reviewerId },
+      rating: dto.rating,
+      text: dto.text,
+    });
+    await this.reviewRepository.save(reviewEntity);
+    const review = await this.findById(reviewEntity.id);
+
+    // Обновляем рейтинг пользователя
+    const userId = review.booking.listing.user.id;
+    const newRating = await this.calculateRatingForUser(userId);
+    await this.usersService.update(userId, {
+      rating: newRating
+    });
+    
+    // Эмитим уведомление
+    this.eventEmitter.emit('notification.signal', {
+      userId,
+      type: NotificationType.REVIEW_NEW,
+      referenceId: review.id,
+      payload: {
+        reviewId: review.id,
+        bookingId: booking.id,
+        listingId: booking.listing.id,
+        listingTitle: booking.listing.title,
+        fromUserName: `${review.reviewer.firstName} ${review.reviewer.lastName}`,
+        rating: review.rating,
+      },
+    });
+
+    // Инвалидируем кеш для listingId и userId (владельца объявления)
+    await this.invalidateListingCache(review.booking.listing.id);
+    await this.invalidateUserCache(userId);
+
+    return review;
+  }
+
+  // ==========================================================================
+  // ================================ PRIVATE =================================
+  // ==========================================================================
+
+  private async calculateRatingForUser(userId: number): Promise<number> {
+    const ratings = await this.reviewRepository.find({
+      where: { booking: { listing: { user: { id: userId } } } },
+      select: { rating: true }
+    });
+    if (ratings.length === 0) {
+      return 0;
+    }
+
+    let sum = 0;
+    for (const r of ratings) {
+      sum += r.rating;
+    }
+    return sum / ratings.length;
   }
 }
