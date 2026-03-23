@@ -8,7 +8,7 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
-
+import { Type } from 'class-transformer';
 import { CurrencyType } from '../common/enums/currency-type.enum';
 import { ListingPeriodType } from '../common/enums/listing-period-type.enum';
 import { ListingStatus } from '../common/enums/listing-status.enum';
@@ -21,6 +21,7 @@ export class Listing {
   @PrimaryGeneratedColumn({ type: 'bigint' })
   id: number;
 
+  @Type(() => User)
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })
   user: User;
@@ -53,6 +54,7 @@ export class Listing {
   })
   currency: CurrencyType;
 
+  @Type(() => Object)
   @Column({ type: 'geometry', srid: 4326, nullable: true })
   location: Point | null;
 
@@ -91,32 +93,65 @@ export class Listing {
   @Column({ default: 0 })
   favoritesCount: number;
 
+  @Type(() => Date)
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
 
+  @Type(() => Date)
   @UpdateDateColumn({ type: 'timestamptz' })
   updatedAt: Date;
 
-  get availabilityPeriodDates(): { startDate: Date; endDate: Date }[] {
-    return this.availability.map((periodString) => {
-      if (!/^\[[^,]+,[^,]+\)$/.test(periodString.trim())) {
-        throw new Error(`Invalid listing availability period stored in database: ${periodString.trim()}`);
-      }
-      const cleanStr = periodString.replace(/[\[\)]/g, '');
-      const parts = cleanStr.split(',').map(date => date.trim());
-      return {
-        startDate: new Date(parts[0]),
-        endDate: new Date(parts[1]),
-      };
-    });
+  /**
+   * Если availability в рантайме не string[], а string, то преобразует в string[]
+   * То есть, гарантированно возвращает массив строк периодов tstzrange
+   * Пример возврата: ["[2026-01-01T00:00:00Z,2026-01-07T00:00:00Z)", "[2026-01-14T00:00:00Z,2026-01-21T00:00:00Z)"]
+   */
+  get availabilityPeriodStrings(): string[] {
+    if (!this.availability) {
+      return [];
+    }
+    if (typeof this.availability === 'string') {
+      return this.parseStringAvailability(this.availability);
+    }
+    if (Array.isArray(this.availability)) {
+      return this.availability;
+    }
+    throw new Error(`Invalid availability type: ${typeof this.availability}`);
   }
 
-  isAvailablePeriod(periodStart: Date, periodEnd: Date): boolean {
-    const start = periodStart.getTime();
-    const end = periodEnd.getTime();
-    
-    return this.availabilityPeriodDates.some(({ startDate, endDate }) => {
-      return startDate.getTime() <= start && end < endDate.getTime();
-    });
+  /**
+   * Парсит availability, приводя список строк к списку объектов, содержащих даты доступности
+   */
+  get availabilityPeriodDates(): { start: Date; end: Date }[] {
+    return this.availabilityPeriodStrings.map(period => this.parseStringPeriod(period));
+  }
+
+  private parseStringAvailability(stringAvailability: string): string[] {
+    if (!stringAvailability || stringAvailability === '{}') {
+      return [];
+    }
+    const result = stringAvailability
+      .trim()
+      .replace(/^{/, '')
+      .replace(/}$/, '')
+      .replace(/\\"/g, '')
+      .replace(/"/g, '')
+      .match(/\[.+?\)/g);
+    return result ?? [];
+  }
+
+  private parseStringPeriod(stringPeriod: string): { start: Date; end: Date } {
+    const trimmed = stringPeriod.trim();
+    if (!/^\[[^,]+,[^,]+\)$/.test(trimmed)) {
+      throw new Error(`Invalid availability period stored in database: ${trimmed}`);
+    }
+    const parts = trimmed.slice(1, -1).split(',').map(s => s.trim());
+    if (parts.length !== 2) {
+      throw new Error(`Invalid availability period stored in database: ${stringPeriod}`);
+    }
+    return {
+      start: new Date(parts[0]),
+      end: new Date(parts[1]),
+    };
   }
 }
