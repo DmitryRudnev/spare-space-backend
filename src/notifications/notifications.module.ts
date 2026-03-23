@@ -7,6 +7,7 @@ import { UsersModule } from '../users/users.module';
 import { WebSocketModule } from '../websocket/websocket.module';
 import { DevicesModule } from '../devices/devices.module';
 import { TelegramModule } from '../telegram/telegram.module';
+import { BullQueueModule } from '../bull/bull.module';
 
 import { NotificationsController } from './notifications.controller';
 import { NotificationsService } from './services/notifications.service';
@@ -14,6 +15,7 @@ import { NotificationsListenerService } from './services/notifications-listener.
 import { FcmNotificationsService } from './services/fcm-notifications.service';
 import { ExpoNotificationsService } from './services/expo-notifications.service';
 import { NotificationMessageBuilder } from './services/notification-message-builder.service';
+import { NotificationsProcessor } from './services/notifications.processor';
 
 @Module({
   imports: [
@@ -21,7 +23,8 @@ import { NotificationMessageBuilder } from './services/notification-message-buil
     UsersModule, 
     WebSocketModule, 
     DevicesModule,
-    TelegramModule
+    TelegramModule,
+    BullQueueModule,
   ],
   controllers: [NotificationsController],
   providers: [
@@ -30,6 +33,7 @@ import { NotificationMessageBuilder } from './services/notification-message-buil
     FcmNotificationsService,
     ExpoNotificationsService,
     NotificationMessageBuilder,
+    NotificationsProcessor,
   ],
   exports: [NotificationsService],
 })
