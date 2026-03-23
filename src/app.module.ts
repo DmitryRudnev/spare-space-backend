@@ -23,6 +23,8 @@ import { FavoritesModule } from './favorites/favorites.module';
 import { QuestionsModule } from './questions/questions.module';
 import { DevicesModule } from './devices/devices.module';
 import { TwoFactorModule } from './two-factor/two-factor.module';
+import { RedisModule } from './common/redis/redis.module';
+import { BullQueueModule } from './bull/bull.module';
 
 @Module({
   imports: [
@@ -74,6 +76,8 @@ import { TwoFactorModule } from './two-factor/two-factor.module';
     QuestionsModule,
     DevicesModule,
     TwoFactorModule,
+    RedisModule,
+    BullQueueModule,
   ],
 })
 export class AppModule {}
