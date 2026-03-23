@@ -4,7 +4,9 @@ import {
   Column,
   CreateDateColumn,
 } from 'typeorm';
+import { Type } from 'class-transformer';
 import { CurrencyType } from '../common/enums/currency-type.enum';
+import { SubscriptionPlanStatus } from '../common/enums/subscription-plan-status.enum';
 
 @Entity('subscription_plans')
 export class SubscriptionPlan {
@@ -13,6 +15,13 @@ export class SubscriptionPlan {
 
   @Column({ type: 'varchar', length: 100, unique: true })
   name: string;
+
+  @Column({
+    type: 'enum',
+    enum: SubscriptionPlanStatus,
+    default: SubscriptionPlanStatus.ACTIVE,
+  })
+  status: SubscriptionPlanStatus;
 
   @Column({ type: 'decimal', precision: 26, scale: 16 })
   price: number;
@@ -39,6 +48,11 @@ export class SubscriptionPlan {
   @Column({ type: 'jsonb', nullable: true })
   extraFeatures: Record<string, string> | null;
 
+  @Type(() => Date)
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
+
+  @Type(() => Date)
+  @CreateDateColumn({ type: 'timestamptz' })
+  updatedAt: Date;
 }
