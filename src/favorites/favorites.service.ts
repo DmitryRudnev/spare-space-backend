@@ -82,7 +82,7 @@ export class FavoritesService {
    */
   async create(listingId: number, userId: number): Promise<Favorite> {
     // Проверяем существование и активность объявления
-    await this.listingsService.validateListingExistence(listingId);
+    await this.listingsService.validateExistence(listingId);
 
     // Проверяем, не добавлено ли уже в избранное
     const existingFavorite = await this.favoriteRepository.findOne({

@@ -41,7 +41,7 @@ export class TelegramProfileHandlerService {
 
   private async getRatingString(rating: number | null, userId: number): Promise<string> {
     if (rating) {
-      const reviewsCount = await this.reviewsService.getReviewsCountByUserId(userId);
+      const reviewsCount = await this.reviewsService.countByUser(userId);
       const reviewsWord = this.getReviewsWord(reviewsCount);
       return `${rating} (${reviewsCount} ${reviewsWord})`;
     }

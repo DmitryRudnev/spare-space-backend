@@ -19,7 +19,6 @@ import { WsAuthMiddleware } from './middlewares/ws-auth.middleware';
 import { ChatService } from '../chat/chat.service';
 import { MessageMapper } from '../chat/mappers/message.mapper';
 import { MessageResponseDto } from '../chat/dto/responses/message-response.dto';
-import { UserStatusService } from '../users/services/user-status.service';
 import { UsersService } from '../users/services/users.service';
 import { NotificationType } from '../common/enums/notification-type.enum';
 
@@ -68,7 +67,6 @@ export class MainWebSocketGateway implements OnGatewayInit, OnGatewayConnection,
     private readonly wsAuthMiddleware: WsAuthMiddleware,
     private readonly chatService: ChatService,
     private readonly usersService: UsersService,
-    private readonly userStatusService: UserStatusService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
@@ -101,7 +99,7 @@ export class MainWebSocketGateway implements OnGatewayInit, OnGatewayConnection,
     // 2. И это НЕ быстрое переподключение (таймера не было, юзер реально был Offline)
     const sockets = await this.server.in(userRoom).fetchSockets();
     if (sockets.length === 1 && !isReconnecting) {
-      await this.userStatusService.setOnline(userId);
+      await this.usersService.updateOnlineStatus(userId, true);
       this.notifyUserStatusUpdate(userId, true, new Date());
     }
   }
@@ -116,7 +114,7 @@ export class MainWebSocketGateway implements OnGatewayInit, OnGatewayConnection,
     // Если сокетов в комнате не осталось — планируем переход в офлайн
     if (sockets.length === 0) {
       const timer = setTimeout(async () => {
-        await this.userStatusService.setOffline(userId);
+        await this.usersService.updateOnlineStatus(userId, false);
         this.notifyUserStatusUpdate(userId, false, new Date());
         this.offlineTimers.delete(userId);
       }, this.OFFLINE_DELAY);
@@ -356,7 +354,7 @@ export class MainWebSocketGateway implements OnGatewayInit, OnGatewayConnection,
     try {
       const subscriberId = client.data.user.userId;
       const { userId: targetUserId } = data;
-      await this.usersService.validateUserExistence(targetUserId);
+      await this.usersService.validateExistence(targetUserId);
 
       client.join(`user:status:${targetUserId}`);      
       this.logger.log(`User ${subscriberId} joined room user:status:${targetUserId}`);

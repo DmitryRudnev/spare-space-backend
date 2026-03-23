@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { UsersService } from '../../../users/services/users.service';
-import { SubscriptionsService } from '../../../subscriptions/subscriptions.service';
+import { UserSubscriptionsService } from '../../../subscriptions//services/user-subscriptions.service';
 import { TelegramSenderService } from '../telegram-sender.service';
 import { UserSubscription } from '../../../entities/user-subscription.entity';
 import { CurrencyType } from 'src/common/enums/currency-type.enum';
@@ -11,19 +11,20 @@ export class TelegramSubscriptionHandlerService {
   constructor(
     private readonly telegramSenderService: TelegramSenderService,
     private readonly usersService: UsersService,
-    private readonly subscriptionsService: SubscriptionsService,
+    private readonly userSubscriptionsService: UserSubscriptionsService,
+
   ) {}
 
 
   async handle(chatId: number, userId: number): Promise<void> {
     try {
-      const subscription = await this.subscriptionsService.findActiveSubscription(userId);
-      
-      if (!subscription) {
+      const { subscriptions } = await this.userSubscriptionsService.findByUser(userId, 1, 0);
+      if (!subscriptions.length) {
         await this.sendNoSubscriptionMessage(chatId);
         return;
       }
-      
+
+      const subscription = subscriptions[0];
       const message = this.buildSubscriptionMessage(subscription);
       await this.telegramSenderService.sendMessage(chatId, message);
     } catch (error) {

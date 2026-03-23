@@ -25,7 +25,7 @@ export class TelegramAccountService {
    * @throws {NotFoundException} Если пользователь не найден
    */
   async generateTelegramLink(userId: number): Promise<string> {
-    await this.usersService.validateUserExistence(userId);
+    await this.usersService.validateExistence(userId);
 
     const botUsername = this.setupService.getBotUsername();
     const token = await this.verificationService.generateToken(userId);
@@ -53,8 +53,10 @@ export class TelegramAccountService {
       throw new ConflictException('Указанный Telegram аккаунт не привязан к пользователю');
     }
 
-    await this.usersService.updateTelegramId(userId, null);
-    await this.usersService.updateTelegramChatId(userId, null);
+    await this.usersService.update(userId, {
+      telegramId: null,
+      telegramChatId: null,
+    });
     this.logger.log(`Telegram аккаунт ${telegramId} отвязан от пользователя ${userId}`);
   }
 }

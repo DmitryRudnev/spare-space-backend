@@ -64,7 +64,7 @@ export class TelegramListingsHandlerService {
       limit: this.paginationService.getItemsPerPage(),
       offset: (page - 1) * this.paginationService.getItemsPerPage(),
     };
-    const result = await this.listingsService.findAll(searchDto, undefined, userId);
+    const result = await this.listingsService.findAllWithCache(searchDto, userId);
     const message = this.buildListingsMessage(result.listings, page, result.total);
     const keyboard = this.paginationService.createPaginationKeyboard(page, totalPages, 'listings');
     if (messageId) {
