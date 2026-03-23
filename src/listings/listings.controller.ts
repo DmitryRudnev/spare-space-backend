@@ -14,7 +14,7 @@ import {
   ApiBadRequestResponse,
 } from '@nestjs/swagger';
 
-import { ListingsService } from './listings.service';
+import { ListingsControllerHandler } from './listings.controller-handler';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { OptionalJwtGuard } from '../auth/optional-jwt.guard';
 import { User } from '../common/decorators/user.decorator';
@@ -29,7 +29,7 @@ import { ListingListResponseDto } from './dto/responses/listing-list-response.dt
 @ApiTags('Listings')
 @Controller('listings')
 export class ListingsController {
-  constructor(private readonly listingsService: ListingsService) {}
+  constructor(private readonly handler: ListingsControllerHandler) {}
 
   @Get()
   @HttpCode(200)
@@ -48,7 +48,7 @@ export class ListingsController {
     type: ListingListResponseDto
   })
   async findAll(@Query() searchDto: SearchListingsDto): Promise<ListingListResponseDto> {
-    const result = await this.listingsService.handleFindAllActive(searchDto);
+    const result = await this.handler.findAllActive(searchDto);
     return ListingMapper.toListResponseDto(
       result.listings,
       result.total,
@@ -58,13 +58,11 @@ export class ListingsController {
   }
 
 
-  @UseGuards(OptionalJwtGuard)
   @Get('user/:id')
   @HttpCode(200)
   @ApiOperation({
-    summary: 'Получение объявлений пользователя (авторизация опциональна)',
-    description: 'Возвращает список объявлений указанного пользователя с фильтрацией. ' +
-      'Аутентификация позволяет получить объявления со статусами DRAFT (если пользователь ищет свои объявления).'
+    summary: 'Получение объявлений пользователя (без авторизации)',
+    description: 'Возвращает список активных объявлений указанного пользователя с фильтрацией. '
   })
   @ApiParam({ name: 'id', description: 'ID пользователя', type: Number })
   @ApiQuery({
@@ -80,12 +78,44 @@ export class ListingsController {
   async findByUser(
     @Param('id') targetUserId: string,
     @Query() searchDto: SearchListingsDto,
-    @User('userId') userId?: number
   ): Promise<ListingListResponseDto> {
-    const result = await this.listingsService.handleFindByUser(
+    const result = await this.handler.findByUser(
       searchDto,
       Number(targetUserId),
-      userId,
+    );
+    return ListingMapper.toListResponseDto(
+      result.listings,
+      result.total,
+      result.limit,
+      result.offset
+    );
+  }
+
+
+  @UseGuards(JwtAuthGuard)
+  @Get('my')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Получение собственных объявлений',
+    description: 'Возвращает список объявлений текущего пользователя с фильтрацией(в том числе по статусу).'
+  })
+  @ApiQuery({
+    name: 'searchDto',
+    type: SearchListingsDto,
+    required: false,
+    description: 'Критерии поиска для объявлений пользователя'
+  })
+  @ApiOkResponse({
+    description: 'Пагинированный список объявлений пользователя',
+    type: ListingListResponseDto
+  })
+  async findMy(
+    @Query() searchDto: SearchListingsDto,
+    @User('userId') currentUserId: number,
+  ): Promise<ListingListResponseDto> {
+    const result = await this.handler.findMy(
+      searchDto,
+      currentUserId,
     );
     return ListingMapper.toListResponseDto(
       result.listings,
@@ -114,7 +144,7 @@ export class ListingsController {
     @Param('id') listingId: string, 
     @User('userId') userId?: number
   ): Promise<ListingDetailResponseDto> {
-    const listing = await this.listingsService.handleFindById(Number(listingId), userId);
+    const listing = await this.handler.findById(Number(listingId), userId);
     return ListingMapper.toDetailResponseDto(listing);
   }
 
@@ -138,7 +168,7 @@ export class ListingsController {
     @Body() createListingDto: CreateListingDto,
     @User('userId') userId: number
   ): Promise<ListingDetailResponseDto> {
-    const listing = await this.listingsService.handleCreate(createListingDto, userId);
+    const listing = await this.handler.create(createListingDto, userId);
     return ListingMapper.toDetailResponseDto(listing);
   }
 
@@ -165,7 +195,7 @@ export class ListingsController {
     @Body() updateListingDto: UpdateListingDto,
     @User('userId') userId: number
   ): Promise<ListingDetailResponseDto> {
-    const listing = await this.listingsService.handleUpdate(Number(listingId), updateListingDto, userId);
+    const listing = await this.handler.update(Number(listingId), updateListingDto, userId);
     return ListingMapper.toDetailResponseDto(listing);
   }
 
@@ -184,6 +214,6 @@ export class ListingsController {
   @ApiUnauthorizedResponse({ description: 'Не авторизован' })
   @ApiNotFoundResponse({ description: 'Объявление не найдено' })
   async delete(@Param('id') listingId: string, @User('userId') userId: number): Promise<void> {
-    return this.listingsService.handleDelete(Number(listingId), userId);
+    return this.handler.delete(Number(listingId), userId);
   }
 }

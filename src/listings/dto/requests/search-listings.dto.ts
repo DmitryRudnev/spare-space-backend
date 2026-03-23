@@ -1,4 +1,4 @@
-import { ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   IsOptional,
@@ -13,8 +13,18 @@ import {
 import { CurrencyType } from '../../../common/enums/currency-type.enum';
 import { ListingPeriodType } from '../../../common/enums/listing-period-type.enum';
 import { ListingType } from '../../../common/enums/listing-type.enum';
+import { ListingStatus } from '../../../common/enums/listing-status.enum';
 
 export class SearchListingsDto {
+  @ApiPropertyOptional({
+    enum: ListingStatus,
+    description: 'Статус объявления; доступно только для эндпоинта GET listings/my',
+    example: ListingStatus.PENDING_APPROVAL
+  })
+  @IsOptional()
+  @IsEnum(ListingStatus)
+  status?: ListingStatus;
+  
   @ApiPropertyOptional({
     enum: ListingType,
     description: 'Тип объявления',
@@ -111,27 +121,23 @@ export class SearchListingsDto {
   @IsObject()
   amenities?: Record<string, string>;
 
-  @ApiPropertyOptional({
+  @ApiProperty({
     type: Number,
     minimum: 1,
-    default: 10,
     description: 'Лимит записей',
     example: 10
   })
-  @IsOptional()
   @IsNumber()
   @Min(1)
-  limit: number = 10;
+  limit: number;
 
-  @ApiPropertyOptional({
+  @ApiProperty({
     type: Number,
     minimum: 0,
-    default: 0,
     description: 'Смещение',
     example: 0
   })
-  @IsOptional()
   @IsNumber()
   @Min(0)
-  offset: number = 0;
+  offset: number;
 }

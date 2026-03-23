@@ -23,7 +23,7 @@ export class ListingMapper {
     dto.viewsCount = listing.viewsCount;
     dto.repostsCount = listing.repostsCount;
     dto.favoritesCount = listing.favoritesCount;
-    dto.createdAt = new Date(listing.createdAt).toISOString();
+    dto.createdAt = listing.createdAt.toISOString();
     return dto;
   }
 
@@ -46,8 +46,8 @@ export class ListingMapper {
     dto.viewsCount = listing.viewsCount;
     dto.repostsCount = listing.repostsCount;
     dto.favoritesCount = listing.favoritesCount;
-    dto.createdAt = new Date(listing.createdAt).toISOString();
-    dto.updatedAt = new Date(listing.updatedAt).toISOString();
+    dto.createdAt = listing.createdAt.toISOString();
+    dto.updatedAt = listing.updatedAt.toISOString();
 
     if (listing.location?.coordinates) {
       dto.location = {
@@ -57,23 +57,11 @@ export class ListingMapper {
     } else {
       dto.location = null;
     }
-
-    let availabilityArray;
-    if (!listing.availability) {
-      availabilityArray = [];
-    }
-    else if (Array.isArray(listing.availability)) {
-      availabilityArray = listing.availability;
-    }
-    else if (typeof listing.availability === 'string') {
-      availabilityArray = this.parseStringAvailability(String(listing.availability));
-    }
-    else {
-      throw new Error(`Failed to parse availability with type '${typeof listing.availability}'`);
-    }
-    dto.availability = availabilityArray.map(periodStr => {
-      return this.parsePeriodString(periodStr);
-    });
+    
+    dto.availability = listing.availabilityPeriodDates.map(period => ({
+      start: period.start.toISOString(),
+      end: period.end.toISOString(),
+    }));
 
     return dto;
   }
@@ -91,34 +79,5 @@ export class ListingMapper {
     dto.limit = limit;
     dto.offset = offset;
     return dto;
-  }
-
-
-  private static parseStringAvailability(stringAvailability: string): string[] {
-    if (!stringAvailability || stringAvailability === '{}') return [];
-
-    const result = stringAvailability
-      .replace(/^{/, '')
-      .replace(/}$/, '')
-      .replace(/\\"/g, '')
-      .replace(/"/g, '')
-      .match(/\[.*?\)/g);
-
-    return result ?? [];
-  }
-
-
-  private static parsePeriodString(periodString: string): { start: string; end: string } {
-    if (!periodString || periodString === '[]') {
-      throw new Error('Invalid period string');
-    }
-    const cleanStr = periodString.replace(/[\[\)]/g, '').trim();
-    const parts = cleanStr.split(',').map(date => date.trim());
-    if (parts.length !== 2) {
-      throw new Error(`Invalid availability period format: ${periodString}`);
-    }
-    const start = new Date(parts[0]).toISOString();
-    const end = new Date(parts[1]).toISOString();
-    return { start, end };
   }
 }

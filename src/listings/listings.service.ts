@@ -8,112 +8,110 @@ import { Listing } from '../entities/listing.entity';
 import { ViewHistory } from '../entities/view-history.entity';
 import { ListingStatus } from '../common/enums/listing-status.enum';
 import { UserRoleType } from '../common/enums/user-role-type.enum';
+import { ListingType } from '../common/enums/listing-type.enum';
+import { RedisService } from '../common/redis/redis.service';
 
 import { CreateListingDto } from './dto/requests/create-listing.dto';
 import { UpdateListingDto } from './dto/requests/update-listing.dto';
 import { SearchListingsDto } from './dto/requests/search-listings.dto';
-
+import { PaginatedListingsDto } from './dto/paginated-listings.dto';
 
 @Injectable()
 export class ListingsService {
+  private readonly LISTING_CACHE_TTL_SEC = 3600; // 1 час
+  private readonly USER_LISTINGS_CACHE_TTL_SEC = 3600; // 1 час
+  private readonly LISTINGS_LIST_CACHE_TTL_SEC = 900; // 15 мин
+
   constructor(
     @InjectRepository(Listing) private readonly listingRepository: Repository<Listing>,
     @InjectRepository(ViewHistory) private readonly viewHistoryRepository: Repository<ViewHistory>,
     private readonly usersService: UsersService,
+    private readonly redisService: RedisService,
   ) {}
 
-
   // ==========================================================================
-  // =============================== USE CASES ================================
+  // ================================= REDIS ==================================
   // ==========================================================================
 
+  private getListingCacheKey(listingId: number): string {
+    return `listing:${listingId}`;
+  }
 
-  async handleFindAllActive(
+  private getTypeListingsCacheKey(type: ListingType, limit: number, offset: number): string {
+    return `listings:${type}:limit:${limit}:offset:${offset}`;
+  }
+
+  private getUserActiveListingsCacheKey(userId: number, limit: number, offset: number): string {
+    return `user:${userId}:listings:active:limit:${limit}:offset:${offset}`;
+  }
+
+  private getUserActiveListingsPattern(userId: number): string {
+    return `user:${userId}:listings:active:*`;
+  }
+
+  async findAllWithCache(
     searchDto: SearchListingsDto,
-  ): Promise<{ listings: Listing[]; total: number; limit: number; offset: number }> {
-    const allowedStatuses = [ListingStatus.ACTIVE];
-    return this.findAll(searchDto, allowedStatuses);
-  }
-
-
-  async handleFindByUser(
-    searchDto: SearchListingsDto,
-    targetUserId: number,
-    currentUserId?: number,
-  ): Promise<{ listings: Listing[]; total: number; limit: number; offset: number }> {
-    const allowedStatuses = currentUserId === targetUserId
-      ? undefined  // любой статус
-      : [ListingStatus.ACTIVE];
-    
-    return this.findAll(searchDto, allowedStatuses, targetUserId);
-  }
-
-
-  async handleFindById(listingId: number, currentUserId?: number): Promise<Listing> {
-    const listing = await this.findById(listingId);
-    if (listing.status !== ListingStatus.ACTIVE && currentUserId !== Number(listing.user.id)) {
-      throw new UnauthorizedException('Not authorized to see this listing');
+    userId?: number,
+  ): Promise<PaginatedListingsDto> {
+    if (userId !== undefined) {
+      await this.usersService.validateExistence(userId);
     }
-    if (currentUserId !== undefined) {
-      await this.saveViewToHistory(listingId, currentUserId);
+
+    // Кэш для активных объявлений конкретного пользователя (без фильтров)
+    if (this.canCacheUserActiveListings(userId, searchDto)) {
+      return this.redisService.getOrSet(
+        this.getUserActiveListingsCacheKey(userId!, searchDto.limit, searchDto.offset),
+        this.USER_LISTINGS_CACHE_TTL_SEC,
+        () => this.findAll(searchDto, userId),
+        PaginatedListingsDto
+      );
     }
-    return listing;
+
+    // Кэш для активных объявлений с единственным фильтром - типом
+    if (this.canCacheTypeListings(userId, searchDto)) {
+      return this.redisService.getOrSet(
+        this.getTypeListingsCacheKey(searchDto.type!, searchDto.limit, searchDto.offset),
+        this.LISTINGS_LIST_CACHE_TTL_SEC,
+        () => this.findAll(searchDto, userId),
+        PaginatedListingsDto
+      );
+    }
+
+    // Обычный запрос без кэширования
+    return this.findAll(searchDto, userId);
   }
 
-
-  async handleCreate(createDto: CreateListingDto, currentUserId: number): Promise<Listing> {
-    return this.create(currentUserId, createDto);
+  async findByIdWithCache(listingId: number): Promise<Listing> {
+    return this.redisService.getOrSet(
+      this.getListingCacheKey(listingId),
+      this.LISTING_CACHE_TTL_SEC,
+      () => this.findById(listingId),
+      Listing
+    );
   }
-
-  
-  async handleUpdate(listingId: number, updateDto: UpdateListingDto, currentUserId: number): Promise<Listing> {
-    await this.validateListingOwnership(listingId, currentUserId);
-    return this.update(listingId, updateDto);
-  }
-
-  
-  async handleDelete(listingId: number, userId: number): Promise<void> {
-    await this.validateListingOwnership(listingId, userId);
-    await this.updateStatus(listingId, ListingStatus.INACTIVE);
-  }
-
 
   // ==========================================================================
   // =============================== PUBLIC API ===============================
   // ==========================================================================
 
-
   async findAll(
     searchDto: SearchListingsDto,
-    statuses?: ListingStatus[],
     userId?: number,
-  ): Promise<{ listings: Listing[]; total: number; limit: number; offset: number }> {
-    if (userId !== undefined) {
-      await this.usersService.validateUserExistence(userId);
-    }
-    const [listings, total] = await this.buildSearchQuery(
-      searchDto,
-      statuses,
-      userId,
-    ).getManyAndCount();
-
+  ): Promise<PaginatedListingsDto> {
+    const [listings, total] = await this.buildSearchQuery(searchDto, userId).getManyAndCount();
     return { listings, total, limit: searchDto.limit, offset: searchDto.offset };
   }
-
 
   async findById(listingId: number): Promise<Listing> {
     const listing = await this.listingRepository.findOne({
       where: { id: listingId },
-      relations: {
-        user: true
-      }
+      relations: { user: true },
     });
     if (!listing) {
       throw new NotFoundException('Listing not found');
     }
     return listing;
   }
-
 
   async create(userId: number, createDto: CreateListingDto): Promise<Listing> {
     const user = await this.usersService.findById(userId);
@@ -125,19 +123,42 @@ export class ListingsService {
       await this.usersService.addRole(userId, UserRoleType.LANDLORD);
     }
 
+    // Инвалидируем кэш списка активных объявлений пользователя
+    await this.redisService.deleteByPattern(this.getUserActiveListingsPattern(userId));  // удалить, когда при создании объявления будут иметь статуст DRAFT, а не ACTIVE, как это сейчас
+
     return this.listingRepository.save(listing);
   }
-
 
   async update(listingId: number, updateDto: UpdateListingDto): Promise<Listing> {
-    const listing = await this.findById(listingId);
+    const listing = await this.findByIdWithCache(listingId);
     const updatedData = this.prepareListingData(updateDto, listing);
-    Object.assign(listing, updatedData);
-    return this.listingRepository.save(listing);
-    // const updatedListing = this.listingRepository.create(updatedData);
-    // return this.listingRepository.save(updatedListing);
+    const updatedListing = this.listingRepository.create(updatedData);
+
+    // Инвалидация конкретного объявления
+    await this.redisService.delete(this.getListingCacheKey(listingId));
+    // Инвалидация списка объявлений пользователя
+    await this.redisService.deleteByPattern(this.getUserActiveListingsPattern(listing.user.id));
+
+    return this.listingRepository.save(updatedListing);
   }
 
+  async updateStatus(listingId: number, newStatus: ListingStatus): Promise<void> {
+    const listing = await this.findByIdWithCache(listingId);
+    const prevStatus = listing.status;
+    if (prevStatus === newStatus) {
+      return;
+    }
+
+    listing.status = newStatus;
+    await this.listingRepository.save(listing);
+
+    // Инвалидация конкретного объявления
+    await this.redisService.delete(this.getListingCacheKey(listingId));
+    // Инвалидация списка объявлений пользователя
+    if (prevStatus === ListingStatus.ACTIVE || newStatus === ListingStatus.ACTIVE) {
+      await this.redisService.deleteByPattern(this.getUserActiveListingsPattern(listing.user.id));
+    }
+  }
 
   async countByUser(
     userId: number,
@@ -152,18 +173,15 @@ export class ListingsService {
     return await this.listingRepository.countBy(where);
   }
 
-  
   async exists(listingId: number): Promise<boolean> {
     return this.listingRepository.existsBy({ id: listingId });
   }
   
-
-  async validateListingExistence(listingId: number): Promise<void> {
+  async validateExistence(listingId: number): Promise<void> {
     if (! await this.exists(listingId)) {
-      throw new NotFoundException('Listing not found');
+      throw new NotFoundException(`Listing ${listingId} not found`);
     }
   }
-
 
   async validateListingOwnership(listingId: number, userId: number): Promise<void> {
     const exists = await this.listingRepository.exists({
@@ -177,28 +195,21 @@ export class ListingsService {
     }
   }
 
-
-  async updateStatus(listingId: number, newStatus: ListingStatus): Promise<void> {
-    const listing = await this.findById(listingId);
-    listing.status = newStatus;
+  async updateViewHistory(listingId: number, userId: number): Promise<void> {
+    await this.usersService.validateExistence(userId);
+    const listing = await this.findByIdWithCache(listingId);
+    listing.viewsCount += 1;
     await this.listingRepository.save(listing);
-  }
 
-
-  async saveViewToHistory(listingId: number, userId: number) {
-    await this.validateListingExistence(listingId);
-    await this.usersService.validateUserExistence(userId);
     await this.viewHistoryRepository.insert({ 
       user: { id: userId }, 
       listing: { id: listingId }, 
     });
   }
 
-
   // ==========================================================================
   // ================================ PRIVATE =================================
   // ==========================================================================
-
 
   private prepareListingData(
     dto: CreateListingDto | UpdateListingDto,
@@ -225,7 +236,7 @@ export class ListingsService {
       data.amenities = dto.amenities;
     }
     if (dto.availability !== undefined) {
-      data.availability = dto.availability.map((interval) => `[${interval.start},${interval.end})`);
+      data.availability = dto.availability.map((interval) => `[${interval.start.toISOString()},${interval.end.toISOString()})`);
     }
     return data;
   }
@@ -233,18 +244,17 @@ export class ListingsService {
   
   private buildSearchQuery(
     searchDto: SearchListingsDto,
-    statuses?: ListingStatus[],
     userId?: number
   ): SelectQueryBuilder<Listing> {
     const query = this.listingRepository
       .createQueryBuilder('listing')
       .leftJoinAndSelect('listing.user', 'user');
 
-    if (statuses?.length) {
-      query.andWhere('listing.status IN (:...statuses)', { statuses });
-    }
     if (userId !== undefined) {
       query.andWhere('listing.user_id = :userId', { userId });
+    }
+    if (searchDto.status !== undefined) {
+      query.andWhere('listing.status = :status', { status: searchDto.status });
     }
     if (searchDto.type !== undefined) {
       query.andWhere('listing.type = :type', { type: searchDto.type });
@@ -280,5 +290,33 @@ export class ListingsService {
     query.orderBy('listing.updated_at', 'DESC').limit(searchDto.limit).offset(searchDto.offset);
 
     return query;
+  }
+
+  private canCacheUserActiveListings(
+    userId: number | undefined,
+    searchDto: SearchListingsDto,
+  ): boolean {
+    return userId !== undefined &&
+           searchDto.status === ListingStatus.ACTIVE &&
+           this.hasNoFilters(searchDto);
+  }
+
+  private canCacheTypeListings(
+    userId: number | undefined,
+    searchDto: SearchListingsDto,
+  ): boolean {
+    return userId === undefined &&
+           searchDto.status === ListingStatus.ACTIVE &&
+           this.hasOnlyTypeFilter(searchDto);
+  }
+
+  private hasNoFilters(dto: SearchListingsDto): boolean {
+    const { limit, offset, status, ...rest } = dto;
+    return Object.values(rest).every(val => val === undefined);
+  }
+
+  private hasOnlyTypeFilter(dto: SearchListingsDto): boolean {
+    const { limit, offset, status, type, ...rest } = dto;
+    return type !== undefined && Object.values(rest).every(val => val === undefined);
   }
 }

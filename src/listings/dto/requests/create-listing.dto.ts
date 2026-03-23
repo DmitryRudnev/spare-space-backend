@@ -7,7 +7,7 @@ import {
   IsArray,
   IsObject,
   IsEnum,
-  IsISO8601,
+  IsDate,
   IsUrl,
   Min,
   Max,
@@ -43,18 +43,18 @@ export class AvailabilityPeriodDto {
     description: 'Дата начала доступности (ISO8601)',
     example: '2025-01-01T00:00:00.000Z'
   })
-  @IsString()
-  @IsISO8601({ strict: true })
-  start: string;
+  @Type(() => Date)
+  @IsDate()
+  start: Date;
 
   @ApiProperty({
     type: String,
     description: 'Дата окончания доступности (ISO8601)',
     example: '2025-02-01T00:00:00.000Z'
   })
-  @IsString()
-  @IsISO8601({ strict: true })
-  end: string;
+  @Type(() => Date)
+  @IsDate()
+  end: Date;
 }
 
 export class CreateListingDto {
