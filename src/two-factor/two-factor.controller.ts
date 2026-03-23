@@ -85,7 +85,7 @@ export class TwoFactorController {
     type: TwoFactorStatusResponseDto,
   })
   async status(@User('userId') userId: number): Promise<TwoFactorStatusResponseDto> {
-    const enabled = await this.usersService.isTwoFactorEnabled(userId);
+    const enabled = (await this.usersService.findById(userId)).twoFaEnabled;
     return { enabled };
   }
 }

@@ -2,12 +2,10 @@ import {
   Entity,
   Column,
   PrimaryGeneratedColumn,
-  OneToMany,
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { UserRoleType } from '../common/enums/user-role-type.enum';
-import { UserRole } from './user-role.entity';
+import { Type } from 'class-transformer';
 
 @Entity('users')
 export class User {
@@ -38,6 +36,7 @@ export class User {
   @Column({ default: false })
   isOnline: boolean;
 
+  @Type(() => Date)
   @CreateDateColumn({ type: 'timestamptz' })
   lastSeenAt: Date;
 
@@ -56,22 +55,14 @@ export class User {
   @Column({ type: 'text', nullable: true })
   twoFaSecret: string | null;
 
-  @Column({ type: 'text', nullable: true })
-  twoFaTempSecret: string | null;
-
   @Column({ type: 'jsonb', nullable: true })
   twoFaRecoveryCodesHashes: string[] | null;
 
+  @Type(() => Date)
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
 
+  @Type(() => Date)
   @UpdateDateColumn({ type: 'timestamptz' })
   updatedAt: Date;
-
-  @OneToMany(() => UserRole, (userRole) => userRole.user)
-  userRoles: UserRole[];
-
-  get roles(): UserRoleType[] {
-    return this.userRoles?.map((userRole) => userRole.role) || [];
-  }
 }

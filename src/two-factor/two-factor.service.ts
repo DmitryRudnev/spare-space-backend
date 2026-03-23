@@ -9,6 +9,7 @@ import * as bcrypt from 'bcrypt';
 import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from 'crypto';
 
 import { UsersService } from '../users/services/users.service';
+import { RedisService } from '../common/redis/redis.service';
 
 @Injectable()
 export class TwoFactorService {
@@ -18,17 +19,20 @@ export class TwoFactorService {
   private readonly appName: string;
   private readonly recoveryCodesCount = 10;
   private readonly recoveryCodeLength = 10; // hex chars
+  private readonly TEMP_2FA_SECRET_PREFIX = '2fa:temp:';
+  private readonly TEMP_2FA_SECRET_TTL_SEC = 3600; // 1 час
 
   constructor(
-    private readonly usersService: UsersService,
     private readonly configService: ConfigService,
+    private readonly usersService: UsersService,
+    private readonly redisService: RedisService,
   ) {
     const secret = this.configService.get<string>('TWO_FA_ENCRYPTION_SECRET');
     if (!secret) {
       throw new Error('TWO_FA_ENCRYPTION_SECRET is missing in configuration');
     }
     this.key = scryptSync(secret, 'salt', 32);
-    this.appName = this.configService.get<string>('APP_NAME', 'Spare_Space');
+    this.appName = this.configService.getOrThrow<string>('APP_NAME');
   }
 
   /**
@@ -51,7 +55,11 @@ export class TwoFactorService {
     });
 
     // Save temporary secret (plaintext - will be used for verification before enabling)
-    await this.usersService.setTwoFactorTempSecret(userId, secret);
+    await this.redisService.set(
+      `${this.TEMP_2FA_SECRET_PREFIX}${userId}`,
+      secret,
+      this.TEMP_2FA_SECRET_TTL_SEC
+    );
 
     return { secret, otpauthUrl };
   }
@@ -69,9 +77,9 @@ export class TwoFactorService {
       throw new BadRequestException('2FA is already enabled');
     }
 
-    const tempSecret = user.twoFaTempSecret;
+    const tempSecret: string | undefined = await this.redisService.get(`${this.TEMP_2FA_SECRET_PREFIX}${userId}`);
     if (!tempSecret) {
-      throw new BadRequestException('No temporary 2FA secret found. Generate one first.');
+      throw new BadRequestException('Temporary 2FA secret not found or expired.');
     }
 
     // Verify the code against the temporary secret
@@ -82,14 +90,16 @@ export class TwoFactorService {
 
     // Encrypt and permanently store the secret
     const encryptedSecret = this.encrypt(tempSecret);
-    await this.usersService.setTwoFactorSecret(userId, encryptedSecret);
-    await this.usersService.setTwoFactorEnabled(userId, true);
+    await this.usersService.update(userId, {
+      twoFaSecret: encryptedSecret,
+      twoFaEnabled: true,
+    });
 
     // Generate and store recovery codes
     const recoveryCodes = await this.generateAndStoreRecoveryCodes(userId);
 
     // Clear temporary secret
-    await this.usersService.setTwoFactorTempSecret(userId, null);
+    await this.redisService.delete(`${this.TEMP_2FA_SECRET_PREFIX}${userId}`);
 
     return { recoveryCodes };
   }
@@ -118,10 +128,11 @@ export class TwoFactorService {
     }
 
     // Clear all 2FA related fields
-    await this.usersService.setTwoFactorSecret(userId, null);
-    await this.usersService.setTwoFactorEnabled(userId, false);
-    await this.usersService.setTwoFactorRecoveryCodesHashes(userId, null);
-    await this.usersService.setTwoFactorTempSecret(userId, null);
+    await this.usersService.update(userId, {
+      twoFaEnabled: false,
+      twoFaSecret: null,
+      twoFaRecoveryCodesHashes: null,
+    });
   }
 
   /**
@@ -161,7 +172,9 @@ export class TwoFactorService {
         // Remove the used recovery code
         const newHashes = [...hashes];
         newHashes.splice(i, 1);
-        await this.usersService.setTwoFactorRecoveryCodesHashes(userId, newHashes);
+        await this.usersService.update(userId, {
+          twoFaRecoveryCodesHashes: newHashes,
+        });
         return true;
       }
     }
@@ -182,7 +195,9 @@ export class TwoFactorService {
       hashedCodes.push(await this.hash(code));
     }
 
-    await this.usersService.setTwoFactorRecoveryCodesHashes(userId, hashedCodes);
+    await this.usersService.update(userId, {
+      twoFaRecoveryCodesHashes: hashedCodes,
+    });
     return plainCodes;
   }
 
