@@ -10,10 +10,10 @@ export class VerifyTwoFactorDto {
   twoFactorToken: string;
 
   @ApiProperty({
-    description: '6-значный код из приложения аутентификатора',
+    description: '6-значный код из приложения аутентификатора или 10-значный код восстановления',
     example: '123456',
     minLength: 6,
-    maxLength: 6,
+    maxLength: 10,
   })
   @IsString()
   @Length(6, 10)

@@ -7,13 +7,13 @@ import { UsersService } from '../users/services/users.service';
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
-    private configService: ConfigService,
     private userService: UsersService,
+    configService: ConfigService,
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: configService.get('JWT_SECRET'),
+      secretOrKey: configService.getOrThrow('JWT_SECRET'),
     });
   }
 
@@ -21,18 +21,15 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     if (payload.type === '2fa') {
       throw new UnauthorizedException('Invalid token type');
     }
+
     const userId = parseInt(payload.sub, 10);
-    if (!userId || isNaN(userId)) {
+    if (!userId) {
       throw new UnauthorizedException('Invalid token payload');
     }
 
-    const user = await this.userService.findById(userId);
-    if (!user) {
-      throw new UnauthorizedException('User not found');
-    }
-
+    await this.userService.validateExistence(userId);
     const roles = await this.userService.getUserRoles(userId);
-    if (!roles || roles.length === 0) {
+    if (!roles?.length) {
       throw new UnauthorizedException('User has no assigned roles');
     }
 

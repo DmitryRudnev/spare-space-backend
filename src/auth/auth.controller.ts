@@ -1,7 +1,6 @@
 import { Controller, Post, Body, HttpCode, BadRequestException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody, ApiCreatedResponse, ApiOkResponse, ApiNoContentResponse, ApiUnauthorizedResponse, ApiBadRequestResponse, ApiConflictResponse } from '@nestjs/swagger';
 
-import { JwtAuthGuard } from './jwt-auth.guard';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/requests/login.dto';
 import { RegisterDto } from './dto/requests/register.dto';
@@ -81,7 +80,7 @@ export class AuthController {
   })
   @ApiBadRequestResponse({ description: 'Некорректный номер телефона' })
   async checkPhoneLogin(@Body() dto: CheckPhoneDto): Promise<{ exists: boolean }> {
-    return this.authService.checkPhoneLogin(dto.phone);
+    return this.authService.checkPhoneExists(dto.phone);
   }
 
   @Post('refresh')

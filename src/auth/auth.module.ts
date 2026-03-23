@@ -3,7 +3,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { PassportModule } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
-import { User } from '../entities/user.entity';
 import { RefreshToken } from '../entities/refresh-token.entity';
 import { UsersModule } from '../users/users.module';
 import { TwoFactorModule } from '../two-factor/two-factor.module';
@@ -13,7 +12,7 @@ import { OptionalJwtGuard } from './optional-jwt.guard';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, RefreshToken]),
+    TypeOrmModule.forFeature([RefreshToken]),
     PassportModule,
     UsersModule,
     TwoFactorModule,
