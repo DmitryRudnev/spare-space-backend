@@ -8,6 +8,8 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, FindOptionsWhere, In, Raw, Not } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 
 import { ListingsService } from '../listings/listings.service';
 import { UsersService } from '../users/services/users.service';
@@ -30,6 +32,7 @@ export class BookingsService {
     private readonly listingsService: ListingsService,
     private readonly usersService: UsersService,
     private readonly eventEmitter: EventEmitter2,
+    @InjectQueue('booking-completion') private bookingCompletionQueue: Queue,
   ) {}
 
 
@@ -71,7 +74,7 @@ export class BookingsService {
         startDate,
         endDate,
         price: booking.totalPrice,
-        currency: booking.listing.currency,
+        currency: booking.currency,
       },
     });
 
@@ -138,7 +141,27 @@ export class BookingsService {
         currency: confirmedBooking.currency,
       },
     });
-    
+
+    const delay = new Date(endDate).getTime() - Date.now();
+    if (delay > 0) {
+      const job = await this.bookingCompletionQueue.add(
+        'complete-booking',
+        { bookingId: confirmedBooking.id },
+        {
+          delay,
+          attempts: 3,
+          backoff: { type: 'exponential', delay: 5000 },
+          removeOnComplete: true,
+          removeOnFail: false,
+        }
+      );
+      if (!job.id) {
+        throw new Error(`Failed to create delayed job for booking completion (booking id ${confirmedBooking.id})`);
+      }
+      confirmedBooking.completionJobId = job.id;
+      await this.bookingRepository.save(confirmedBooking);
+    }
+
     return confirmedBooking;
   }
 
@@ -240,7 +263,7 @@ export class BookingsService {
     if (!hasRenter) {
       throw new UnauthorizedException('Only renters can create bookings');
     }
-    const listing = await this.listingsService.findById(createDto.listingId);
+    const listing = await this.listingsService.findByIdWithCache(createDto.listingId);
     if (listing.status !== ListingStatus.ACTIVE) {
       throw new BadRequestException('Cannot book an inactive listing');
     }
@@ -248,8 +271,8 @@ export class BookingsService {
       throw new BadRequestException('Cannot book owned listing');
     }
     
-    const startDate = new Date(createDto.period.start);
-    const endDate = new Date(createDto.period.end);
+    const startDate = createDto.period.start;
+    const endDate = createDto.period.end;
     await this.validateBookingDates(startDate, endDate, listing.id, listing.availability);
 
     const duration = this.calculateDuration(startDate, endDate, listing.pricePeriod);

@@ -27,7 +27,6 @@ import {
 } from '@nestjs/swagger';
 
 import { BookingsService } from './bookings.service';
-import { BookingStatus } from 'src/common/enums/booking-status.enum';
 import { CreateBookingDto } from './dto/requests/create-booking.dto';
 import { UpdateBookingPeriodDto } from './dto/requests/update-booking-period.dto';
 import { UpdateBookingStatusDto } from './dto/requests/update-booking-status.dto';
@@ -113,10 +112,10 @@ export class BookingsController {
   }
 
 
-  @Patch(':id')
+  @Patch(':id/period')
   @HttpCode(200)
   @ApiOperation({
-    summary: 'Обновление бронирования',
+    summary: 'Обновление периода бронирования',
     description: 'Изменяет период существующего бронирования. Только для арендатора и только pending-бронирований.'
   })
   @ApiParam({ name: 'id', description: 'ID бронирования для обновления', type: Number })
@@ -135,11 +134,11 @@ export class BookingsController {
   }
 
 
-  @Patch(':id/status')
+  @Patch(':id/confirm')
   @HttpCode(200)
   @ApiOperation({
-    summary: 'Изменение статуса бронирования',
-    description: 'Изменяет статус бронирования. Только для владельца объекта.'
+    summary: 'Подтверждение бронирования',
+    description: 'Изменяет статус бронирования на ПОДТВЕРЖДЕНО. Только для владельца объекта.'
   })
   @ApiParam({ name: 'id', description: 'ID бронирования', type: Number })
   @ApiBody({ type: UpdateBookingStatusDto, description: 'Новый статус бронирования' })
@@ -156,7 +155,7 @@ export class BookingsController {
   }
 
   
-  @Delete(':id')
+  @Patch(':id/cancel')
   @HttpCode(204)
   @ApiOperation({
     summary: 'Отмена бронирования',

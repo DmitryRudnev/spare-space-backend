@@ -1,4 +1,5 @@
 import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn  } from 'typeorm';
+import { Type } from 'class-transformer';
 import { User } from './user.entity';
 import { Listing } from './listing.entity';
 import { CurrencyType } from '../common/enums/currency-type.enum';
@@ -9,10 +10,12 @@ export class Booking {
   @PrimaryGeneratedColumn({ type: 'bigint' })
   id: number;
 
+  @Type(() => Listing)
   @ManyToOne(() => Listing, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'listing_id' })
   listing: Listing;
 
+  @Type(() => User)
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'renter_id' })
   renter: User;
@@ -29,29 +32,29 @@ export class Booking {
   @Column({ type: 'enum', enum: BookingStatus, enumName: 'booking_status', default: BookingStatus.PENDING })
   status: BookingStatus;
 
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  completionJobId: string | null;
+
+  @Type(() => Date)
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
 
+  @Type(() => Date)
   @UpdateDateColumn({ type: 'timestamptz' })
   updatedAt: Date;
 
   get periodDates(): { startDate: Date; endDate: Date } {
-    if (!/^\[[^,]+,[^,]+\)$/.test(this.period.trim())) {
-      throw new Error(`Invalid booking period stored in database: ${this.period.trim()}`);
+    const trimmed = this.period.trim();
+    if (!/^\[[^,]+,[^,]+\)$/.test(trimmed)) {
+      throw new Error(`Invalid booking period stored in database: ${trimmed}`);
     }
-    const cleanStr = this.period.replace(/[\[\)]/g, '');
-    const parts = cleanStr.split(',').map(date => date.trim());
+    const parts = trimmed.slice(1, -1).split(',').map(s => s.trim());
+    if (parts.length !== 2) {
+      throw new Error(`Invalid booking period stored in database: ${trimmed}`);
+    }
     return {
       startDate: new Date(parts[0]),
       endDate: new Date(parts[1]),
     };
-  }
-
-  get startDate(): Date {
-    return this.periodDates.startDate;
-  }
-
-  get endDate(): Date {
-    return this.periodDates.endDate;
   }
 }

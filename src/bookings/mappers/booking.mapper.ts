@@ -8,12 +8,12 @@ import { ListingMapper } from '../../listings/mappers/listing.mapper';
 export class BookingMapper {
   static toResponseDto(booking: Booking): BookingResponseDto {
     const dto = new BookingResponseDto();
-    const periodDates = booking.periodDates;
+    const { startDate, endDate } = booking.periodDates;
     
     dto.id = booking.id;
     dto.listingId = booking.listing.id;
     dto.listingTitle = booking.listing.title;
-    dto.firstListingPhoto = booking.listing.photoUrls && booking.listing.photoUrls.length > 0 
+    dto.firstListingPhoto = booking.listing.photoUrls?.length 
       ? booking.listing.photoUrls[0] 
       : null;
     dto.renter = UserMapper.toPublicResponseDto(booking.renter);
@@ -22,10 +22,10 @@ export class BookingMapper {
     dto.currency = booking.currency;
     dto.status = booking.status;
     dto.period = {
-      start: periodDates.startDate.toISOString(),
-      end: periodDates.endDate.toISOString()
+      start: startDate.toISOString(),
+      end: endDate.toISOString()
     };
-    dto.createdAt = new Date(booking.createdAt).toISOString();
+    dto.createdAt = booking.createdAt.toISOString();
 
     return dto;
   }
@@ -33,7 +33,7 @@ export class BookingMapper {
 
   static toDetailResponseDto(booking: Booking): BookingDetailResponseDto {
     const dto = new BookingDetailResponseDto();
-    const periodDates = booking.periodDates;
+    const { startDate, endDate } = booking.periodDates;
 
     dto.id = booking.id;
     dto.listing = ListingMapper.toResponseDto(booking.listing);
@@ -43,11 +43,11 @@ export class BookingMapper {
     dto.currency = booking.currency;
     dto.status = booking.status;
     dto.period = {
-      start: periodDates.startDate.toISOString(),
-      end: periodDates.endDate.toISOString()
+      start: startDate.toISOString(),
+      end: endDate.toISOString()
     };
-    dto.createdAt = new Date(booking.createdAt).toISOString();
-    dto.updatedAt = new Date(booking.updatedAt).toISOString();
+    dto.createdAt = booking.createdAt.toISOString();
+    dto.updatedAt = booking.updatedAt.toISOString();
 
     return dto;
   }
