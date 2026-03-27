@@ -51,7 +51,7 @@ export class AuthService {
     const user = await this.usersService.create(
       dto.firstName,
       dto.lastName,
-      dto.phone,
+      dto.phone.replace(/[\s\-\(\)]/g, ''),
       dto.email,
       passwordHash,
       dto.patronymic,
@@ -63,12 +63,12 @@ export class AuthService {
   }
 
   async login(dto: LoginDto): Promise<LoginResponseDto> {
-    // Находим пользователя по идентифиактору
+    // Находим пользователя по идентификатору
     if (!dto.email && !dto.phone) {
       throw new UnauthorizedException('Invalid credentials');
     }
     const user = dto.phone
-      ? await this.usersService.findByPhone(dto.phone)
+      ? await this.usersService.findByPhone(dto.phone.replace(/[\s\-\(\)]/g, ''))
       : await this.usersService.findByEmail(dto.email!)
 
     // Если пользователь не найден, то имитируем хеширование для защиты от timing-атаки
@@ -77,7 +77,7 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    // Валидирум пароль
+    // Валидируем пароль
     const isPasswordValid = await bcrypt.compare(dto.password, user.passwordHash);
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials');
@@ -145,13 +145,16 @@ export class AuthService {
     }
     
     // Валидируем код (6-значный totp или 10-значный код восстановления)
-    if (code.length !== 6 && code.length !== 10) {
+    const userId = payload.sub;
+    let valid: boolean;
+    if (code.length === 6) {
+      valid = await this.twoFactorService.validateTwoFactorCode(userId, code);
+    } else if (code.length === 10) {
+      valid = await this.twoFactorService.validateRecoveryCode(userId, code);
+    } else {
       throw new BadRequestException(`Code length must be 6 symbols(TOTP code) or 10 symbols(Recovery code). Actual code length: ${code.length}`);
     }
-    const userId = payload.sub;
-    const isTotpValid = await this.twoFactorService.validateTwoFactorCode(userId, code);
-    const isRecoveryValid = await this.twoFactorService.validateRecoveryCode(userId, code);
-    if (!isTotpValid && !isRecoveryValid) {
+    if (!valid) {
       throw new UnauthorizedException('Invalid code');
     }
     
