@@ -275,8 +275,7 @@ export class BookingsService {
       throw new BadRequestException('Cannot book owned listing');
     }
     
-    const startDate = createDto.period.start;
-    const endDate = createDto.period.end;
+    const { start: startDate, end: endDate } = createDto.period;
     await this.validateBookingDates(startDate, endDate, listing.id, listing.availability);
 
     const duration = this.calculateDuration(startDate, endDate, listing.pricePeriod);
@@ -299,8 +298,7 @@ export class BookingsService {
   async updatePeriod(bookingId: number, updatePeriodDto: UpdateBookingPeriodDto): Promise<Booking> {
     const booking = await this.findById(bookingId);
 
-    const startDate = new Date(updatePeriodDto.period.start);
-    const endDate = new Date(updatePeriodDto.period.end);
+    const { start: startDate, end: endDate } = updatePeriodDto.period;
     await this.validateBookingDates(startDate, endDate, booking.listing.id, booking.listing.availability, bookingId);
 
     const duration = this.calculateDuration(startDate, endDate, booking.listing.pricePeriod);
@@ -395,10 +393,14 @@ export class BookingsService {
   private calculateDuration(start: Date, end: Date, pricePeriod: ListingPeriodType): number {
     const ms = end.getTime() - start.getTime();
     switch (pricePeriod) {
-      case ListingPeriodType.HOUR:  return Math.ceil(ms / (1000 * 60 * 60));
-      case ListingPeriodType.DAY:   return Math.ceil(ms / (1000 * 60 * 60 * 24));
-      case ListingPeriodType.WEEK:  return Math.ceil(ms / (1000 * 60 * 60 * 24 * 7));
-      case ListingPeriodType.MONTH: return Math.ceil(ms / (1000 * 60 * 60 * 24 * 30));
+      // case ListingPeriodType.HOUR:  return Math.ceil(ms / (1000 * 60 * 60));
+      // case ListingPeriodType.DAY:   return Math.ceil(ms / (1000 * 60 * 60 * 24));
+      // case ListingPeriodType.WEEK:  return Math.ceil(ms / (1000 * 60 * 60 * 24 * 7));
+      // case ListingPeriodType.MONTH: return Math.ceil(ms / (1000 * 60 * 60 * 24 * 30));
+      case ListingPeriodType.HOUR:  return (ms / (1000 * 60 * 60));
+      case ListingPeriodType.DAY:   return (ms / (1000 * 60 * 60 * 24));
+      case ListingPeriodType.WEEK:  return (ms / (1000 * 60 * 60 * 24 * 7));
+      case ListingPeriodType.MONTH: return (ms / (1000 * 60 * 60 * 24 * 30));
       default: throw new BadRequestException('Unknown price period');
     }
   }

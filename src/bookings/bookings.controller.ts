@@ -29,7 +29,6 @@ import {
 import { BookingsService } from './bookings.service';
 import { CreateBookingDto } from './dto/requests/create-booking.dto';
 import { UpdateBookingPeriodDto } from './dto/requests/update-booking-period.dto';
-import { UpdateBookingStatusDto } from './dto/requests/update-booking-status.dto';
 import { SearchBookingsDto } from './dto/requests/search-bookings.dto';
 import { User } from '../common/decorators/user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -141,13 +140,11 @@ export class BookingsController {
     description: 'Изменяет статус бронирования на ПОДТВЕРЖДЕНО. Только для владельца объекта.'
   })
   @ApiParam({ name: 'id', description: 'ID бронирования', type: Number })
-  @ApiBody({ type: UpdateBookingStatusDto, description: 'Новый статус бронирования' })
   @ApiOkResponse({ description: 'Статус успешно изменён', type: BookingDetailResponseDto })
   @ApiNotFoundResponse({ description: 'Бронирование не найдено' })
   @ApiBadRequestResponse({ description: 'Некорректный статус или операция' })
   async updateStatus(
     @Param('id') bookingId: string,
-    @Body() changeStatusDto: UpdateBookingStatusDto,
     @User('userId') userId: number
   ): Promise<BookingDetailResponseDto> {
     const booking = await this.bookingsService.handleConfirm(userId, Number(bookingId));
