@@ -57,9 +57,13 @@ export class BookingsService {
 
   async handleCreate(userId: number, createDto: CreateBookingDto): Promise<Booking> {
     const booking = await this.create(userId, createDto);
-
-    const renter = await this.usersService.findById(userId);
+    
+    // Обновляем периоды доступности объявления
     const { startDate, endDate } = booking.periodDates;
+    await this.listingsService.updateAvailabilityAfterBooking(booking.listing.id, startDate, endDate);
+
+    // Эмитим уведомление
+    const renter = await this.usersService.findById(userId);
     this.eventEmitter.emit('notification.signal', {
       userId: Number(booking.listing.user.id),
       type: NotificationType.BOOKING_NEW,
