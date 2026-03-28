@@ -1,10 +1,8 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
 import { Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
-import { Booking } from '../../entities/booking.entity';
 import { BookingStatus } from '../../common/enums/booking-status.enum';
 import { NotificationType } from '../../common/enums/notification-type.enum';
 import { BookingsService } from '../bookings.service';
@@ -14,7 +12,6 @@ export class BookingCompletionProcessor extends WorkerHost {
   private readonly logger = new Logger(BookingCompletionProcessor.name);
 
   constructor(
-    @InjectRepository(Booking)
     private readonly bookingsService: BookingsService,
     private readonly eventEmitter: EventEmitter2,
   ) {
@@ -44,7 +41,7 @@ export class BookingCompletionProcessor extends WorkerHost {
       await this.bookingsService.updateStatus(bookingId, BookingStatus.COMPLETED);
       this.logger.log(`Booking ${bookingId} automatically completed`);
 
-      // Эмитим уведомление о завершении обоим участникам
+      // Эмитим уведомление арендатору
       const { startDate, endDate } = booking.periodDates;
       this.eventEmitter.emit('notification.signal', {
         userId: booking.renter.id,
@@ -60,6 +57,8 @@ export class BookingCompletionProcessor extends WorkerHost {
           currency: booking.currency,
         },
       });
+
+      // Эмитим уведомление владельцу
       this.eventEmitter.emit('notification.signal', {
         userId: booking.listing.user.id,
         type: NotificationType.BOOKING_COMPLETED,
