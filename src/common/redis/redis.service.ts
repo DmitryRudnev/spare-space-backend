@@ -1,4 +1,4 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, Logger } from '@nestjs/common';
 import { ClassConstructor, plainToInstance } from 'class-transformer';
 import Keyv from 'keyv';
 import { Redis } from 'ioredis';
@@ -6,6 +6,8 @@ import { REDIS_CLIENT, REDIS_IOREDIS } from './redis-client.module';
 
 @Injectable()
 export class RedisService {
+  private readonly logger = new Logger(RedisService.name);
+
   constructor(
     @Inject(REDIS_CLIENT) private readonly keyv: Keyv,
     @Inject(REDIS_IOREDIS) private readonly redis: Redis,
@@ -22,10 +24,14 @@ export class RedisService {
   ): Promise<T> {
     const cached = await this.keyv.get<T>(key);
     if (cached) {
+      this.logger.log(`Cache hit for key: ${key}`);
       return cls ? plainToInstance(cls, cached) : (cached as T);
     }
+
+    this.logger.log(`Cache miss for key: ${key}. Executing callback.`);
     const result = await cb();
     if (result !== undefined && result !== null) {
+      this.logger.log(`Caching result for key: ${key} with TTL: ${ttlSec} seconds.`);
       // cache-manager v5+ требует миллисекунды
       await this.keyv.set(key, result, ttlSec * 1000);
     }
@@ -38,8 +44,11 @@ export class RedisService {
   async get<T>(key: string, cls?: ClassConstructor<T>): Promise<T | undefined> {
     const cached = await this.keyv.get<T>(key);
     if (cached) {
+      this.logger.log(`Cache hit for key: ${key}`);
       return cls ? plainToInstance(cls, cached) : (cached as T);
     }
+    this.logger.log(`Cache miss for key: ${key}`);
+    return undefined;
   }
 
   /**

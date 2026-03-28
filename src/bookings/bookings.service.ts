@@ -3,7 +3,8 @@ import {
   NotFoundException,
   BadRequestException,
   ConflictException,
-  UnauthorizedException
+  UnauthorizedException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, FindOptionsWhere, In, Raw, Not } from 'typeorm';
@@ -27,6 +28,8 @@ import { UpdateBookingPeriodDto } from './dto/requests/update-booking-period.dto
 
 @Injectable()
 export class BookingsService {
+  private readonly logger = new Logger(BookingsService.name);
+
   constructor(
     @InjectRepository(Booking) private readonly bookingRepository: Repository<Booking>,
     private readonly listingsService: ListingsService,
@@ -148,6 +151,7 @@ export class BookingsService {
 
     const delay = new Date(endDate).getTime() - Date.now();
     if (delay > 0) {
+      this.logger.log(`Scheduling booking completion for booking ${confirmedBooking.id} with delay: ${delay/1000/60} minutes`);
       const job = await this.bookingCompletionQueue.add(
         'complete-booking',
         { bookingId: confirmedBooking.id },
@@ -160,6 +164,7 @@ export class BookingsService {
         }
       );
       if (!job.id) {
+        this.logger.error(`Failed to create delayed job for booking completion (booking id ${confirmedBooking.id})`);
         throw new Error(`Failed to create delayed job for booking completion (booking id ${confirmedBooking.id})`);
       }
       confirmedBooking.completionJobId = job.id;

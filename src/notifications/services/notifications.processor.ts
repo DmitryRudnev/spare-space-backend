@@ -53,11 +53,13 @@ export class NotificationsProcessor extends WorkerHost {
 
       // FCM или EXPO
       if (settings.sendPush) {
+        this.logger.log(`Processing push notification for user ${userId}`);
         await this.handlePushNotification(userId, type, referenceId, payload);
       }
 
       // TG bot
       if (settings.sendTgBot) {
+        this.logger.log(`Processing Telegram notification for user ${userId}`);
         await this.handleTelegramNotification(userId, type, referenceId, payload);
       }
     } catch (error) {

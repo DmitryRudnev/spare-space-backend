@@ -19,6 +19,7 @@ export class BookingCompletionProcessor extends WorkerHost {
   }
 
   async process(job: Job<{ bookingId: number }>): Promise<void> {
+    this.logger.log(`Processing booking completion for job ${job.id} with data: ${JSON.stringify(job.data)}`);
     const { bookingId } = job.data;
 
     try {
