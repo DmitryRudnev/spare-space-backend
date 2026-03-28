@@ -59,7 +59,7 @@ export class BookingsService {
     const booking = await this.create(userId, createDto);
     
     // Обновляем периоды доступности объявления
-    const { startDate, endDate } = booking.periodDates;
+    const { start: startDate, end: endDate } = booking.periodDates;
     await this.listingsService.updateAvailabilityAfterBooking(booking.listing.id, startDate, endDate);
 
     // Эмитим уведомление
@@ -97,7 +97,7 @@ export class BookingsService {
     const updatedBooking = await this.updatePeriod(bookingId, updateDto);
 
     const renter = await this.usersService.findById(userId);
-    const { startDate, endDate } = updatedBooking.periodDates;
+    const { start: startDate, end: endDate } = updatedBooking.periodDates;
     
     this.eventEmitter.emit('notification.signal', {
       userId: Number(updatedBooking.listing.user.id),
@@ -130,7 +130,7 @@ export class BookingsService {
     }
     const confirmedBooking = await this.updateStatus(bookingId, BookingStatus.CONFIRMED);
   
-    const { startDate, endDate } = confirmedBooking.periodDates;
+    const { start: startDate, end: endDate } = confirmedBooking.periodDates;
     this.eventEmitter.emit('notification.signal', {
       userId: Number(confirmedBooking.renter.id),
       type: NotificationType.BOOKING_CONFIRMED,
@@ -182,7 +182,7 @@ export class BookingsService {
     const targetUserId = userId === Number(cancelledBooking.renter.id)
       ? Number(cancelledBooking.listing.user.id) 
       : Number(cancelledBooking.renter.id);
-    const { startDate, endDate } = cancelledBooking.periodDates;
+    const { start: startDate, end: endDate } = cancelledBooking.periodDates;
 
     this.eventEmitter.emit('notification.signal', {
       userId: targetUserId,

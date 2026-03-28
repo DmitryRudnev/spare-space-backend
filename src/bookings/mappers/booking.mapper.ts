@@ -8,7 +8,6 @@ import { ListingMapper } from '../../listings/mappers/listing.mapper';
 export class BookingMapper {
   static toResponseDto(booking: Booking): BookingResponseDto {
     const dto = new BookingResponseDto();
-    const { startDate, endDate } = booking.periodDates;
     
     dto.id = booking.id;
     dto.listingId = booking.listing.id;
@@ -21,19 +20,14 @@ export class BookingMapper {
     dto.totalPrice = booking.totalPrice;
     dto.currency = booking.currency;
     dto.status = booking.status;
-    dto.period = {
-      start: startDate.toISOString(),
-      end: endDate.toISOString()
-    };
+    dto.period = booking.periodDates;
     dto.createdAt = booking.createdAt.toISOString();
 
     return dto;
   }
 
-
   static toDetailResponseDto(booking: Booking): BookingDetailResponseDto {
     const dto = new BookingDetailResponseDto();
-    const { startDate, endDate } = booking.periodDates;
 
     dto.id = booking.id;
     dto.listing = ListingMapper.toResponseDto(booking.listing);
@@ -42,17 +36,13 @@ export class BookingMapper {
     dto.totalPrice = booking.totalPrice;
     dto.currency = booking.currency;
     dto.status = booking.status;
-    dto.period = {
-      start: startDate.toISOString(),
-      end: endDate.toISOString()
-    };
+    dto.period = booking.periodDates;
     dto.createdAt = booking.createdAt.toISOString();
     dto.updatedAt = booking.updatedAt.toISOString();
 
     return dto;
   }
 
-  
   static toListResponseDto(
     bookings: Booking[], 
     total: number, 
@@ -69,3 +59,4 @@ export class BookingMapper {
     return dto;
   }
 }
+

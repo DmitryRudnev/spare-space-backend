@@ -3,14 +3,7 @@ import { ListingResponseDto } from '../../../listings/dto/responses/listing-resp
 import { CurrencyType } from '../../../common/enums/currency-type.enum';
 import { BookingStatus } from '../../../common/enums/booking-status.enum';
 import { UserPublicResponseDto } from '../../../users/dto/responses/user-public-response.dto';
-
-export class BookingPeriodDto {
-  @ApiProperty({ type: String, description: 'Дата начала (ISO8601)', example: '2025-01-01T00:00:00.000Z' })
-  start: string;
-
-  @ApiProperty({ type: String, description: 'Дата окончания (ISO8601)', example: '2025-02-01T00:00:00.000Z' })
-  end: string;
-}
+import { PeriodDto } from '../../../common/dto/period.dto';
 
 export class BookingDetailResponseDto {
   @ApiProperty({ type: Number, description: 'ID бронирования', example: 1 })
@@ -34,8 +27,8 @@ export class BookingDetailResponseDto {
   @ApiProperty({ enum: BookingStatus, description: 'Статус бронирования', example: BookingStatus.PENDING })
   status: BookingStatus;
 
-  @ApiProperty({ type: BookingPeriodDto, description: 'Период бронирования' })
-  period: BookingPeriodDto;
+  @ApiProperty({ type: PeriodDto, description: 'Период бронирования' })
+  period: PeriodDto;
 
   @ApiProperty({ type: String, description: 'Дата создания (ISO8601)', example: '2025-01-01T00:00:00.000Z' })
   createdAt: string;

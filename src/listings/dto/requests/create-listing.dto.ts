@@ -7,13 +7,11 @@ import {
   IsArray,
   IsObject,
   IsEnum,
-  IsDate,
   IsUrl,
   Min,
   Max,
   Length,
   MinLength,
-  MaxLength,
   ArrayMinSize,
   ArrayMaxSize,
   ValidateNested,
@@ -22,40 +20,8 @@ import {
 import { CurrencyType } from '../../../common/enums/currency-type.enum';
 import { ListingPeriodType } from '../../../common/enums/listing-period-type.enum';
 import { ListingType } from '../../../common/enums/listing-type.enum';
-
-export class LocationDto {
-  @ApiProperty({ type: Number, description: 'Долгота', example: 37.2091 })
-  @IsNumber()
-  @Min(-180)
-  @Max(180)
-  longitude: number;
-
-  @ApiProperty({ type: Number, description: 'Широта', example: 55.9832 })
-  @IsNumber()
-  @Min(-90)
-  @Max(90)
-  latitude: number;
-}
-
-export class AvailabilityPeriodDto {
-  @ApiProperty({
-    type: String,
-    description: 'Дата начала доступности (ISO8601)',
-    example: '2025-01-01T00:00:00.000Z'
-  })
-  @Type(() => Date)
-  @IsDate()
-  start: Date;
-
-  @ApiProperty({
-    type: String,
-    description: 'Дата окончания доступности (ISO8601)',
-    example: '2025-02-01T00:00:00.000Z'
-  })
-  @Type(() => Date)
-  @IsDate()
-  end: Date;
-}
+import { PeriodDto } from '../../../common/dto/period.dto';
+import { LocationDto } from '../location.dto';
 
 export class CreateListingDto {
   @ApiProperty({
@@ -162,12 +128,12 @@ export class CreateListingDto {
   amenities?: Record<string, string>;
 
   @ApiProperty({
-    type: [AvailabilityPeriodDto],
+    type: [PeriodDto],
     description: 'Периоды доступности'
   })
   @IsArray()
   @ArrayMinSize(1)
-  @Type(() => AvailabilityPeriodDto)
+  @Type(() => PeriodDto)
   @ValidateNested({ each: true })
-  availability: AvailabilityPeriodDto[];
+  availability: PeriodDto[];
 }

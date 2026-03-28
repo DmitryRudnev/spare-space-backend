@@ -43,7 +43,7 @@ export class Booking {
   @UpdateDateColumn({ type: 'timestamptz' })
   updatedAt: Date;
 
-  get periodDates(): { startDate: Date; endDate: Date } {
+  get periodDates(): { start: Date; end: Date } {
     const trimmed = this.period.trim();
     if (!/^\[[^,]+,[^,]+\)$/.test(trimmed)) {
       throw new Error(`Invalid booking period stored in database: ${trimmed}`);
@@ -53,8 +53,8 @@ export class Booking {
       throw new Error(`Invalid booking period stored in database: ${trimmed}`);
     }
     return {
-      startDate: new Date(parts[0]),
-      endDate: new Date(parts[1]),
+      start: new Date(parts[0]),
+      end: new Date(parts[1]),
     };
   }
 }

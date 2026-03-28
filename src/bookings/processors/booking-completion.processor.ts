@@ -31,7 +31,7 @@ export class BookingCompletionProcessor extends WorkerHost {
       }
 
       // Дополнительная проверка: период бронирования должен закончиться
-      const bookingEndDate = new Date(booking.periodDates.endDate);
+      const bookingEndDate = new Date(booking.periodDates.end);
       if (bookingEndDate > new Date()) {
         this.logger.warn(`Booking ${bookingId} end date is in future, skipping`);
         return;
@@ -42,7 +42,7 @@ export class BookingCompletionProcessor extends WorkerHost {
       this.logger.log(`Booking ${bookingId} automatically completed`);
 
       // Эмитим уведомление арендатору
-      const { startDate, endDate } = booking.periodDates;
+      const { start: startDate, end: endDate } = booking.periodDates;
       this.eventEmitter.emit('notification.signal', {
         userId: booking.renter.id,
         type: NotificationType.BOOKING_COMPLETED,

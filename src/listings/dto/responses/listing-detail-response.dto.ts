@@ -4,30 +4,8 @@ import { CurrencyType } from '../../../common/enums/currency-type.enum';
 import { ListingPeriodType } from '../../../common/enums/listing-period-type.enum';
 import { ListingType } from '../../../common/enums/listing-type.enum';
 import { ListingStatus } from '../../../common/enums/listing-status.enum';
-
-export class LocationDto {
-  @ApiProperty({ type: Number, description: 'Долгота', example: 37.2091 })
-  longitude: number;
-
-  @ApiProperty({ type: Number, description: 'Широта', example: 55.9832 })
-  latitude: number;
-}
-
-export class AvailabilityPeriodDto {
-  @ApiProperty({
-    type: String,
-    description: 'Дата начала доступности (ISO8601)',
-    example: '2025-01-01T00:00:00.000Z'
-  })
-  start: string;
-
-  @ApiProperty({
-    type: String,
-    description: 'Дата окончания доступности (ISO8601)',
-    example: '2025-02-01T00:00:00.000Z'
-  })
-  end: string;
-}
+import { PeriodDto } from '../../../common/dto/period.dto';
+import { LocationDto } from '../location.dto';
 
 export class ListingDetailResponseDto {
     @ApiProperty({ 
@@ -128,10 +106,10 @@ export class ListingDetailResponseDto {
   amenities: Record<string, string> | null;
 
   @ApiProperty({ 
-    type: [AvailabilityPeriodDto], 
+    type: [PeriodDto], 
     description: 'Периоды доступности' 
   })
-  availability: AvailabilityPeriodDto[];
+  availability: PeriodDto[];
 
   @ApiProperty({ 
     type: Number, 

@@ -17,9 +17,7 @@ export class ListingMapper {
     dto.currency = listing.currency;
     dto.pricePeriod = listing.pricePeriod;
     dto.address = listing.address;
-    dto.firstPhotoUrl = listing.photoUrls && listing.photoUrls.length > 0 
-      ? listing.photoUrls[0] 
-      : null;
+    dto.firstPhotoUrl = listing.photoUrls?.[0] || null;
     dto.viewsCount = listing.viewsCount;
     dto.repostsCount = listing.repostsCount;
     dto.favoritesCount = listing.favoritesCount;
@@ -48,20 +46,14 @@ export class ListingMapper {
     dto.favoritesCount = listing.favoritesCount;
     dto.createdAt = listing.createdAt.toISOString();
     dto.updatedAt = listing.updatedAt.toISOString();
+    dto.availability = listing.availabilityPeriodDates;
 
-    if (listing.location?.coordinates) {
-      dto.location = {
-        longitude: listing.location.coordinates[0],
-        latitude: listing.location.coordinates[1]
-      };
-    } else {
-      dto.location = null;
-    }
-    
-    dto.availability = listing.availabilityPeriodDates.map(period => ({
-      start: period.start.toISOString(),
-      end: period.end.toISOString(),
-    }));
+    dto.location = listing.location?.coordinates
+      ? {
+          longitude: listing.location.coordinates[0],
+          latitude: listing.location.coordinates[1]
+        }
+      : null;
 
     return dto;
   }
