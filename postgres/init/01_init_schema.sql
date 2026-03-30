@@ -55,8 +55,8 @@ CREATE TYPE moderation_action AS ENUM ('APPROVE', 'REJECT', 'EDIT', 'BAN');
 
 CREATE TABLE users (
     id BIGSERIAL PRIMARY KEY,
-    email VARCHAR(255) UNIQUE NOT NULL,
     phone VARCHAR(20) UNIQUE NOT NULL,
+    email VARCHAR(255) UNIQUE,
     first_name VARCHAR(50) NOT NULL,
     last_name VARCHAR(50) NOT NULL, 
     patronymic VARCHAR(50),

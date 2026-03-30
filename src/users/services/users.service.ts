@@ -111,19 +111,19 @@ export class UsersService {
   }
 
   async create(
+    phone: string,
+    email: string | null,
+    passwordHash: string,
     firstName: string,
     lastName: string,
-    phone: string,
-    email: string,
-    passwordHash: string,
-    patronymic?: string,
+    patronymic: string | null,
   ): Promise<User> {
     const data: DeepPartial<User> = {
-      firstName,
-      lastName,
       phone,
       email,
       passwordHash,
+      firstName,
+      lastName,
       patronymic,
       rating: 0,
     };

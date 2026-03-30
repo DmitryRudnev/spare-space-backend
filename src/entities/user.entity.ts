@@ -12,11 +12,11 @@ export class User {
   @PrimaryGeneratedColumn({ type: 'bigint' })
   id: number;
 
-  @Column({ type: 'varchar', length: 255, unique: true })
-  email: string;
-
   @Column({ type: 'varchar', length: 20, unique: true })
   phone: string;
+
+  @Column({ type: 'varchar', length: 255, unique: true, nullable: true })
+  email: string | null;
 
   @Column({ type: 'varchar', length: 50 })
   firstName: string;
