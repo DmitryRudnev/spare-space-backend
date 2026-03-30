@@ -3,30 +3,36 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
-import * as crypto from 'crypto';
+import { randomBytes, createHmac, randomInt } from 'node:crypto';
 import { ConfigService } from '@nestjs/config';
 
 import { UsersService } from '../users/services/users.service';
 import { TwoFactorService } from '../two-factor/two-factor.service';
+import { RedisService } from '../common/redis/redis.service';
+
 import { UserRoleType } from '../common/enums/user-role-type.enum';
 import { RefreshToken } from '../entities/refresh-token.entity';
 
-import { RegisterDto } from './dto/requests/register.dto';
 import { LoginDto } from './dto/requests/login.dto';
 import { AuthResponseDto } from './dto/responses/auth-response.dto';
 import { LoginResponseDto } from './dto/responses/login-response.dto';
+import { VerifySmsCodeResponseDto } from './dto/responses/verify-sms-code-response.dto';
+import { CompleteRegistrationDto } from './dto/requests/complete-registration.dto';
 
 @Injectable()
 export class AuthService {
   private readonly BCRYPT_SALT_ROUNDS = 12;
   private readonly REFRESH_TOKEN_SECRET: string;
   private readonly REFRESH_TOKEN_EXPIRY_DAYS: number;  
+  private readonly SMS_CODE_CACHE_PREFIX = 'sms:verify:';
+  private readonly SMS_CODE_CACHE_TTL_SEC = 300;  // 5 минут
 
   constructor(
     @InjectRepository(RefreshToken) private readonly tokenRepository: Repository<RefreshToken>,
     private readonly jwtService: JwtService,
     private readonly usersService: UsersService,
     private readonly twoFactorService: TwoFactorService,
+    private readonly redisService: RedisService,
     configService: ConfigService,
   ) {
     this.REFRESH_TOKEN_SECRET = configService.getOrThrow('REFRESH_TOKEN_SECRET');
@@ -37,30 +43,87 @@ export class AuthService {
   // ========================== CONTROLLER HANDLERS ===========================
   // ==========================================================================
 
-  async register(dto: RegisterDto): Promise<AuthResponseDto> {
-    // Проверяем уникальность телефона и почты
-    const [phoneExists, emailExists] = await Promise.all([
-      this.usersService.existsByPhone(dto.phone),
-      this.usersService.existsByEmail(dto.email),
-    ]);
-    if (phoneExists) throw new ConflictException('Phone already exists');
-    if (emailExists) throw new ConflictException('Email already exists');
+  async requestSmsCode(phone: string): Promise<void> {
+    // const code = randomInt(100000, 999999).toString();
+    const code = '000000';  // Заглушка
+
+    const cleanedPhone = this.cleanPhoneNumber(phone);
+    await this.redisService.set(
+      `${this.SMS_CODE_CACHE_PREFIX}${cleanedPhone}`,
+      code,
+      this.SMS_CODE_CACHE_TTL_SEC,
+    );
+
+    // В Prod отправить уведомление через EvenEmitter2, указать канал SMS
+  }
+
+
+  async verifySmsCode(phone: string, code: string): Promise<VerifySmsCodeResponseDto> {
+    // Валидируем код
+    const cleanedPhone = this.cleanPhoneNumber(phone);
+    const cacheCode = await this.redisService.get(`${this.SMS_CODE_CACHE_PREFIX}${cleanedPhone}`);
+    if (!cacheCode || code !== cacheCode) {
+      throw new UnauthorizedException('Invalid or expired code');
+    }
+    await this.redisService.delete(`${this.SMS_CODE_CACHE_PREFIX}${cleanedPhone}`);
+
+    // Ищем пользователя с заданным номером телефона
+    const user = await this.usersService.findByPhone(cleanedPhone);
+
+    // Если пользователь НЕ найден, то возвращаем 10-минутный JWT токен
+    // для доступа к эндпоинту POST auth/complete-registration
+    if (!user) {
+      const registerToken = this.jwtService.sign(
+        { phone: cleanedPhone, type: 'register' },
+        { expiresIn: '10m' }
+      );
+      return { requiresRegistration: true, registerToken };
+    }
+
+    // Если пользователь найден и у него НЕ включена 2ФА, то возвращаем access и refresh токены
+    if (!user.twoFaEnabled) {
+      const tokens = await this.issueTokens(user.id);
+      return { ...tokens };
+    }
+
+    // Если пользователь найден и 2ФА включена, то возвращаем 5-минутный JWT токен
+    // для доступа к эндпоинту POST auth/verify-2fa
+    const twoFactorToken = this.jwtService.sign(
+      { sub: user.id, type: '2fa' },
+      { expiresIn: '5m' }
+    );
+    return { requiresTwoFactor: true, twoFactorToken };
+  }
+
+
+  async completeRegistration(dto: CompleteRegistrationDto): Promise<AuthResponseDto> {
+    // Валидируем временный токен регистрации
+    let payload;
+    try {
+      payload = this.jwtService.verify(dto.registerToken);
+    } catch {
+      throw new UnauthorizedException('Invalid or expired register token');
+    }
+    if (payload.type !== 'register') {
+      throw new UnauthorizedException('Invalid token type');
+    }
     
     // Создаём пользователя и добавляем роль по умолчанию
     const passwordHash = await bcrypt.hash(dto.password, this.BCRYPT_SALT_ROUNDS);
     const user = await this.usersService.create(
+      payload.phone,
+      null,
+      passwordHash,
       dto.firstName,
       dto.lastName,
-      dto.phone.replace(/[\s\-\(\)]/g, ''),
-      dto.email,
-      passwordHash,
-      dto.patronymic,
+      dto.patronymic ?? null,
     );
     await this.usersService.addRole(user.id, UserRoleType.RENTER);
 
     // Возвращаем access и refresh токены
     return this.issueTokens(user.id);
   }
+
 
   async login(dto: LoginDto): Promise<LoginResponseDto> {
     // Находим пользователя по идентификатору
@@ -73,7 +136,7 @@ export class AuthService {
 
     // Если пользователь не найден, то имитируем хеширование для защиты от timing-атаки
     if (!user) {
-      await bcrypt.hash(crypto.randomBytes(16).toString('hex'), this.BCRYPT_SALT_ROUNDS);
+      await bcrypt.hash(randomBytes(16).toString('hex'), this.BCRYPT_SALT_ROUNDS);
       throw new UnauthorizedException('Invalid credentials');
     }
 
@@ -92,9 +155,10 @@ export class AuthService {
       return { requiresTwoFactor: true, twoFactorToken };
     }
 
-    // Возвращаем access и refresh токены
+    // Если 2ФА отключена, возвращаем access и refresh токены
     return this.issueTokens(user.id);
   }
+
 
   async refresh(refreshToken: string): Promise<AuthResponseDto> {
     // Валидируем токен
@@ -113,6 +177,7 @@ export class AuthService {
     return this.issueTokens(token.user.id);
   }
 
+
   async logout(refreshToken: string): Promise<void> {
     // Валидируем токен
     const token = await this.tokenRepository.findOneBy({
@@ -126,11 +191,6 @@ export class AuthService {
     await this.tokenRepository.update(token.id, { revoked: true });
   }
 
-  async checkPhoneExists(phone: string): Promise<{ exists: boolean }> {
-    const cleanedPhone = phone.replace(/[\s\-\(\)]/g, '');
-    const exists = await this.usersService.existsByPhone(cleanedPhone);
-    return { exists };
-  }
 
   async verifyTwoFactor(twoFactorAuthToken: string, code: string): Promise<AuthResponseDto> {
     // Валидируем временный 2ФА токен авторизации
@@ -170,7 +230,7 @@ export class AuthService {
     // Генерируем access и refresh токены
     const roles = await this.usersService.getUserRoles(userId);
     const accessToken = this.jwtService.sign({ sub: userId, roles });
-    const refreshToken = crypto.randomBytes(64).toString('base64url');
+    const refreshToken = randomBytes(64).toString('base64url');
     
     // Сохраняем refresh токен в репозитории
     const token = this.tokenRepository.create({
@@ -185,9 +245,12 @@ export class AuthService {
   }
 
   private hash(token: string): string {
-    return crypto
-      .createHmac('sha256', this.REFRESH_TOKEN_SECRET)
+    return createHmac('sha256', this.REFRESH_TOKEN_SECRET)
       .update(token)
       .digest('hex');
+  }
+
+  private cleanPhoneNumber(phone: string): string {
+    return phone.replace(/[\s\-\(\)]/g, '');
   }
 }

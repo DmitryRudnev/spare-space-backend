@@ -9,6 +9,7 @@ import { TwoFactorModule } from '../two-factor/two-factor.module';
 import { JwtStrategy } from './jwt.strategy';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { OptionalJwtGuard } from './optional-jwt.guard';
+import { RedisModule } from '../common/redis/redis.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { OptionalJwtGuard } from './optional-jwt.guard';
     PassportModule,
     UsersModule,
     TwoFactorModule,
+    RedisModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy, JwtAuthGuard, OptionalJwtGuard],

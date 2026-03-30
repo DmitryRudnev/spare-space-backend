@@ -51,7 +51,7 @@ export class TwoFactorService {
     const otpauthUrl = generateURI({ 
       issuer: this.appName,
       secret,
-      label: user.email
+      label: user.email ?? user.phone
     });
 
     // Save temporary secret (plaintext - will be used for verification before enabling)

@@ -1,39 +1,64 @@
-import { Controller, Post, Body, HttpCode, BadRequestException } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody, ApiCreatedResponse, ApiOkResponse, ApiNoContentResponse, ApiUnauthorizedResponse, ApiBadRequestResponse, ApiConflictResponse } from '@nestjs/swagger';
+import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBody,
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiNoContentResponse,
+  ApiUnauthorizedResponse,
+  ApiBadRequestResponse,
+  ApiConflictResponse,
+} from '@nestjs/swagger';
 
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/requests/login.dto';
-import { RegisterDto } from './dto/requests/register.dto';
 import { TokenOperationDto } from './dto/requests/token-operation.dto';
-import { CheckPhoneDto } from './dto/requests/check-phone.dto';
 import { AuthResponseDto } from './dto/responses/auth-response.dto';
 import { LoginResponseDto } from './dto/responses/login-response.dto';
 import { VerifyTwoFactorDto } from './dto/requests/verify-two-factor.dto';
+import { RequestSmsCodeDto } from './dto/requests/request-sms-code.dto';
+import { VerifySmsCodeDto } from './dto/requests/verify-sms-code.dto';
+import { CompleteRegistrationDto } from './dto/requests/complete-registration.dto';
+import { VerifySmsCodeResponseDto } from './dto/responses/verify-sms-code-response.dto';
 
 @ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(private readonly authService: AuthService) {}
 
-  @Post('register')
-  @HttpCode(201)
-  @ApiOperation({
-    summary: 'Регистрация пользователя',
-    description: 'Создает нового пользователя и возвращает токены доступа'
-  })
-  @ApiBody({ type: RegisterDto, description: 'Данные для регистрации' })
-  @ApiCreatedResponse({ 
-    description: 'Пользователь успешно зарегистрирован', 
-    type: AuthResponseDto 
-  })
-  @ApiBadRequestResponse({ description: 'Некорректные данные запроса' })
-  @ApiConflictResponse({ description: 'Email или телефон уже существуют' })
-  async register(@Body() dto: RegisterDto): Promise<AuthResponseDto> {
-    return this.authService.register(dto);
+  @Post('request-sms-code')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Запрос SMS-кода для входа/регистрации' })
+  @ApiBody({ type: RequestSmsCodeDto })
+  @ApiOkResponse({ description: 'Код отправлен' })
+  async requestSmsCode(@Body() dto: RequestSmsCodeDto): Promise<void> {
+    await this.authService.requestSmsCode(dto.phone);
+  }
+
+  @Post('verify-sms-code')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Подтверждение кода' })
+  @ApiBody({ type: VerifySmsCodeDto })
+  @ApiOkResponse({ type: VerifySmsCodeResponseDto })
+  @ApiUnauthorizedResponse({ description: 'Неверный или просроченный код' })
+  async verifySmsCode(@Body() dto: VerifySmsCodeDto): Promise<VerifySmsCodeResponseDto> {
+    return this.authService.verifySmsCode(dto.phone, dto.code);
+  }
+
+  @Post('complete-registration')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Завершение регистрации' })
+  @ApiBody({ type: CompleteRegistrationDto })
+  @ApiCreatedResponse({ type: AuthResponseDto })
+  @ApiConflictResponse({ description: 'Телефон уже существует' })
+  @ApiUnauthorizedResponse({ description: 'Неверный или просроченный токен' })
+  async completeRegistration(@Body() dto: CompleteRegistrationDto): Promise<AuthResponseDto> {
+    return this.authService.completeRegistration(dto);
   }
 
   @Post('login')
-  @HttpCode(200)
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Вход в систему',
     description: 'Аутентификация пользователя по email/телефону и паролю'
@@ -50,7 +75,7 @@ export class AuthController {
   }
 
   @Post('verify-2fa')
-  @HttpCode(200)
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Подтверждение двухфакторной аутентификации',
     description: 'Завершает вход с 2FA и возвращает токены доступа'
@@ -62,29 +87,8 @@ export class AuthController {
     return this.authService.verifyTwoFactor(dto.twoFactorToken, dto.code);
   }
 
-  @Post('check-phone-login')
-  @HttpCode(200)
-  @ApiOperation({
-    summary: 'Проверка телефона для входа',
-    description: 'Проверяет, существует ли пользователь с указанным телефоном'
-  })
-  @ApiBody({ type: CheckPhoneDto, description: 'Телефон для проверки' })
-  @ApiOkResponse({ 
-    description: 'Результат проверки телефона',
-    schema: {
-      type: 'object',
-      properties: {
-        exists: { type: 'boolean', example: true }
-      }
-    }
-  })
-  @ApiBadRequestResponse({ description: 'Некорректный номер телефона' })
-  async checkPhoneLogin(@Body() dto: CheckPhoneDto): Promise<{ exists: boolean }> {
-    return this.authService.checkPhoneExists(dto.phone);
-  }
-
   @Post('refresh')
-  @HttpCode(200)
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Обновление токенов',
     description: 'Обновляет access и refresh токены'
@@ -101,7 +105,7 @@ export class AuthController {
   }
 
   @Post('logout')
-  @HttpCode(204)
+  @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Выход из системы',
     description: 'Инвалидирует refresh токен'

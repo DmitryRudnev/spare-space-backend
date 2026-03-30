@@ -3,14 +3,14 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 export class LoginResponseDto {
   @ApiPropertyOptional({
     type: String,
-    description: 'Access токен (отсутствует, если требуется 2FA)',
+    description: 'Access токен (если 2ФА отключена)',
     example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
   })
   accessToken?: string;
 
   @ApiPropertyOptional({
     type: String,
-    description: 'Refresh токен (отсутствует, если требуется 2FA)',
+    description: 'Refresh токен (если 2ФА отключена)',
     example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
   })
   refreshToken?: string;
