@@ -54,12 +54,24 @@ export class DevicesService {
   }
 
   /**
+   * Удалить токен устройства для конкретного пользователя
+   * @param userId ID пользователя из JWT
+   * @param fcmToken FCM токен устройства, который нужно удалить
+   */
+  async deleteDevice(userId: number, fcmToken: string): Promise<void> {
+    await this.deviceRepository.delete({ 
+      user: { id: userId },
+      fcmToken,
+    });
+  }
+
+  /**
    * Получить все активные токены пользователя для рассылки Push
    */
   async getUserTokens(userId: number): Promise<string[]> {
     const devices = await this.deviceRepository.find({
       where: { user: { id: userId } },
-      select: ['fcmToken']
+      select: { fcmToken: true },
     });
     return devices.map(d => d.fcmToken);
   }

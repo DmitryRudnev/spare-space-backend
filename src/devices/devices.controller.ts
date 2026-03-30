@@ -4,6 +4,9 @@ import {
   Body,
   UseGuards,
   HttpCode,
+  Delete,
+  HttpStatus,
+  Param,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -12,6 +15,7 @@ import {
   ApiOkResponse,
   ApiUnauthorizedResponse,
   ApiBadRequestResponse,
+  ApiNoContentResponse,
 } from '@nestjs/swagger';
 import { DevicesService } from './devices.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -26,21 +30,34 @@ export class DevicesController {
   constructor(private readonly devicesService: DevicesService) {}
 
   @Post()
-  @HttpCode(200)
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Регистрация или обновление токена устройства',
-    description: 'Сохраняет FCM токен для текущего пользователя. Вызывается фронтендом при запуске приложения или обновлении токена Firebase.'
+    description: 'Сохраняет FCM токен для текущего пользователя. Вызывается фронтендом при запуске приложения'
   })
-  @ApiOkResponse({
-    description: 'Токен успешно сохранен'
-  })
+  @ApiOkResponse({ description: 'Токен успешно сохранен' })
   @ApiUnauthorizedResponse({ description: 'Не авторизован' })
   @ApiBadRequestResponse({ description: 'Некорректные данные запроса' })
   async updateDevice(
     @User('userId') userId: number,
     @Body() updateDeviceDto: UpdateDeviceDto,
-  ) {
-    await this.devicesService.upsertDevice(userId, updateDeviceDto);
-    return { success: true };
+  ): Promise<void> {
+    await this.devicesService.upsertDevice(userId, updateDeviceDto);    
+  }
+
+  @Delete(':fcmToken')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Удаление токена устройства',
+    description: 'Удаляет FCM токен для текущего пользователя. Вызывается фронтендом при выходе из аккаунта или при удалении приложения'
+  })
+  @ApiNoContentResponse({ description: 'Токен успешно удален' })
+  @ApiUnauthorizedResponse({ description: 'Не авторизован' })
+  @ApiBadRequestResponse({ description: 'Некорректные данные запроса' })
+  async deleteDevice(
+    @Param('fcmToken') fcmToken: string,
+    @User('userId') userId: number,
+  ): Promise<void> {
+    await this.devicesService.deleteDevice(userId, fcmToken);
   }
 }
