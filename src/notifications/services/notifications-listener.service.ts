@@ -38,11 +38,11 @@ export class NotificationsListenerService {
       if (await this.mainWsGateway.isOnline(userId)) {
         this.logger.log(`User ${userId} is online. Sending notification via WebSocket.`);
         await this.handleWebSocketNotification(userId, type, referenceId, payload);
-        return;
+        // return;
       }
 
       // Остальные каналы отправляем через очередь
-      this.logger.log(`User ${userId} is offline. Adding notification to queue.`);
+      this.logger.log(`Adding notification (for user ${userId}) to queue.`);
       await this.notificationsQueue.add(
         'send-notification',
         {
