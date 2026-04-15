@@ -12,7 +12,6 @@ export class NotificationMapper {
 
     dto.id = Number(notification.id);
     dto.type = notification.type;
-    dto.channel = notification.channel;
     dto.referenceId = notification.referenceId ? Number(notification.referenceId) : null;
     dto.payload = notification.payload;
     dto.isRead = notification.isRead;

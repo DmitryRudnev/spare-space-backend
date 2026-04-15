@@ -1,16 +1,14 @@
-import { Injectable, Logger, NotFoundException, OnModuleInit } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import { Repository, In, FindOptionsWhere } from 'typeorm';
 import { Notification } from '../../entities/notification.entity';
 import { SearchNotificationsDto } from '.././dto/requests/search-notifications.dto';
-import { MarkAsReadDto } from '.././dto/requests/mark-as-read.dto';
 import { NotificationType } from '../../common/enums/notification-type.enum';
 import { NotificationChannel } from '../../common/enums/notification-channel.enum';
 import { NotificationSetting } from '../../entities/notification-setting.entity';
 
 @Injectable()
 export class NotificationsService {
-  private readonly logger = new Logger(NotificationsService.name);
   constructor(
     @InjectRepository(Notification)
     private notificationRepository: Repository<Notification>,
@@ -37,11 +35,17 @@ export class NotificationsService {
   }
 
 
-  async findAll(userId: number, dto: SearchNotificationsDto) {
-    const where: any = { user: { id: userId } };
-    if (dto.type) where.type = dto.type;
-    if (dto.channel) where.channel = dto.channel;
-    if (dto.isRead) where.isRead = dto.isRead;
+  async findAllPush(userId: number, dto: SearchNotificationsDto) {
+    const where: FindOptionsWhere<Notification> = {
+      user: { id: userId },
+      channel: NotificationChannel.FCM
+    };
+    if (dto.type !== undefined ) {
+      where.type = dto.type;
+    }
+    if (dto.isRead !== undefined ) {
+      where.isRead = dto.isRead;
+    }
 
     const [notifications, total] = await this.notificationRepository.findAndCount({
       where,
@@ -49,7 +53,7 @@ export class NotificationsService {
       take: dto.limit,
       skip: dto.offset
     });
-
+    
     return {
       notifications,
       total,
@@ -73,17 +77,14 @@ export class NotificationsService {
   }
 
 
-  async markAsRead(notificationId: number, userId: number, dto: MarkAsReadDto) {
-    const targetIds = dto.ids ? [notificationId, ...dto.ids] : [notificationId];
-    const where: any = { 
-      id: In(targetIds), 
+  async markAsRead(userId: number, notificationIds?: number[]): Promise<void> {    
+    const where: FindOptionsWhere<Notification> = {
       user: { id: userId },
       isRead: false,
     };
-    const notifications = await this.notificationRepository.find({ where });
 
-    if (notifications.length === 0) {
-      throw new NotFoundException('No notifications found to mark as read');
+    if (notificationIds?.length) {
+      where.id = In(notificationIds);
     }
 
     await this.notificationRepository.update(where, { isRead: true });

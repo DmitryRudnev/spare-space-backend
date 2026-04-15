@@ -5,7 +5,7 @@ import { Type } from 'class-transformer';
 export class MarkAsReadDto {
   @ApiPropertyOptional({
     type: [Number],
-    description: 'Список ID уведомлений для массовой пометки "прочитано"',
+    description: 'Список ID уведомлений для пометки "прочитано". Если не передан, будут прочитаны все.',
     example: [1, 2, 3]
   })
   @IsOptional()

@@ -1,5 +1,5 @@
-import { Controller, Get, Body, Param, Query, UseGuards, Patch, HttpCode } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery, ApiParam } from '@nestjs/swagger';
+import { Controller, Get, Body, Param, Query, UseGuards, Patch, HttpCode, HttpStatus } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiOkResponse, ApiNoContentResponse } from '@nestjs/swagger';
 import { NotificationsService } from './services/notifications.service';
 import { SearchNotificationsDto } from './dto/requests/search-notifications.dto';
 import { MarkAsReadDto } from './dto/requests/mark-as-read.dto';
@@ -17,24 +17,23 @@ export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
 
   @Get()
-  @HttpCode(200)
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Получить список уведомлений текущего пользователя' })
-  @ApiQuery({ type: SearchNotificationsDto }) // Автоматически развернет поля DTO в параметры запроса
-  @ApiResponse({ status: 200, type: NotificationListResponseDto })
+  @ApiOkResponse({ type: NotificationListResponseDto, description: 'Список уведомлений' })
   async findAll(
     @Query() searchDto: SearchNotificationsDto, 
     @User('userId') userId: number
   ): Promise<NotificationListResponseDto> {
-    const { notifications, total, limit, offset } = await this.notificationsService.findAll(userId, searchDto);
+    const { notifications, total, limit, offset } = await this.notificationsService.findAllPush(userId, searchDto);
     return NotificationMapper.toListResponseDto(notifications, total, limit, offset);
   }
 
   @Get(':id')
-  @HttpCode(200)
-  @ApiOperation({ summary: 'Получить детальную информацию об уведомлении' })
-  @ApiParam({ name: 'id', description: 'ID уведомления', example: 1 })
-  @ApiResponse({ status: 200, type: NotificationResponseDto })
-  @ApiResponse({ status: 404, description: 'Уведомление не найдено' })
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Получить информацию об уведомлении' })
+  @ApiParam({ type: Number, name: 'id', description: 'ID уведомления', example: 1 })
+  @ApiOkResponse({ type: NotificationResponseDto, description: 'Данные уведомления' })
+  @ApiNoContentResponse({ description: 'Уведомление не найдено' })
   async findById(
     @Param('id') id: string,
     @User('userId') userId: number,
@@ -43,16 +42,14 @@ export class NotificationsController {
     return NotificationMapper.toResponseDto(notification);
   }
   
-  @Patch(':id/read')
-  @HttpCode(200)
+  @Patch('read')
+  @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Пометить уведомление (и дополнительные ID) как прочитанные' })
-  @ApiParam({ name: 'id', description: 'ID основного уведомления', example: 1 })
-  @ApiResponse({ status: 200, description: 'Статус успешно обновлен' })
+  @ApiNoContentResponse({ description: 'Статус успешно обновлен' })
   async markAsRead(
-    @Param('id') id: string,
     @User('userId') userId: number,
     @Body() dto: MarkAsReadDto,
   ): Promise<void> {
-    await this.notificationsService.markAsRead(+id, userId, dto);
+    await this.notificationsService.markAsRead(userId, dto.ids);
   }
 }

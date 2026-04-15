@@ -13,7 +13,6 @@ import { NotificationsController } from './notifications.controller';
 import { NotificationsService } from './services/notifications.service';
 import { NotificationsListenerService } from './services/notifications-listener.service';
 import { FcmNotificationsService } from './services/fcm-notifications.service';
-import { ExpoNotificationsService } from './services/expo-notifications.service';
 import { NotificationMessageBuilder } from './services/notification-message-builder.service';
 import { NotificationsProcessor } from './services/notifications.processor';
 
@@ -31,7 +30,6 @@ import { NotificationsProcessor } from './services/notifications.processor';
     NotificationsService,
     NotificationsListenerService,
     FcmNotificationsService,
-    ExpoNotificationsService,
     NotificationMessageBuilder,
     NotificationsProcessor,
   ],
