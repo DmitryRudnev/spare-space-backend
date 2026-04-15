@@ -15,8 +15,6 @@ import {
   ApiOperation,
   ApiBearerAuth,
   ApiParam,
-  ApiBody,
-  ApiQuery,
   ApiCreatedResponse,
   ApiOkResponse,
   ApiNoContentResponse,
@@ -32,39 +30,27 @@ import { User } from '../common/decorators/user.decorator';
 import { FavoriteMapper } from './mappers/favorite.mapper';
 
 import { CreateFavoriteDto } from './dto/requests/create-favorite.dto';
-import { SearchListingsDto } from '../listings/dto/requests/search-listings.dto';
+import { SearchListingsDto } from './dto/requests/search-listings.dto';
 import { FavoriteResponseDto } from './dto/responses/favorite-response.dto';
 import { FavoritesListResponseDto } from './dto/responses/favorites-list-response.dto';
 
-@Controller('favorites')
+@Controller('listings/favorites')
 @UseGuards(JwtAuthGuard)
 @ApiTags('Favorites')
 @ApiBearerAuth()
 export class FavoritesController {
   constructor(private readonly favoritesService: FavoritesService) {}
 
-  @Get()
+  @Get('my')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({
-    summary: 'Получить список избранного текущего пользователя',
-    description: 'Возвращает пагинированный список избранных объявлений с фильтрацией. Требует аутентификации.',
-  })
-  @ApiQuery({
-    name: 'searchDto',
-    type: SearchListingsDto,
-    required: false,
-    description: 'Критерии фильтрации объявлений (тип, цена, геолокация и т.д.)',
-  })
-  @ApiOkResponse({
-    description: 'Список избранных объявлений',
-    type: FavoritesListResponseDto,
-  })
+  @ApiOperation({ summary: 'Получить список избранного текущего пользователя' })
+  @ApiOkResponse({ type: FavoritesListResponseDto, description: 'Список избранных объявлений' })
   @ApiUnauthorizedResponse({ description: 'Не авторизован' })
   async findAll(
     @Query() searchDto: SearchListingsDto,
     @User('userId') userId: number,
   ): Promise<FavoritesListResponseDto> {
-    const result = await this.favoritesService.findAllByUser(userId, searchDto);
+    const result = await this.favoritesService.findAll(userId, searchDto);
     return FavoriteMapper.toListResponseDto(
       result.favorites,
       result.total,
@@ -73,18 +59,10 @@ export class FavoritesController {
     );
   }
 
-
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({
-    summary: 'Добавить объявление в избранное',
-    description: 'Добавляет объявление в избранное текущего пользователя. Требует аутентификации.',
-  })
-  @ApiBody({ type: CreateFavoriteDto, description: 'Данные для добавления в избранное' })
-  @ApiCreatedResponse({
-    description: 'Объявление успешно добавлено в избранное',
-    type: FavoriteResponseDto,
-  })
+  @ApiOperation({ summary: 'Добавить объявление в избранное' })
+  @ApiCreatedResponse({ type: FavoriteResponseDto, description: 'Объявление успешно добавлено в избранное' })
   @ApiUnauthorizedResponse({ description: 'Не авторизован' })
   @ApiNotFoundResponse({ description: 'Объявление не найдено' })
   @ApiConflictResponse({ description: 'Объявление уже в избранном' })
@@ -96,15 +74,11 @@ export class FavoritesController {
     const favorite = await this.favoritesService.create(createFavoriteDto.listingId, userId);
     return FavoriteMapper.toResponseDto(favorite);
   }
-
   
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({
-    summary: 'Удалить объявление из избранного по ID записи',
-    description: 'Удаляет запись избранного по её ID. Требует аутентификации и владения записью.',
-  })
-  @ApiParam({ name: 'id', description: 'ID записи избранного', type: Number })
+  @ApiOperation({ summary: 'Удалить объявление из избранного' })
+  @ApiParam({ name: 'id', description: 'ID объявления', type: Number })
   @ApiNoContentResponse({ description: 'Запись успешно удалена из избранного' })
   @ApiUnauthorizedResponse({ description: 'Не авторизован или доступ запрещен' })
   @ApiNotFoundResponse({ description: 'Запись избранного не найдена' })
@@ -112,6 +86,6 @@ export class FavoritesController {
     @Param('id') id: string,
     @User('userId') userId: number,
   ): Promise<void> {
-    await this.favoritesService.remove(+id, userId);
+    await this.favoritesService.remove(Number(id), userId);
   }
 }
