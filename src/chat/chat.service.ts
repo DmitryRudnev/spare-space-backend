@@ -2,15 +2,10 @@ import { Injectable, BadRequestException, ConflictException } from '@nestjs/comm
 import { Repository, In, DataSource, IsNull, FindOperator, FindOptionsWhere, Not } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 
-import { UsersService } from '../users/services/users.service';
 import { Conversation } from '../entities/conversation.entity';
 import { Message } from '../entities/message.entity';
-
-import {
-  CreateConversationDto,
-  SearchConversationsDto,
-  SearchMessagesDto,
- } from './dto/requests';
+import { UsersService } from '../users/services/users.service';
+import { ListingsService } from 'src/listings/listings.service';
 
 import { 
   ConversationNotFoundException, 
@@ -19,34 +14,51 @@ import {
   MessageAccessDeniedException
 } from '../shared/exceptions/domain.exception';
 
-interface FindConversationsResult {
-  conversations: Conversation[];
-  total: number;
-  limit: number;
-  offset: number;
+export interface ConversationPreview {
+  conversation: Conversation;
+  lastMessage: Message | null;
+  unreadsCount: number;
 }
 
-interface FindMessagesResult {
-  messages: Message[];
-  total: number;
-  limit: number;
-  offset: number;
-}
-
-/**
- * Сервис для управления беседами и сообщениями
- * @class ChatService
- */
 @Injectable()
 export class ChatService {
   constructor(
     @InjectRepository(Conversation) private readonly conversationRepository: Repository<Conversation>,
     @InjectRepository(Message) private readonly messageRepository: Repository<Message>,
     private readonly usersService: UsersService,
+    private readonly listingsService: ListingsService,
     private readonly dataSource: DataSource,
   ) {}
 
   // ==================== HTTP CONTROLLER METHODS ====================
+
+  /**
+   * Получение предварительного просмотра бесед пользователя с пагинацией
+   * 
+   * @param userId - ID пользователя
+   * @param limit - Количество бесед на странице
+   * @param offset - Смещение для пагинации
+   * @returns Объект с массивом предварительных просмотров бесед и метаданными пагинации
+   */
+  async getConversationsPreviews(
+    userId: number,
+    limit: number,
+    offset: number,
+  ): Promise<{ previews: ConversationPreview[]; total: number; limit: number; offset: number; }> {
+    // 1. Получаем пагинированный список бесед
+    const { conversations, total } = await this.findConversations(userId, limit, offset);
+  
+    // 2. Параллельно собираем данные для каждой беседы
+    const previews = await Promise.all(
+      conversations.map(async (conversation) => {
+        const lastMessage = await this.getLastMessage(conversation.id);
+        const unreadsCount = await this.getUnreadsCount(conversation.id, userId, false);
+        return { conversation, lastMessage, unreadsCount };
+      })
+    );
+  
+    return { previews, total, limit, offset };
+  }
 
   /**
    * Поиск бесед пользователя с пагинацией
@@ -54,7 +66,11 @@ export class ChatService {
    * @param dto - DTO с параметрами пагинации
    * @returns Объект с массивом бесед и метаданными пагинации
    */
-  async findConversations(userId: number, dto: SearchConversationsDto): Promise<FindConversationsResult> {
+  async findConversations(
+    userId: number,
+    limit: number,
+    offset: number,
+  ): Promise<{ conversations: Conversation[]; total: number; limit: number; offset: number; }> {
     const [conversations, total] = await this.conversationRepository.findAndCount({
       where: [
         { participant1: { id: userId } },
@@ -66,16 +82,10 @@ export class ChatService {
         listing: { user: true }
       },
       order: { lastMessageAt: 'DESC' },
-      take: dto.limit,
-      skip: dto.offset
+      take: limit,
+      skip: offset,
     });
-
-    return { 
-      conversations, 
-      total, 
-      limit: dto.limit, 
-      offset: dto.offset 
-    };
+    return { conversations, total, limit, offset };
   }
 
   /**
@@ -102,6 +112,24 @@ export class ChatService {
   }
 
   /**
+   * Получение предварительного просмотра беседы
+   * 
+   * @param conversationId - ID беседы
+   * @param currentUserId - ID текущего пользователя
+   * @returns Объект предварительного просмотра беседы
+   * @throws ConversationNotFoundException если беседа не найдена
+   */
+  async getConversationPreview(
+    conversationId: number,
+    currentUserId: number,
+  ): Promise<ConversationPreview> {
+    const conversation = await this.findConversationById(conversationId);
+    const lastMessage = await this.getLastMessage(conversationId);
+    const unreadsCount = await this.getUnreadsCount(conversationId, currentUserId, false);
+    return { conversation, lastMessage, unreadsCount };
+  }
+
+  /**
    * Проверяет, является ли пользователь участником беседы
    * @param conversationId - ID беседы
    * @param userId - ID пользователя для проверки
@@ -110,8 +138,7 @@ export class ChatService {
   async verifyConversationAccess(conversationId: number, userId: number): Promise<void> {
     const conversation = await this.findConversationById(conversationId);
 
-    if (userId !== Number(conversation.participant1.id) && 
-        userId !== Number(conversation.participant2.id)) {
+    if (userId !== Number(conversation.participant1.id) && userId !== Number(conversation.participant2.id)) {
       throw new ConversationAccessDeniedException(conversationId, userId);
     }
   }
@@ -123,26 +150,21 @@ export class ChatService {
    * @returns Объект с массивом сообщений и метаданными пагинации
    */
   async findMessages(
-    conversationId: number, 
-    dto: SearchMessagesDto
-  ): Promise<FindMessagesResult> {
+    conversationId: number,
+    limit: number,
+    offset: number,
+  ): Promise<{ messages: Message[]; total: number; limit: number; offset: number; }> {
     const [messages, total] = await this.messageRepository.findAndCount({
       where: { conversation: { id: conversationId } },
       relations: { 
         sender: true, 
         conversation: true 
       },
-      order: { sentAt: 'ASC' },
-      skip: dto.offset,
-      take: dto.limit
+      order: { sentAt: 'DESC' },
+      take: limit,
+      skip: offset,
     });
-
-    return { 
-      messages, 
-      total, 
-      limit: dto.limit, 
-      offset: dto.offset 
-    };
+    return { messages, total, limit, offset };
   }
 
   /**
@@ -180,38 +202,41 @@ export class ChatService {
    * @throws ConflictException если беседа уже существует
    */
   async createConversation(
-    currentUserId: number, 
-    dto: CreateConversationDto
-  ): Promise<Conversation> {
-    const { participantId, listingId } = dto;
+    currentUserId: number,
+    companionId: number,
+    listingId?: number,
+  ): Promise<ConversationPreview> {
+    await this.usersService.validateExistence(companionId);
 
-    if (currentUserId === participantId) {
+    if (currentUserId === companionId) {
       throw new BadRequestException('Cannot create conversation with self');
     }
 
-    const [currentUser, targetUser] = await Promise.all([
-      this.usersService.findById(currentUserId),
-      this.usersService.findById(participantId)
-    ]);
+    if (listingId) {
+      try {
+        await this.listingsService.validateListingOwnership(listingId, companionId);
+      } catch (error) {
+        throw new BadRequestException('Companion must be the listing owner');
+      }
+    }
 
     const conversationExists = await this.checkConversationExists(
       currentUserId, 
-      participantId, 
+      companionId, 
       listingId
     );
-
     if (conversationExists) {
       throw new ConflictException('Conversation already exists');
     }
 
     const conversation = this.conversationRepository.create({
-      participant1: currentUser,
-      participant2: targetUser,
+      participant1: { id: currentUserId },
+      participant2: { id: companionId },
       listing: listingId ? { id: listingId } : null
     });
 
     const savedConversation = await this.conversationRepository.save(conversation);
-    return this.findConversationById(savedConversation.id);
+    return this.getConversationPreview(savedConversation.id, currentUserId);
   }
 
   /**
@@ -228,12 +253,8 @@ export class ChatService {
     if (permanent) {
       // Полное удаление с каскадным удалением сообщений
       await this.dataSource.transaction(async (transactionalEntityManager) => {
-        await transactionalEntityManager.delete(Message, { 
-          conversation: { id: conversationId } 
-        });
-        await transactionalEntityManager.delete(Conversation, { 
-          id: conversationId 
-        });
+        await transactionalEntityManager.delete(Conversation, { id: conversationId });
+        await transactionalEntityManager.delete(Message, { conversation: { id: conversationId } });
       });
     } else {
       // Мягкое удаление
@@ -406,7 +427,7 @@ export class ChatService {
    */
   async getLastMessageId(conversationId: number): Promise<number | null> {
     const message = await this.messageRepository.findOne({
-      select: ['id'], // Выбираем только поле id
+      select: { id: true }, // Выбираем только поле id
       where: { conversation: { id: conversationId } },
       order: { sentAt: 'DESC' },
     });
@@ -414,11 +435,35 @@ export class ChatService {
   }
 
   /**
+   * Возвращает количество непрочитанных сообщений в беседе
+   * @param conversationId - ID беседы
+   * @param userId - ID пользователя
+   * @param isSender - является ли пользователь отправителем непрочитанных сообщений?
+   * @returns Количество непрочитанных сообщений
+   */
+  async getUnreadsCount(
+    conversationId: number, 
+    userId: number,
+    isSender: boolean,
+  ): Promise<number> {
+    const where: FindOptionsWhere<Message> = {
+      conversation: { id: conversationId },
+      isRead: false,
+    };
+    if (isSender) {
+      where.sender = { id: userId };
+    } else {
+      where.sender = Not(userId);
+    }
+    return this.messageRepository.countBy(where);
+  }
+
+  /**
    * Получение массива ID непрочитанных сообщений в беседе
    * @param conversationId - ID беседы
    * @param userId - ID пользователя
-   * @param isSender - надо искать сообщения от этого пользователя?
-   * @returns Количество непрочитанных сообщений
+   * @param isSender - является ли пользователь отправителем непрочитанных сообщений?
+   * @returns Массив ID непрочитанных сообщений
    */
   async getUnreadMessageIds(
     conversationId: number, 
@@ -437,7 +482,7 @@ export class ChatService {
     
     const messages = await this.messageRepository.find({
       where,
-      select: ['id'],
+      select: { id: true },
       order: { sentAt: 'ASC' }
     });
     

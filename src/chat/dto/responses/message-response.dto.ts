@@ -16,10 +16,4 @@ export class MessageResponseDto {
 
   @ApiProperty({ type: String, description: 'Дата отправки (ISO8601)', example: '2025-01-01T00:00:00.000Z' })
   sentAt: string;
-
-  @ApiProperty({ type: String, description: 'Дата обновления (ISO8601)', example: '2025-01-02T00:00:00.000Z' })
-  updatedAt: string;
-
-  @ApiProperty({ type: String, description: 'Дата прочтения (ISO8601)', example: '2025-01-03T00:00:00.000Z' })
-  readAt: string | null;
 }

@@ -9,15 +9,14 @@ import {
   Query, 
   UseGuards, 
   HttpCode, 
-  UseFilters
+  UseFilters,
+  HttpStatus
 } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
   ApiBearerAuth,
   ApiParam,
-  ApiQuery,
-  ApiBody,
   ApiOkResponse,
   ApiUnauthorizedResponse,
   ApiNotFoundResponse,
@@ -49,96 +48,54 @@ import {
   MessagesListResponseDto,
 } from './dto/responses';
 
-@ApiTags('Chat')
 @Controller('chat')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UserRoleType.RENTER, UserRoleType.LANDLORD)
 @UseFilters(DomainExceptionFilter)
+@ApiTags('Chat')
 @ApiBearerAuth()
 @ApiUnauthorizedResponse({ description: 'Не авторизован' })
 export class ChatController {
   constructor(private readonly chatService: ChatService) {}
 
   @Get('conversations')
-  @HttpCode(200)
-  @ApiOperation({
-    summary: 'Получение списка бесед пользователя',
-    description: 'Возвращает список бесед текущего пользователя с пагинацией. ' +
-    'Требует аутентификации и роли RENTER или LANDLORD.'
-  })
-  @ApiQuery({
-    name: 'searchDto',
-    type: SearchConversationsDto,
-    required: false,
-    description: 'Параметры пагинации'
-  })
-  @ApiOkResponse({
-    description: 'Список бесед пользователя',
-    type: ConversationsListResponseDto
-  })
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Получение списка бесед пользователя' })
+  @ApiOkResponse({ type: ConversationsListResponseDto, description: 'Список бесед пользователя' })
   async findConversations(
     @Query() dto: SearchConversationsDto, 
     @User('userId') userId: number
   ): Promise<ConversationsListResponseDto> {
-    const result = await this.chatService.findConversations(userId, dto);
+    const result = await this.chatService.getConversationsPreviews(userId, dto.limit, dto.offset);
     return ConversationMapper.toListResponseDto(
-      result.conversations,
+      result.previews,
       result.total,
       result.limit,
-      result.offset
+      result.offset,
+      userId,
     );
   }
 
-
   @Get('conversations/:id')
-  @HttpCode(200)
-  @ApiOperation({
-    summary: 'Получение беседы по ID',
-    description: 'Возвращает детали беседы по идентификатору. Требует аутентификации и участия в беседе.'
-  })
-  @ApiParam({ 
-    name: 'id', 
-    description: 'ID беседы', 
-    type: Number,
-    example: 1
-  })
-  @ApiOkResponse({
-    description: 'Детали беседы',
-    type: ConversationResponseDto
-  })
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Получение беседы по ID' })
+  @ApiParam({ type: Number, name: 'id', description: 'ID беседы', example: 1 })
+  @ApiOkResponse({ type: ConversationResponseDto, description: 'Детали беседы' })
   @ApiNotFoundResponse({ description: 'Беседа не найдена' })
   async findConversationById(
     @Param('id') conversationId: string,
     @User('userId') userId: number
   ): Promise<ConversationResponseDto> {
     await this.chatService.verifyConversationAccess(Number(conversationId), userId)
-    const conversation = await this.chatService.findConversationById(Number(conversationId));
-    return ConversationMapper.toResponseDto(conversation);
+    const preview = await this.chatService.getConversationPreview(Number(conversationId), userId);
+    return ConversationMapper.toResponseDto(preview, userId);
   }
 
-
   @Get('conversations/:id/messages')
-  @HttpCode(200)
-  @ApiOperation({
-    summary: 'Получение сообщений беседы',
-    description: 'Возвращает список сообщений в беседе с пагинацией. Требует аутентификации и участия в беседе.'
-  })
-  @ApiParam({ 
-    name: 'id', 
-    description: 'ID беседы', 
-    type: Number,
-    example: 1
-  })
-  @ApiQuery({
-    name: 'searchDto',
-    type: SearchMessagesDto,
-    required: false,
-    description: 'Параметры пагинации'
-  })
-  @ApiOkResponse({
-    description: 'Список сообщений беседы',
-    type: MessagesListResponseDto
-  })
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Получение сообщений беседы' })
+  @ApiParam({ type: Number, name: 'id', description: 'ID беседы', example: 1 })
+  @ApiOkResponse({ type: MessagesListResponseDto, description: 'Список сообщений беседы' })
   @ApiNotFoundResponse({ description: 'Беседа не найдена' })
   async findMessages(
     @Param('id') conversationId: string,
@@ -146,7 +103,7 @@ export class ChatController {
     @User('userId') userId: number
   ): Promise<MessagesListResponseDto> {
     await this.chatService.verifyConversationAccess(Number(conversationId), userId)
-    const result = await this.chatService.findMessages(Number(conversationId), getMessagesDto);
+    const result = await this.chatService.findMessages(Number(conversationId), getMessagesDto.limit, getMessagesDto.offset);
     return MessageMapper.toListResponseDto(
       result.messages,
       result.total,
@@ -155,54 +112,27 @@ export class ChatController {
     );
   }
 
-
   @Post('conversations')
-  @HttpCode(201)
-  @ApiOperation({
-    summary: 'Создание новой беседы',
-    description: 'Создает новую беседу по ID пользователей и ID объявления(опционально). ' +
-    'Требует аутентификации и роли RENTER или LANDLORD.'
-  })
-  @ApiBody({ 
-    type: CreateConversationDto, 
-    description: 'Данные для создания беседы' 
-  })
-  @ApiCreatedResponse({
-    description: 'Беседа успешно создана',
-    type: ConversationResponseDto
-  })
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Создание новой беседы' })
+  @ApiCreatedResponse({ type: ConversationResponseDto, description: 'Беседа успешно создана' })
   @ApiBadRequestResponse({ description: 'Некорректные данные запроса' })
-  @ApiUnauthorizedResponse({ description: 'Участники должны иметь роли RENTER или LANDLORD' })
   async createConversation(
     @Body() createConversationDto: CreateConversationDto,
     @User('userId') currentUserId: number
   ): Promise<ConversationResponseDto> {
-    const conversation = await this.chatService.createConversation(
-    currentUserId, 
-    createConversationDto
+    const preview = await this.chatService.createConversation(
+      currentUserId,
+      createConversationDto.participantId,
+      createConversationDto.listingId
     );
-    return ConversationMapper.toResponseDto(conversation);
+    return ConversationMapper.toResponseDto(preview, currentUserId);
   }
 
-
   @Delete('conversations/:id')
-  @HttpCode(204)
-  @ApiOperation({
-    summary: 'Удаление беседы',
-    description: 'Удаляет беседу (мягкое удаление по умолчанию). ' +
-    'Требует аутентификации и участия в беседе.'
-  })
-  @ApiParam({ 
-    name: 'id', 
-    description: 'ID беседы', 
-    type: Number,
-    example: 1
-  })
-  @ApiBody({ 
-    type: DeleteConversationDto, 
-    required: false,
-    description: 'Параметры удаления' 
-  })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Удаление беседы (по умолчанию soft-delete)' })
+  @ApiParam({ type: Number, name: 'id', description: 'ID беседы', example: 1 })
   @ApiOkResponse({ description: 'Беседа успешно удалена' })
   @ApiNotFoundResponse({ description: 'Беседа не найдена' })
   async deleteConversation(
@@ -211,26 +141,13 @@ export class ChatController {
     @Body() dto?: DeleteConversationDto
   ): Promise<void> {
     await this.chatService.verifyConversationAccess(Number(conversationId), userId)
-    await this.chatService.deleteConversation(
-      Number(conversationId), 
-      dto?.permanent
-    );
+    await this.chatService.deleteConversation(Number(conversationId), dto?.permanent);
   }
 
-
   @Patch('conversations/:id/restore')
-  @HttpCode(204)
-  @ApiOperation({
-    summary: 'Восстановление беседы',
-    description: 'Восстанавливает мягко удаленную беседу. ' +
-    'Требует аутентификации и участия в беседе.'
-  })
-  @ApiParam({ 
-    name: 'id', 
-    description: 'ID беседы', 
-    type: Number,
-    example: 1
-  })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Восстановление беседы' })
+  @ApiParam({ type: Number, name: 'id', description: 'ID беседы', example: 1 })
   @ApiOkResponse({ description: 'Беседа успешно восстановлена' })
   @ApiNotFoundResponse({ description: 'Беседа не найдена' })
   async restoreConversation(

@@ -14,8 +14,7 @@ export class MessageMapper {
     dto.text = message.text;
     dto.isRead = message.isRead;
     dto.sentAt = new Date(message.sentAt).toISOString();
-    dto.updatedAt = new Date(message.updatedAt).toISOString();
-    dto.readAt = message.readAt ? new Date(message.readAt).toISOString() : null;
+
     return dto;
   }
 
@@ -31,6 +30,7 @@ export class MessageMapper {
     dto.total = total;
     dto.limit = limit;
     dto.offset = offset;
+
     return dto;
   }
 }
