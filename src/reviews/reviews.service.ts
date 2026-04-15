@@ -113,7 +113,7 @@ export class ReviewsService {
     const [reviews, total] = await this.reviewRepository.findAndCount({
       where,
       relations: {
-        booking: { listing: true },
+        booking: { listing: { user: true } },
         reviewer: true,
       },
       order: { createdAt: 'DESC' },

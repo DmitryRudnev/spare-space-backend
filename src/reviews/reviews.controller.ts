@@ -14,8 +14,6 @@ import {
   ApiOperation,
   ApiBearerAuth,
   ApiParam,
-  ApiQuery,
-  ApiBody,
   ApiCreatedResponse,
   ApiOkResponse,
   ApiUnauthorizedResponse,
@@ -40,13 +38,9 @@ export class ReviewsController {
 
   @Get('listing/:id')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({
-    summary: 'Получить отзывы для объявления',
-    description: 'Возвращает пагинированный список отзывов, оставленных гостями для указанного объявления.',
-  })
-  @ApiParam({ name: 'id', description: 'ID объявления', type: Number })
-  @ApiQuery({ name: 'paginationDto', type: PaginationDto, required: false, description: 'Параметры пагинации' })
-  @ApiOkResponse({ description: 'Список отзывов', type: ReviewListResponseDto })
+  @ApiOperation({ summary: 'Получить отзывы для объявления' })
+  @ApiParam({ type: Number, name: 'id', description: 'ID объявления' })
+  @ApiOkResponse({ type: ReviewListResponseDto, description: 'Список отзывов' })
   @ApiNotFoundResponse({ description: 'Объявление не найдено' })
   async findByListing(
     @Param('id') listingId: string,
@@ -67,13 +61,9 @@ export class ReviewsController {
 
   @Get('user/:id')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({
-    summary: 'Получить отзывы о пользователе',
-    description: 'Возвращает пагинированный список отзывов, оставленных заданному пользователю (как владельцу объявлений).',
-  })
-  @ApiParam({ name: 'id', description: 'ID пользователя', type: Number })
-  @ApiQuery({ name: 'paginationDto', type: PaginationDto, required: false, description: 'Параметры пагинации' })
-  @ApiOkResponse({ description: 'Список отзывов', type: ReviewListResponseDto })
+  @ApiOperation({ summary: 'Получить отзывы о пользователе' })
+  @ApiParam({ type: Number, name: 'id', description: 'ID пользователя' })
+  @ApiOkResponse({ type: ReviewListResponseDto, description: 'Список отзывов' })
   @ApiNotFoundResponse({ description: 'Пользователь не найден' })
   async findByUser(
     @Param('id') userId: string,
@@ -94,12 +84,9 @@ export class ReviewsController {
 
   @Get(':id')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({
-    summary: 'Получить отзыв по ID',
-    description: 'Возвращает информацию о конкретном отзыве.',
-  })
+  @ApiOperation({ summary: 'Получить отзыв по ID' })
   @ApiParam({ name: 'id', description: 'ID отзыва', type: Number })
-  @ApiOkResponse({ description: 'Информация об отзыве', type: ReviewResponseDto })
+  @ApiOkResponse({ type: ReviewResponseDto, description: 'Информация об отзыве' })
   @ApiNotFoundResponse({ description: 'Отзыв не найден' })
   async findOne(@Param('id') reviewId: string): Promise<ReviewResponseDto> {
     const review = await this.reviewsService.findById(Number(reviewId));
@@ -110,12 +97,8 @@ export class ReviewsController {
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.CREATED)
   @ApiBearerAuth()
-  @ApiOperation({
-    summary: 'Создать новый отзыв',
-    description: 'Позволяет аутентифицированному пользователю оставить отзыв о завершённом бронировании.',
-  })
-  @ApiBody({ type: CreateReviewDto, description: 'Данные для создания отзыва' })
-  @ApiCreatedResponse({ description: 'Отзыв успешно создан', type: ReviewResponseDto })
+  @ApiOperation({ summary: 'Создать новый отзыв' })
+  @ApiCreatedResponse({ type: ReviewResponseDto, description: 'Отзыв успешно создан' })
   @ApiUnauthorizedResponse({ description: 'Не авторизован' })
   @ApiNotFoundResponse({ description: 'Бронирование не найдено' })
   @ApiBadRequestResponse({ description: 'Бронирование ещё не завершено или некорректные данные' })

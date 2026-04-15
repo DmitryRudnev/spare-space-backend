@@ -12,12 +12,12 @@ export class ReviewResponseDto {
   @ApiProperty({ type: ListingResponseDto, description: 'Объявление, к которому оставлен отзыв' })
   listing: ListingResponseDto;
 
-  @ApiProperty({ example: 5, description: 'Оценка (1-5)' })
+  @ApiProperty({ type: Number, description: 'Оценка (1-5)', example: 5 })
   rating: number;
 
-  @ApiProperty({ example: 'Отличное место!', nullable: true, description: 'Текст отзыва' })
+  @ApiProperty({ type: String, nullable: true, description: 'Текст отзыва', example: 'Отличное место!' })
   text: string | null;
 
-  @ApiProperty({ example: '2025-01-01T12:00:00.000Z', description: 'Дата создания' })
+  @ApiProperty({ type: String, description: 'Дата создания', example: '2025-01-01T12:00:00.000Z' })
   createdAt: string;
 }
