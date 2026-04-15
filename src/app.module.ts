@@ -19,7 +19,6 @@ import { ChatModule } from './chat/chat.module';
 import { TelegramModule } from './telegram/telegram.module';
 import telegramConfig from './telegram/config/telegram.config';
 import { WebSocketModule } from './websocket/websocket.module';
-import { FavoritesModule } from './favorites/favorites.module';
 import { QuestionsModule } from './questions/questions.module';
 import { DevicesModule } from './devices/devices.module';
 import { TwoFactorModule } from './two-factor/two-factor.module';
@@ -72,7 +71,6 @@ import { BullQueueModule } from './bull/bull.module';
     ChatModule,
     TelegramModule,
     WebSocketModule,
-    FavoritesModule,
     QuestionsModule,
     DevicesModule,
     TwoFactorModule,
