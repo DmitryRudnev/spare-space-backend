@@ -7,13 +7,13 @@ import {
   UseGuards,
   HttpCode,
   UnauthorizedException,
+  HttpStatus,
 } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
   ApiBearerAuth,
   ApiParam,
-  ApiBody,
   ApiOkResponse,
   ApiUnauthorizedResponse,
   ApiNotFoundResponse,
@@ -35,36 +35,12 @@ import { UserPrivateResponseDto } from './dto/responses/user-private-response.dt
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  @Get(':id')
-  @HttpCode(200)
-  @ApiOperation({
-    summary: 'Получение публичного профиля пользователя',
-    description: 'Возвращает публичные данные пользователя по ID. Аутентификация не требуется.'
-  })
-  @ApiParam({ name: 'id', description: 'ID пользователя', type: Number })
-  @ApiOkResponse({
-    description: 'Публичный профиль пользователя',
-    type: UserPublicResponseDto
-  })
-  @ApiNotFoundResponse({ description: 'Пользователь не найден' })
-  async findOne(@Param('id') id: string): Promise<UserPublicResponseDto> {
-    const user = await this.usersService.findById(+id);
-    return UserMapper.toPublicResponseDto(user);
-  }
-
-
   @UseGuards(JwtAuthGuard)
   @Get('profile/me')
-  @HttpCode(200)
+  @HttpCode(HttpStatus.OK)
   @ApiBearerAuth()
-  @ApiOperation({
-    summary: 'Получение собственного профиля',
-    description: 'Возвращает полные данные профиля текущего пользователя. Требует аутентификации.'
-  })
-  @ApiOkResponse({
-    description: 'Приватный профиль пользователя',
-    type: UserPrivateResponseDto
-  })
+  @ApiOperation({ summary: 'Получение собственного профиля' })
+  @ApiOkResponse({ type: UserPrivateResponseDto, description: 'Полный профиль пользователя' })
   @ApiUnauthorizedResponse({ description: 'Не авторизован' })
   @ApiNotFoundResponse({ description: 'Пользователь не найден' })
   async getMyProfile(@User('userId') currentUserId: number): Promise<UserPrivateResponseDto> {
@@ -72,21 +48,23 @@ export class UsersController {
     return UserMapper.toPrivateResponseDto(user);
   }
 
+  @Get('profile/:id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Получение публичного профиля пользователя' })
+  @ApiParam({ type: Number, name: 'id', description: 'ID пользователя' })
+  @ApiOkResponse({ type: UserPublicResponseDto, description: 'Публичный профиль пользователя' })
+  @ApiNotFoundResponse({ description: 'Пользователь не найден' })
+  async findOne(@Param('id') id: string): Promise<UserPublicResponseDto> {
+    const user = await this.usersService.findById(+id);
+    return UserMapper.toPublicResponseDto(user);
+  }
 
   @UseGuards(JwtAuthGuard)
   @Patch('profile/me')
-  @HttpCode(200)
+  @HttpCode(HttpStatus.OK)
   @ApiBearerAuth()
-  @ApiOperation({
-    summary: 'Обновление профиля пользователя',
-    description: 'Обновляет данные профиля. Требует аутентификации и владения профилем.'
-  })
-  @ApiParam({ name: 'id', description: 'ID пользователя для обновления', type: Number })
-  @ApiBody({ type: UpdateUserDto, description: 'Данные для обновления' })
-  @ApiOkResponse({
-    description: 'Профиль успешно обновлен',
-    type: UserPrivateResponseDto
-  })
+  @ApiOperation({ summary: 'Обновление профиля пользователя' })
+  @ApiOkResponse({ type: UserPrivateResponseDto, description: 'Профиль успешно обновлен' })
   @ApiUnauthorizedResponse({ description: 'Не авторизован или доступ запрещен' })
   @ApiNotFoundResponse({ description: 'Пользователь не найден' })
   @ApiBadRequestResponse({ description: 'Некорректные данные запроса' })

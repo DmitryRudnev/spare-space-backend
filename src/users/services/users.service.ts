@@ -125,7 +125,6 @@ export class UsersService {
       firstName,
       lastName,
       patronymic,
-      rating: 0,
     };
 
     const user = this.userRepository.create(data);

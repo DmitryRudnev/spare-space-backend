@@ -12,8 +12,6 @@ export class UserMapper {
     dto.patronymic = user.patronymic;
     dto.rating = user.rating;
     dto.verified = user.verified;
-    dto.isOnline = user.isOnline;
-    dto.lastSeenAt = user.lastSeenAt.toISOString();
     dto.createdAt = user.createdAt.toISOString();
     
     return dto;
@@ -27,6 +25,7 @@ export class UserMapper {
     dto.email = user.email;
     dto.phone = user.phone;
     dto.twoFaEnabled = user.twoFaEnabled;
+    dto.telegramId = user.telegramId;
     dto.updatedAt = new Date(user.updatedAt).toISOString();
 
     return dto;
