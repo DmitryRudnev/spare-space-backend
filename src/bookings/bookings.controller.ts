@@ -9,14 +9,13 @@ import {
   Query,
   UseGuards,
   HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
   ApiBearerAuth,
   ApiParam,
-  ApiQuery,
-  ApiBody,
   ApiCreatedResponse,
   ApiOkResponse,
   ApiNoContentResponse,
@@ -36,30 +35,18 @@ import { BookingDetailResponseDto } from './dto/responses/booking-detail-respons
 import { BookingListResponseDto } from './dto/responses/booking-list-response.dto';
 import { BookingMapper } from './mappers/booking.mapper';
 
-@ApiTags('Bookings')
 @Controller('bookings')
 @UseGuards(JwtAuthGuard)
+@ApiTags('Bookings')
 @ApiBearerAuth()
 @ApiUnauthorizedResponse({ description: 'Не авторизован' })
 export class BookingsController {
   constructor(private readonly bookingsService: BookingsService) {}
 
-  @Get()
-  @HttpCode(200)
-  @ApiOperation({
-    summary: 'Получение списка бронирований',
-    description: 'Возвращает список бронирований текущего пользователя с заданными фильтрами. Требует аутентификации.'
-  })
-  @ApiQuery({
-    name: 'searchDto',
-    type: SearchBookingsDto,
-    required: false,
-    description: 'Критерии поиска (статус, пагинация)'
-  })
-  @ApiOkResponse({
-    description: 'Список бронирований пользователя',
-    type: BookingListResponseDto
-  })
+  @Get('my')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Получение списка бронирований текущего пользователя' })
+  @ApiOkResponse({ type: BookingListResponseDto, description: 'Список бронирований' })
   async findAll(
     @Query() searchDto: SearchBookingsDto, 
     @User('userId') userId: number
@@ -73,15 +60,11 @@ export class BookingsController {
     );
   }
 
-
   @Get(':id')
-  @HttpCode(200)
-  @ApiOperation({
-    summary: 'Получение одного бронирования',
-    description: 'Возвращает детали бронирования по ID. Требует аутентификации и участия в бронировании.'
-  })
-  @ApiParam({ name: 'id', description: 'ID бронирования', type: Number })
-  @ApiOkResponse({ description: 'Бронирование найдено', type: BookingDetailResponseDto })
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Получение одного бронирования' })
+  @ApiParam({ type: Number, name: 'id', description: 'ID бронирования' })
+  @ApiOkResponse({ type: BookingDetailResponseDto, description: 'Бронирование найдено' })
   @ApiNotFoundResponse({ description: 'Бронирование не найдено' })
   async findById(
     @Param('id') bookingId: string,
@@ -91,15 +74,10 @@ export class BookingsController {
     return BookingMapper.toDetailResponseDto(booking);
   }
 
-
   @Post()
-  @HttpCode(201)
-  @ApiOperation({
-    summary: 'Создание нового бронирования',
-    description: 'Создаёт бронирование на основе предоставленных данных. Требует аутентификации и наличия роли арендатора.'
-  })
-  @ApiBody({ type: CreateBookingDto, description: 'Данные для создания бронирования' })
-  @ApiCreatedResponse({ description: 'Бронирование успешно создано', type: BookingDetailResponseDto })
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Создание нового бронирования' })
+  @ApiCreatedResponse({ type: BookingDetailResponseDto, description: 'Бронирование успешно создано' })
   @ApiBadRequestResponse({ description: 'Некорректные данные запроса' })
   @ApiConflictResponse({ description: 'Конфликт: объект недоступен для бронирования' })
   async create(
@@ -110,16 +88,11 @@ export class BookingsController {
     return BookingMapper.toDetailResponseDto(booking);
   }
 
-
   @Patch(':id/period')
-  @HttpCode(200)
-  @ApiOperation({
-    summary: 'Обновление периода бронирования',
-    description: 'Изменяет период существующего бронирования. Только для арендатора и только pending-бронирований.'
-  })
-  @ApiParam({ name: 'id', description: 'ID бронирования для обновления', type: Number })
-  @ApiBody({ type: UpdateBookingPeriodDto, description: 'Данные для обновления' })
-  @ApiOkResponse({ description: 'Бронирование успешно обновлено', type: BookingDetailResponseDto })
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Обновление периода бронирования' })
+  @ApiParam({ type: Number, name: 'id', description: 'ID бронирования для обновления' })
+  @ApiOkResponse({ type: BookingDetailResponseDto, description: 'Бронирование успешно обновлено' })
   @ApiNotFoundResponse({ description: 'Бронирование не найдено' })
   @ApiBadRequestResponse({ description: 'Некорректные данные запроса' })
   @ApiConflictResponse({ description: 'Конфликт: объект недоступен для новых дат' })
@@ -132,15 +105,11 @@ export class BookingsController {
     return BookingMapper.toDetailResponseDto(booking);
   }
 
-
   @Patch(':id/confirm')
-  @HttpCode(200)
-  @ApiOperation({
-    summary: 'Подтверждение бронирования',
-    description: 'Изменяет статус бронирования на ПОДТВЕРЖДЕНО. Только для владельца объекта.'
-  })
-  @ApiParam({ name: 'id', description: 'ID бронирования', type: Number })
-  @ApiOkResponse({ description: 'Статус успешно изменён', type: BookingDetailResponseDto })
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Подтверждение бронирования' })
+  @ApiParam({ type: Number, name: 'id', description: 'ID бронирования' })
+  @ApiOkResponse({ type: BookingDetailResponseDto, description: 'Бронирование подтверждено' })
   @ApiNotFoundResponse({ description: 'Бронирование не найдено' })
   @ApiBadRequestResponse({ description: 'Некорректный статус или операция' })
   async updateStatus(
@@ -150,15 +119,11 @@ export class BookingsController {
     const booking = await this.bookingsService.handleConfirm(userId, Number(bookingId));
     return BookingMapper.toDetailResponseDto(booking);
   }
-
   
   @Patch(':id/cancel')
-  @HttpCode(204)
-  @ApiOperation({
-    summary: 'Отмена бронирования',
-    description: 'Выполняет отмену бронирования. Доступно для арендатора или владельца объекта.'
-  })
-  @ApiParam({ name: 'id', description: 'ID бронирования для отмены', type: Number })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Отмена бронирования' })
+  @ApiParam({ type: Number, name: 'id', description: 'ID бронирования для отмены' })
   @ApiNoContentResponse({ description: 'Бронирование успешно отменено' })
   @ApiNotFoundResponse({ description: 'Бронирование не найдено' })
   @ApiBadRequestResponse({ description: 'Невозможно отменить бронирование' })

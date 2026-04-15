@@ -1,38 +1,34 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { ListingResponseDto } from '../../../listings/dto/responses/listing-response.dto';
 import { CurrencyType } from '../../../common/enums/currency-type.enum';
-import { BookingStatus } from '../../../common/enums/booking-status.enum';
-import { UserPublicResponseDto } from '../../../users/dto/responses/user-public-response.dto';
-import { PeriodDto } from '../../../common/dto/period.dto';
+import { BookingResponseDto } from './booking-response.dto';
+import { LocationDto } from 'src/listings/dto/location.dto';
+import { ListingPeriodType } from 'src/common/enums/listing-period-type.enum';
 
-export class BookingDetailResponseDto {
-  @ApiProperty({ type: Number, description: 'ID бронирования', example: 1 })
-  id: number;
+export class BookingDetailResponseDto extends BookingResponseDto {
+  @ApiProperty({ type: Number, description: 'Цена за период', example: 1500 })
+  listingPrice: number;
   
-  @ApiProperty({ type: ListingResponseDto, description: 'Полное объявление' })
-  listing: ListingResponseDto;
-
-  @ApiProperty({ type: UserPublicResponseDto, description: 'Арендатор' })
-  renter: UserPublicResponseDto;
-
-  @ApiProperty({ type: UserPublicResponseDto, description: 'Владелец объявления' })
-  landlord: UserPublicResponseDto;
-
-  @ApiProperty({ type: Number, description: 'Общая цена', example: 15000 })
-  totalPrice: number;
-
   @ApiProperty({ enum: CurrencyType, description: 'Валюта', example: CurrencyType.RUB })
-  currency: CurrencyType;
+  listingCurrency: CurrencyType;
 
-  @ApiProperty({ enum: BookingStatus, description: 'Статус бронирования', example: BookingStatus.PENDING })
-  status: BookingStatus;
+  @ApiProperty({ enum: ListingPeriodType, description: 'Период ценообразования', example: ListingPeriodType.DAY })
+  listingPricePeriod: ListingPeriodType;
 
-  @ApiProperty({ type: PeriodDto, description: 'Период бронирования' })
-  period: PeriodDto;
+  @ApiProperty({ type: Number, description: 'Размер в квадратных метрах', example: 5.5, nullable: true })
+  listingSize: number | null;
 
-  @ApiProperty({ type: String, description: 'Дата создания (ISO8601)', example: '2025-01-01T00:00:00.000Z' })
-  createdAt: string;
+  @ApiProperty({ type: String, description: 'Адрес', example: 'Москва, ул. Пушкина, д. Колотушкина' })
+  listingAdress: string;
 
-  @ApiProperty({ type: String, description: 'Дата обновления (ISO8601)', example: '2025-01-01T00:00:00.000Z' })
-  updatedAt: string;
+  @ApiProperty({ type: LocationDto, description: 'Координаты места', nullable: true })
+  listingLocation: LocationDto | null;
+
+  @ApiProperty({
+    type: 'object',
+    additionalProperties: { type: 'string' },
+    description: 'Удобства в формате {"ключ": "значение"}',
+    example: { 'security': 'true', 'electricity': '220V' },
+    nullable: true,
+  })
+  listingAmenities: Record<string, string> | null;
 }
