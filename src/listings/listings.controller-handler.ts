@@ -3,6 +3,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { Listing } from '../entities/listing.entity';
 import { ListingStatus } from '../common/enums/listing-status.enum';
 import { ListingsService } from './listings.service';
+import { FavoritesService } from './favorites.service';
 
 import { CreateListingDto } from './dto/requests/create-listing.dto';
 import { UpdateListingDto } from './dto/requests/update-listing.dto';
@@ -10,13 +11,23 @@ import { SearchListingsDto } from './dto/requests/search-listings.dto';
 
 @Injectable()
 export class ListingsControllerHandler {
-  constructor(private readonly listingsService: ListingsService) {}
+  constructor(
+    private readonly listingsService: ListingsService,
+    private readonly favoritesService: FavoritesService,
+  ) {}
 
   async findAllActive(
     searchDto: SearchListingsDto,
   ): Promise<{ listings: Listing[]; total: number; limit: number; offset: number }> {
     searchDto.status = ListingStatus.ACTIVE;
     return this.listingsService.findAllWithCache(searchDto);
+  }
+
+  async findGeo(
+    searchDto: SearchListingsDto,
+  ): Promise<{ listings: Listing[]; total: number; limit: number; offset: number }> {
+    searchDto.status = ListingStatus.ACTIVE;
+    return this.listingsService.findGeo(searchDto);
   }
 
   async findByUser(
@@ -34,15 +45,21 @@ export class ListingsControllerHandler {
     return this.listingsService.findAllWithCache(searchDto, currentUserId);
   }
 
-  async findById(listingId: number, currentUserId?: number): Promise<Listing> {
+  async findById(listingId: number, currentUserId?: number): Promise<{ listing: Listing; isFavorite?: boolean }> {
     const listing = await this.listingsService.findByIdWithCache(listingId);
     if (listing.status !== ListingStatus.ACTIVE && currentUserId !== Number(listing.user.id)) {
       throw new UnauthorizedException('Not authorized to see this listing');
     }
+
     if (currentUserId !== undefined) {
       await this.listingsService.updateViewHistory(listingId, currentUserId);
     }
-    return listing;
+    
+    const isFavorite = currentUserId
+      ? await this.favoritesService.existsByUser(listingId, currentUserId)
+      : undefined; 
+
+    return { listing, isFavorite };
   }
 
   async create(createDto: CreateListingDto, currentUserId: number): Promise<Listing> {

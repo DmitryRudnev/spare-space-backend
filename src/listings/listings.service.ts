@@ -113,6 +113,27 @@ export class ListingsService {
     return listing;
   }
 
+  async findGeo(
+    searchDto: SearchListingsDto,
+    userId?: number,
+  ): Promise<{ listings: Listing[]; total: number; limit: number; offset: number }> {
+    const query = this.buildSearchQuery(searchDto, userId);
+    query.andWhere('listing.location IS NOT NULL');
+    query.select([
+      'listing.id',
+      'listing.title',
+      'listing.type',
+      'listing.size',
+      'listing.price',
+      'listing.currency',
+      'listing.pricePeriod',
+      'listing.location',
+      'listing.photoUrls',
+    ]);
+    const [listings, total] = await query.getManyAndCount();
+    return { listings, total, limit: searchDto.limit, offset: searchDto.offset };
+  }
+
   async create(userId: number, createDto: CreateListingDto): Promise<Listing> {
     const user = await this.usersService.findById(userId);
     const listingData = this.prepareListingData(createDto, { user, status: ListingStatus.ACTIVE });  // пока что для разработки статус ACTIVE; потом сделать DRAFT
@@ -232,12 +253,10 @@ export class ListingsService {
   }
 
   async validateListingOwnership(listingId: number, userId: number): Promise<void> {
-    const exists = await this.listingRepository.exists({
-      where: {
-        id: listingId,
-        user: { id: userId },
-      }
-    });
+    const exists = await this.listingRepository.exists({ where: {
+      id: listingId,
+      user: { id: userId },
+    }});
     if (!exists) {
       throw new UnauthorizedException('Not authorized to modify this listing');
     }
