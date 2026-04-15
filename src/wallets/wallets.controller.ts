@@ -1,44 +1,44 @@
-import { Controller, Get, Post, Body, Query, UseGuards, HttpCode } from '@nestjs/common';
+import { Controller, Get, Post, Body, Query, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
+import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { WalletsService } from './wallets.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { User } from '../common/decorators/user.decorator';
-import { GetBalancesDto } from './dto/get-balances.dto';
-import { TopupDto } from './dto/topup.dto';
-import { WithdrawDto } from './dto/withdraw.dto';
-import { TransferDto } from './dto/transfer.dto';
+import { SearchTransactionsDto } from './dto/requests/search-transactions.dto';
+import { WalletResponseDto } from './dto/responses/wallet-response.dto';
+import { TransactionListResponseDto } from './dto/responses/transaction-list-response.dto';
+import { WalletMapper } from './mappers/wallet.mapper';
 
 @Controller('wallets')
 @UseGuards(JwtAuthGuard)
+@ApiTags('Wallets')
+@ApiBearerAuth()
 export class WalletsController {
   constructor(private readonly walletsService: WalletsService) {}
 
-  @Get('me')
-  @HttpCode(200)
-  getMyWallet(@User('userId') userId: number) {
-    return this.walletsService.getWalletByUserId(userId);
+  @Get('balances/my')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Получить балансы всех кошельков пользователя' })
+  @ApiOkResponse({ type: [WalletResponseDto], description: 'Баланс всех кошельков пользователя' })
+  async findWalletsByUser(@User('userId') userId: number): Promise<WalletResponseDto[]> {
+    const wallets = await this.walletsService.findWalletsByUser(userId);
+    return wallets.map(wallet => WalletMapper.toWalletResponseDto(wallet));
   }
-
-  @Get('me/balances')
-  @HttpCode(200)
-  getMyBalances(@Query() getBalancesDto: GetBalancesDto, @User('userId') userId: number) {
-    return this.walletsService.getBalances(userId, getBalancesDto);
-  }
-
-  @Post('topup')
-  @HttpCode(200)
-  topup(@Body() topupDto: TopupDto, @User('userId') userId: number) {
-    return this.walletsService.topup(userId, topupDto);
-  }
-
-  @Post('withdraw')
-  @HttpCode(200)
-  withdraw(@Body() withdrawDto: WithdrawDto, @User('userId') userId: number) {
-    return this.walletsService.withdraw(userId, withdrawDto);
-  }
-
-  @Post('transfer')
-  @HttpCode(200)
-  transfer(@Body() transferDto: TransferDto, @User('userId') userId: number) {
-    return this.walletsService.transfer(userId, transferDto);
+  
+  @Get('transactions/my')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Получить список транзакций пользователя' })
+  @ApiOkResponse({ type: TransactionListResponseDto, description: 'Список транзакций пользователя' })
+  async findTransactionsByUser(
+    @User('userId') userId: number,
+    @Query() dto: SearchTransactionsDto
+  ): Promise<TransactionListResponseDto> {
+    const [transactions, total] = await this.walletsService.findTransactionsByUser(
+      userId,
+      dto.limit,
+      dto.offset,
+      dto.currency,
+      dto.type
+    );
+    return WalletMapper.toTransactionListDto(transactions, total, dto.limit, dto.offset);
   }
 }
