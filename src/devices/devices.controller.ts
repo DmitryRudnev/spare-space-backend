@@ -31,10 +31,7 @@ export class DevicesController {
 
   @Post()
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({
-    summary: 'Регистрация или обновление токена устройства',
-    description: 'Сохраняет FCM токен для текущего пользователя. Вызывается фронтендом при запуске приложения'
-  })
+  @ApiOperation({ summary: 'Регистрация или обновление FCM токена' })
   @ApiOkResponse({ description: 'Токен успешно сохранен' })
   @ApiUnauthorizedResponse({ description: 'Не авторизован' })
   @ApiBadRequestResponse({ description: 'Некорректные данные запроса' })
@@ -47,10 +44,7 @@ export class DevicesController {
 
   @Delete(':fcmToken')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({
-    summary: 'Удаление токена устройства',
-    description: 'Удаляет FCM токен для текущего пользователя. Вызывается фронтендом при выходе из аккаунта или при удалении приложения'
-  })
+  @ApiOperation({ summary: 'Удаление токена устройства' })
   @ApiNoContentResponse({ description: 'Токен успешно удален' })
   @ApiUnauthorizedResponse({ description: 'Не авторизован' })
   @ApiBadRequestResponse({ description: 'Некорректные данные запроса' })
