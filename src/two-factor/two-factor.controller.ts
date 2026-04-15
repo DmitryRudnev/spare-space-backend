@@ -10,8 +10,10 @@ import {
 import {
   ApiTags,
   ApiOperation,
-  ApiResponse,
   ApiBearerAuth,
+  ApiOkResponse,
+  ApiBadRequestResponse,
+  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 
 import { TwoFactorService } from './two-factor.service';
@@ -37,12 +39,8 @@ export class TwoFactorController {
 
   @Get('generate')
   @ApiOperation({ summary: 'Сгенерировать временный TOTP секрет для включения 2FA' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Секрет успешно сгенерирован',
-    type: GenerateSecretResponseDto,
-  })
-  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '2FA уже включена' })
+  @ApiOkResponse({ type: GenerateSecretResponseDto, description: 'Секрет успешно сгенерирован' })
+  @ApiBadRequestResponse({ description: '2FA уже включена' })
   async generate(@User('userId') userId: number): Promise<GenerateSecretResponseDto> {
     return this.twoFactorService.generateSecret(userId);
   }
@@ -50,12 +48,8 @@ export class TwoFactorController {
   @Post('enable')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Включить двухфакторную аутентификацию для пользователя' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: '2FA включена, возвращены коды восстановления',
-    type: EnableTwoFactorResponseDto,
-  })
-  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Неверный код или нет временного секрета' })
+  @ApiOkResponse({ type: EnableTwoFactorResponseDto, description: '2FA включена, возвращены коды восстановления' })
+  @ApiBadRequestResponse({ description: 'Неверный код или нет временного секрета' })
   async enable(
     @User('userId') userId: number,
     @Body() dto: EnableTwoFactorRequestDto,
@@ -67,9 +61,9 @@ export class TwoFactorController {
   @Post('disable')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Отключить двухфакторную аутентификацию' })
-  @ApiResponse({ status: HttpStatus.OK, description: '2FA отключена' })
-  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '2FA не включена' })
-  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'Неверный код' })
+  @ApiOkResponse({ description: '2FA отключена' })
+  @ApiBadRequestResponse({ description: '2FA не включена' })
+  @ApiUnauthorizedResponse({ description: 'Неверный код' })
   async disable(
     @User('userId') userId: number,
     @Body() dto: DisableTwoFactorRequestDto,
@@ -79,11 +73,7 @@ export class TwoFactorController {
 
   @Get('status')
   @ApiOperation({ summary: 'Получить текущий статус 2FA для пользователя' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Статус получен',
-    type: TwoFactorStatusResponseDto,
-  })
+  @ApiOkResponse({ type: TwoFactorStatusResponseDto, description: 'Статус получен' })
   async status(@User('userId') userId: number): Promise<TwoFactorStatusResponseDto> {
     const enabled = (await this.usersService.findById(userId)).twoFaEnabled;
     return { enabled };
