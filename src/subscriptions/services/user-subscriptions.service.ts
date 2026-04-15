@@ -63,6 +63,19 @@ export class UserSubscriptionsService {
     return subscription;
   }
 
+  async findActiveByUser(userId: number): Promise<UserSubscription | null> {
+    return this.userSubscriptionRepository.findOne({
+      where: {
+        user: { id: userId },
+        status: SubscriptionStatus.ACTIVE,
+      },
+      relations: {
+        user: true,
+        plan: true,
+      },
+    });
+  }
+
   async findByUser(
     userId: number,
     limit: number,

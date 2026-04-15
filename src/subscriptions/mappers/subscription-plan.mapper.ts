@@ -10,7 +10,7 @@ export class SubscriptionPlanMapper {
     dto.id = plan.id;
     dto.name = plan.name;
     dto.status = plan.status;
-    dto.price = plan.price;
+    dto.price = plan.formattedPrice;
     dto.currency = plan.currency;
     dto.maxListings = plan.maxListings;
     dto.prioritySearch = plan.prioritySearch;

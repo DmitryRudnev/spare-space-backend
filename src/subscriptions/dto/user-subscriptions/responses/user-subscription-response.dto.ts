@@ -1,4 +1,3 @@
-// src/subscriptions/dto/user-subscriptions/responses/user-subscription-response.dto.ts
 import { ApiProperty } from '@nestjs/swagger';
 import { SubscriptionPlanResponseDto } from '../../subscription-plans/responses/subscription-plan-response.dto';
 import { SubscriptionStatus } from '../../../../common/enums/subscription-status.enum';

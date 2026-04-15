@@ -15,8 +15,6 @@ import {
   ApiOperation,
   ApiBearerAuth,
   ApiParam,
-  ApiQuery,
-  ApiBody,
   ApiOkResponse,
   ApiCreatedResponse,
   ApiUnauthorizedResponse,
@@ -46,18 +44,10 @@ export class SubscriptionPlansController {
 
   @Get()
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({
-    summary: 'Получить все активные тарифные планы',
-    description: 'Возвращает пагинированный список активных тарифных планов. Доступно без авторизации.',
-  })
-  @ApiQuery({ name: 'pagination', type: PaginationDto, required: false, description: 'Параметры пагинации' })
-  @ApiOkResponse({ description: 'Список планов', type: SubscriptionPlanListResponseDto })
+  @ApiOperation({ summary: 'Получить все активные тарифные планы' })
+  @ApiOkResponse({ type: SubscriptionPlanListResponseDto, description: 'Список планов' })
   async findAll(@Query() pagination: PaginationDto): Promise<SubscriptionPlanListResponseDto> {
-    const result = await this.plansService.findAllWithCache(
-      pagination.limit,
-      pagination.offset,
-      // По умолчанию сервис фильтрует по ACTIVE, можно не передавать
-    );
+    const result = await this.plansService.findAllWithCache(pagination.limit, pagination.offset);
     return SubscriptionPlanMapper.toListResponseDto(
       result.plans,
       result.total,
@@ -68,12 +58,9 @@ export class SubscriptionPlansController {
 
   @Get(':id')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({
-    summary: 'Получить тарифный план по ID',
-    description: 'Возвращает детальную информацию о плане. Доступно без авторизации.',
-  })
-  @ApiParam({ name: 'id', description: 'ID тарифного плана', type: Number })
-  @ApiOkResponse({ description: 'Детальная информация о плане', type: SubscriptionPlanDetailResponseDto })
+  @ApiOperation({ summary: 'Получить тарифный план по ID' })
+  @ApiParam({ type: Number, name: 'id', description: 'ID тарифного плана' })
+  @ApiOkResponse({ type: SubscriptionPlanDetailResponseDto, description: 'Детальная информация о плане' })
   @ApiNotFoundResponse({ description: 'План не найден' })
   async findOne(@Param('id') planId: string): Promise<SubscriptionPlanDetailResponseDto> {
     const plan = await this.plansService.findByIdWithCache(Number(planId));
@@ -85,12 +72,8 @@ export class SubscriptionPlansController {
   @Roles(UserRoleType.ADMIN)
   @HttpCode(HttpStatus.CREATED)
   @ApiBearerAuth()
-  @ApiOperation({
-    summary: 'Создать новый тарифный план',
-    description: 'Доступно только администраторам.',
-  })
-  @ApiBody({ type: CreateSubscriptionPlanDto, description: 'Данные для создания плана' })
-  @ApiCreatedResponse({ description: 'План успешно создан', type: SubscriptionPlanDetailResponseDto })
+  @ApiOperation({ summary: 'Создать новый тарифный план' })
+  @ApiCreatedResponse({ type: SubscriptionPlanDetailResponseDto, description: 'План успешно создан' })
   @ApiUnauthorizedResponse({ description: 'Не авторизован' })
   @ApiForbiddenResponse({ description: 'Недостаточно прав' })
   @ApiConflictResponse({ description: 'План с таким названием уже существует' })
@@ -104,12 +87,8 @@ export class SubscriptionPlansController {
   @Roles(UserRoleType.ADMIN)
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth()
-  @ApiOperation({
-    summary: 'Обновить информацию о тарифном плане (кроме статуса)',
-    description: 'Доступно только администраторам.',
-  })
-  @ApiParam({ name: 'id', description: 'ID тарифного плана', type: Number })
-  @ApiBody({ type: UpdateSubscriptionPlanInfoDto, description: 'Обновляемые поля' })
+  @ApiOperation({ summary: 'Обновить информацию о тарифном плане' })
+  @ApiParam({ type: Number, name: 'id', description: 'ID тарифного плана' })
   @ApiOkResponse({ description: 'План обновлён', type: SubscriptionPlanDetailResponseDto })
   @ApiUnauthorizedResponse({ description: 'Не авторизован' })
   @ApiForbiddenResponse({ description: 'Недостаточно прав' })
@@ -133,8 +112,7 @@ export class SubscriptionPlansController {
     description: 'Доступно только администраторам.',
   })
   @ApiParam({ name: 'id', description: 'ID тарифного плана', type: Number })
-  @ApiBody({ type: UpdateSubscriptionPlanStatusDto, description: 'Новый статус' })
-  @ApiOkResponse({ description: 'Статус обновлён', type: SubscriptionPlanDetailResponseDto })
+  @ApiOkResponse({ type: SubscriptionPlanDetailResponseDto, description: 'Статус обновлён' })
   @ApiUnauthorizedResponse({ description: 'Не авторизован' })
   @ApiForbiddenResponse({ description: 'Недостаточно прав' })
   @ApiNotFoundResponse({ description: 'План не найден' })
