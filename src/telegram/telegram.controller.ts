@@ -7,6 +7,7 @@ import {
   Get, 
   Delete,
   HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { 
   ApiTags, 
@@ -15,7 +16,6 @@ import {
   ApiOkResponse, 
   ApiConflictResponse,
   ApiNoContentResponse,
-  ApiBody
 } from '@nestjs/swagger';
 import { TelegramWebhookGuard } from './guards/telegram-webhook.guard';
 import { TelegramService } from './services/telegram.service';
@@ -36,7 +36,6 @@ export class TelegramController {
     private readonly telegramAccountService: TelegramAccountService,
   ) {}
 
-
   @Post('webhook')
   @UseGuards(TelegramWebhookGuard)
   async handleWebhook(@Body() update: TelegramWebhookUpdate): Promise<{ status: string }> {
@@ -44,19 +43,12 @@ export class TelegramController {
     return { status: 'ok' };
   }
 
-
   @Get('link')
-  @HttpCode(200)
+  @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ 
-    summary: 'Получить ссылку для привязки Telegram аккаунта',
-    description: 'Генерирует уникальную ссылку для привязки Telegram аккаунта к пользователю'
-  })
-  @ApiOkResponse({ 
-    description: 'Ссылка успешно сгенерирована',
-    type: GenerateTelegramLinkResponseDto
-  })
+  @ApiOperation({ summary: 'Получить ссылку для привязки Telegram аккаунта' })
+  @ApiOkResponse({ type: GenerateTelegramLinkResponseDto, description: 'Ссылка успешно сгенерирована' })
   async generateTelegramLink(
     @User('userId') currentUserId: number
   ): Promise<GenerateTelegramLinkResponseDto> {
@@ -64,26 +56,18 @@ export class TelegramController {
     return { link };
   }
 
-
   @Delete('unlink')
-  @HttpCode(204)
+  @HttpCode(HttpStatus.NO_CONTENT)
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ 
-    summary: 'Отвязать Telegram аккаунт',
-    description: 'Отвязывает Telegram аккаунт от пользователя'
-  })
-  @ApiBody({ type: UnlinkTelegramAccountRequestDto, description: 'ID Telegram аккаунта' })
-  @ApiNoContentResponse({ 
-    description: 'Telegram аккаунт успешно отвязан' 
-  })
-  @ApiConflictResponse({ 
-    description: 'Указанный Telegram аккаунт не привязан к пользователю' 
-  })
+  @ApiOperation({ summary: 'Отвязать текущий Telegram аккаунт' })
+  @ApiNoContentResponse({ description: 'Telegram аккаунт успешно отвязан' })
+  @ApiConflictResponse({ description: 'Указанный Telegram аккаунт не привязан к пользователю' })
   async unlinkTelegramAccount(
     @User('userId') currentUserId: number,
-    @Body() unlinkDto: UnlinkTelegramAccountRequestDto
+    // @Body() unlinkDto: UnlinkTelegramAccountRequestDto,
   ): Promise<void> {
-    await this.telegramAccountService.unlinkTelegramAccount(currentUserId, unlinkDto.telegramId);
+    await this.telegramAccountService.unlinkTelegramAccount(currentUserId);
+    // await this.telegramAccountService.unlinkTelegramAccount(currentUserId, unlinkDto.telegramId);
   }
 }

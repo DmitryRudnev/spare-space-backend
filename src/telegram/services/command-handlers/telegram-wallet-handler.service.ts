@@ -3,7 +3,7 @@ import { UsersService } from '../../../users/services/users.service';
 import { WalletsService } from '../../../wallets/wallets.service';
 import { TelegramSenderService } from '../telegram-sender.service';
 import { TransactionType } from '../../../common/enums/transaction-type.enum';
-import { WalletBalance } from '../../../entities/wallet-balance.entity';
+import { Wallet } from 'src/entities/wallet.entity';
 import { Transaction } from '../../../entities/transaction.entity';
 import { CurrencyType } from 'src/common/enums/currency-type.enum';
 
@@ -19,8 +19,8 @@ export class TelegramWalletHandlerService {
   
   async handle(chatId: number, userId: number): Promise<void> {
     try {
-      const balances = await this.walletsService.getBalances(userId, {});
-      const transactions = await this.walletsService.findTransactionsByUserId(userId);
+      const balances = await this.walletsService.findWalletsByUser(userId);
+      const [transactions, total] = await this.walletsService.findTransactionsByUser(userId, 5, 0);
 
       const message = this.buildWalletMessage(balances, transactions);
       await this.telegramSenderService.sendMessage(chatId, message);
@@ -36,7 +36,7 @@ export class TelegramWalletHandlerService {
   // ==========================================================================
 
 
-  private buildWalletMessage(balances: WalletBalance[], transactions: Transaction[]): string {
+  private buildWalletMessage(balances: Wallet[], transactions: Transaction[]): string {
     let message = `💰 *Ваш кошелёк*\n\n`;
 
     // Секция балансов

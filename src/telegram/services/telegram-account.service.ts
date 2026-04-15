@@ -43,14 +43,15 @@ export class TelegramAccountService {
    * @throws {NotFoundException} Если пользователь не найден
    * @throws {ConflictException} Если Telegram аккаунт не привязан к пользователю
    */
-  async unlinkTelegramAccount(userId: number, telegramId: number): Promise<void> {
-    const user = await this.usersService.findById(userId);
-    if (!user) {
-      throw new NotFoundException('Пользователь не найден');
-    }
-
-    if (user.telegramId != telegramId) {
-      throw new ConflictException('Указанный Telegram аккаунт не привязан к пользователю');
+  async unlinkTelegramAccount(userId: number, telegramId?: number): Promise<void> {
+    // Пока что в БД предусмотрен только 1 ТГ аккаунт для одного пользователя
+    // Если это потом изменится, то в контроллере надо будет принимать telegramId
+    // и изменить логику этого метода
+    if (telegramId) {
+      const user = await this.usersService.findById(userId);
+      if (user.telegramId != telegramId) {
+        throw new ConflictException('Указанный Telegram аккаунт не привязан к пользователю');
+      }
     }
 
     await this.usersService.update(userId, {
