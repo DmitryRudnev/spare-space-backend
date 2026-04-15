@@ -9,7 +9,7 @@ CREATE TYPE payment_method AS ENUM ('CARD', 'SBP', 'USDT', 'ETH', 'TRX');
 CREATE TYPE payment_status AS ENUM ('PENDING', 'BLOCKED', 'COMPLETED', 'REFUNDED');
 CREATE TYPE transaction_type AS ENUM ('TOPUP', 'CHARGE', 'PAYOUT', 'COMMISSION');
 CREATE TYPE currency_type AS ENUM ('RUB', 'USD', 'USDT', 'ETH', 'TRX');
-CREATE TYPE notification_channel AS ENUM ('WEBSOCKET', 'FCM', 'EMAIL', 'SMS', 'TG_BOT', 'EXPO');
+CREATE TYPE notification_channel AS ENUM ('WEBSOCKET', 'FCM', 'EMAIL', 'SMS', 'TG_BOT');
 CREATE TYPE notification_type AS ENUM (
     -- Сообщения
     'MESSAGE_NEW',      -- Новое сообщение в чате
@@ -185,24 +185,16 @@ CREATE INDEX idx_bookings_period ON bookings USING GIST(period);
 
 CREATE TABLE wallets (
     id BIGSERIAL PRIMARY KEY,
-    user_id BIGINT UNIQUE NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    balance DECIMAL(26,16) NOT NULL DEFAULT 0,
+    currency currency_type NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (user_id, currency)
 );
 
 CREATE INDEX idx_wallets_user_id ON wallets(user_id);
-
-
-
-CREATE TABLE wallet_balances (
-    id BIGSERIAL PRIMARY KEY,
-    wallet_id BIGINT NOT NULL REFERENCES wallets(id) ON DELETE CASCADE,
-    balance DECIMAL(26,16) NOT NULL DEFAULT 0,
-    currency currency_type NOT NULL,
-    UNIQUE (wallet_id, currency)
-);
-
-CREATE INDEX idx_wallet_balances_wallet_id ON wallet_balances(wallet_id);
-CREATE INDEX idx_wallet_balances_currency ON wallet_balances(currency);
+CREATE INDEX idx_wallets_currency ON wallets(currency);
 
 
 
@@ -225,7 +217,7 @@ CREATE INDEX idx_payments_status ON payments(status);
 
 CREATE TABLE transactions (
     id BIGSERIAL PRIMARY KEY,
-    wallet_id BIGINT NOT NULL REFERENCES wallets(id) ON DELETE CASCADE,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     type transaction_type NOT NULL,
     amount DECIMAL(26,16) NOT NULL,
     currency currency_type NOT NULL,
@@ -237,7 +229,7 @@ CREATE TABLE transactions (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_transactions_wallet_id ON transactions(wallet_id);
+CREATE INDEX idx_transactions_user_id ON transactions(user_id);
 CREATE INDEX idx_transactions_type ON transactions(type);
 CREATE INDEX idx_transactions_created_at ON transactions(created_at);
 
