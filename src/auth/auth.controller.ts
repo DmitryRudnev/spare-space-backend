@@ -30,7 +30,6 @@ export class AuthController {
   @Post('request-sms-code')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Запрос SMS-кода для входа/регистрации' })
-  @ApiBody({ type: RequestSmsCodeDto })
   @ApiOkResponse({ description: 'Код отправлен' })
   async requestSmsCode(@Body() dto: RequestSmsCodeDto): Promise<void> {
     await this.authService.requestSmsCode(dto.phone);
@@ -39,8 +38,10 @@ export class AuthController {
   @Post('verify-sms-code')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Подтверждение кода' })
-  @ApiBody({ type: VerifySmsCodeDto })
-  @ApiOkResponse({ type: VerifySmsCodeResponseDto })
+  @ApiOkResponse({
+    type: VerifySmsCodeResponseDto,
+    description: 'Вход выполнен успешно ИЛИ требуется завершение регистрации ИЛИ требуется подтверждение 2ФА',
+  })
   @ApiUnauthorizedResponse({ description: 'Неверный или просроченный код' })
   async verifySmsCode(@Body() dto: VerifySmsCodeDto): Promise<VerifySmsCodeResponseDto> {
     return this.authService.verifySmsCode(dto.phone, dto.code);
@@ -49,8 +50,7 @@ export class AuthController {
   @Post('complete-registration')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Завершение регистрации' })
-  @ApiBody({ type: CompleteRegistrationDto })
-  @ApiCreatedResponse({ type: AuthResponseDto })
+  @ApiCreatedResponse({ type: AuthResponseDto, description: 'Регистрация успешно завершена' })
   @ApiConflictResponse({ description: 'Телефон уже существует' })
   @ApiUnauthorizedResponse({ description: 'Неверный или просроченный токен' })
   async completeRegistration(@Body() dto: CompleteRegistrationDto): Promise<AuthResponseDto> {
@@ -59,15 +59,8 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({
-    summary: 'Вход в систему',
-    description: 'Аутентификация пользователя по email/телефону и паролю'
-  })
-  @ApiBody({ type: LoginDto, description: 'Данные для входа' })
-  @ApiOkResponse({ 
-    description: 'Успешная аутентификация', 
-    type: LoginResponseDto 
-  })
+  @ApiOperation({ summary: 'Вход по телефону/почте и паролю' })
+  @ApiOkResponse({ type: LoginResponseDto, description: 'Вход выполнен успешно ИЛИ требуется подтверждение 2ФА' })
   @ApiUnauthorizedResponse({ description: 'Неверные учетные данные' })
   @ApiBadRequestResponse({ description: 'Некорректные данные запроса' })
   async login(@Body() dto: LoginDto): Promise<LoginResponseDto> {
@@ -76,12 +69,8 @@ export class AuthController {
 
   @Post('verify-2fa')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({
-    summary: 'Подтверждение двухфакторной аутентификации',
-    description: 'Завершает вход с 2FA и возвращает токены доступа'
-  })
-  @ApiBody({ type: VerifyTwoFactorDto })
-  @ApiOkResponse({ type: AuthResponseDto })
+  @ApiOperation({ summary: 'Подтверждение двухфакторной аутентификации' })
+  @ApiOkResponse({ type: AuthResponseDto, description: '2ФА успешно подтверждена' })
   @ApiUnauthorizedResponse({ description: 'Неверный код или токен' })
   async verifyTwoFactor(@Body() dto: VerifyTwoFactorDto): Promise<AuthResponseDto> {
     return this.authService.verifyTwoFactor(dto.twoFactorToken, dto.code);
@@ -89,15 +78,8 @@ export class AuthController {
 
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({
-    summary: 'Обновление токенов',
-    description: 'Обновляет access и refresh токены'
-  })
-  @ApiBody({ type: TokenOperationDto, description: 'Refresh токен' })
-  @ApiOkResponse({ 
-    description: 'Токены успешно обновлены', 
-    type: AuthResponseDto 
-  })
+  @ApiOperation({ summary: 'Обновление access и refresh токенов' })
+  @ApiOkResponse({ type: AuthResponseDto, description: 'Токены успешно обновлены' })
   @ApiUnauthorizedResponse({ description: 'Неверный или просроченный токен' })
   @ApiBadRequestResponse({ description: 'Некорректные данные запроса' })
   async refresh(@Body() dto: TokenOperationDto): Promise<AuthResponseDto> {
@@ -106,11 +88,7 @@ export class AuthController {
 
   @Post('logout')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({
-    summary: 'Выход из системы',
-    description: 'Инвалидирует refresh токен'
-  })
-  @ApiBody({ type: TokenOperationDto, description: 'Refresh токен для инвалидации' })
+  @ApiOperation({ summary: 'Выход из системы' })
   @ApiNoContentResponse({ description: 'Успешный выход из системы' })
   @ApiUnauthorizedResponse({ description: 'Неверный токен' })
   @ApiConflictResponse({ description: 'Токен уже отозван' })
