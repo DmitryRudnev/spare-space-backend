@@ -154,4 +154,10 @@ export class Listing {
       end: new Date(parts[1]),
     };
   }
+
+  get formattedPrice(): number {
+    return [CurrencyType.RUB, CurrencyType.USD].includes(this.currency)
+      ? Math.round(this.price * 100) / 100
+      : Number(this.price);
+  }
 }

@@ -57,4 +57,10 @@ export class Booking {
       end: new Date(parts[1]),
     };
   }
+
+  get formattedPrice(): number {
+    return [CurrencyType.RUB, CurrencyType.USD].includes(this.currency)
+      ? Math.round(this.totalPrice * 100) / 100
+      : Number(this.totalPrice);
+  }
 }

@@ -55,4 +55,10 @@ export class SubscriptionPlan {
   @Type(() => Date)
   @CreateDateColumn({ type: 'timestamptz' })
   updatedAt: Date;
+
+  get formattedPrice(): number {
+    return [CurrencyType.RUB, CurrencyType.USD].includes(this.currency)
+      ? Math.round(this.price * 100) / 100
+      : Number(this.price);
+  }
 }

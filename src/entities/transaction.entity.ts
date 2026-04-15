@@ -1,5 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn } from 'typeorm';
-import { Wallet } from './wallet.entity';
+import { User } from './user.entity';
 import { Booking } from './booking.entity';
 import { TransactionType } from '../common/enums/transaction-type.enum';
 import { PaymentStatus } from '../common/enums/payment-status.enum';
@@ -10,9 +10,12 @@ export class Transaction {
   @PrimaryGeneratedColumn({ type: 'bigint' })
   id: number;
 
-  @ManyToOne(() => Wallet, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'wallet_id' })
-  wallet: Wallet;
+  @Column({ name: 'user_id', type: 'bigint' })
+  userId: number;
+
+  @ManyToOne(() => User, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'user_id' })
+  user: User;
 
   @Column({ type: 'enum', enum: TransactionType })
   type: TransactionType;
@@ -41,4 +44,10 @@ export class Transaction {
 
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
+
+  get formattedAmount(): number {
+    return [CurrencyType.RUB, CurrencyType.USD].includes(this.currency)
+      ? Math.round(this.amount * 100) / 100
+      : Number(this.amount);
+  }
 }
