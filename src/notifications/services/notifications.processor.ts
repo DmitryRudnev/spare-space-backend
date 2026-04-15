@@ -1,11 +1,9 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
 import { Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 
 import { NotificationsService } from './notifications.service';
 import { FcmNotificationsService } from './fcm-notifications.service';
-import { ExpoNotificationsService } from './expo-notifications.service';
 import { NotificationMessageBuilder } from './notification-message-builder.service';
 
 import { UsersService } from '../../users/services/users.service';
@@ -18,25 +16,15 @@ import { AnyNotificationPayload } from '../../common/interfaces/notification-pay
 @Processor('notifications')
 export class NotificationsProcessor extends WorkerHost {
   private readonly logger = new Logger(NotificationsProcessor.name);
-  private readonly pushProvider: string;
 
   constructor(
     private readonly notificationsService: NotificationsService,
     private readonly usersService: UsersService,
     private readonly devicesService: DevicesService,
     private readonly fcmNotificationsService: FcmNotificationsService,
-    private readonly expoNotificationsService: ExpoNotificationsService,
     private readonly telegramNotificationService: TelegramNotificationService,
     private readonly notificationMessageBuilder: NotificationMessageBuilder,
-    private readonly configService: ConfigService,
-  ) {
-    super();
-    const provider = this.configService.getOrThrow<string>('PUSH_PROVIDER');
-    if (provider !== 'fcm' && provider !== 'expo') {
-      throw new Error(`Invalid PUSH_PROVIDER env variable: "${provider}". Allowed values: fcm, expo`);
-    }
-    this.pushProvider = provider;
-  }
+  ) { super(); }
 
   async process(
     job: Job<{
@@ -51,7 +39,7 @@ export class NotificationsProcessor extends WorkerHost {
     try {
       const settings = await this.notificationsService.getUserNotificationSettings(userId);
 
-      // FCM или EXPO
+      // FCM
       if (settings.sendPush) {
         this.logger.log(`Processing push notification for user ${userId}`);
         await this.handlePushNotification(userId, type, referenceId, payload);
@@ -80,30 +68,16 @@ export class NotificationsProcessor extends WorkerHost {
       return;
     }
 
-    const sendByFCM = this.pushProvider === 'fcm';
-    const targetTokens = sendByFCM
-      ? tokens.filter(t => !this.expoNotificationsService.isExpoToken(t))
-      : tokens.filter(t => this.expoNotificationsService.isExpoToken(t));
-
-    if (targetTokens.length === 0) {
-      this.logger.warn(`No ${this.pushProvider} tokens found for user ${userId}`);
-      return;
-    }
-
     await this.notificationsService.create(
       userId,
       type,
-      sendByFCM ? NotificationChannel.FCM : NotificationChannel.EXPO,
+      NotificationChannel.FCM,
       referenceId,
       payload
     );
 
     const { title, body } = this.notificationMessageBuilder.build(type, payload);
-    if (sendByFCM) {
-      await this.fcmNotificationsService.sendPush(tokens, title, body, type, payload);
-    } else {
-      await this.expoNotificationsService.sendPush(tokens, title, body, type, payload);
-    }
+    await this.fcmNotificationsService.sendPush(tokens, title, body, type, payload);
   }
   
   
