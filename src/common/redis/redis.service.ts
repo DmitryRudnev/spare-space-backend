@@ -28,10 +28,10 @@ export class RedisService {
       return cls ? plainToInstance(cls, cached) : (cached as T);
     }
 
-    this.logger.log(`Cache miss for key: ${key}. Executing callback.`);
+    this.logger.log(`Cache miss for key: ${key}, executing callback`);
     const result = await cb();
-    if (result !== undefined && result !== null) {
-      this.logger.log(`Caching result for key: ${key} with TTL: ${ttlSec} seconds.`);
+    if (result) {
+      this.logger.log(`Caching result for key: ${key} with TTL: ${ttlSec} seconds`);
       // cache-manager v5+ требует миллисекунды
       await this.keyv.set(key, result, ttlSec * 1000);
     }
@@ -55,6 +55,7 @@ export class RedisService {
    * Прямая запись в кэш
    */
   async set(key: string, value: any, ttlSec: number): Promise<void> {
+    this.logger.log(`Caching result for key: ${key} with TTL: ${ttlSec} seconds`);
     await this.keyv.set(key, value, ttlSec * 1000);
   }
 
@@ -62,6 +63,7 @@ export class RedisService {
    * Удалить запись (инвалидация)
    */
   async delete(key: string): Promise<void> {
+    this.logger.log(`Deleting key: ${key}`);
     await this.keyv.delete(key);
   }
 
@@ -69,9 +71,11 @@ export class RedisService {
    * Удалить все ключи, соответствующие паттерну (например, "reviews:listing:123:*").
    * Используется для инвалидации групп кеша.
    */
-    async deleteByPattern(pattern: string): Promise<void> {
+  async deleteByPattern(pattern: string): Promise<void> {
+    const normalizedPattern = pattern.startsWith('*') ? pattern : `*${pattern}`;
+    this.logger.log(`Deleting keys by pattern: ${normalizedPattern}`);
     const stream = this.redis.scanStream({ 
-      match: pattern,
+      match: normalizedPattern,
       count: 100
     });
 
