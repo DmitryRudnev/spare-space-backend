@@ -9,14 +9,13 @@ import {
   HttpCode,
   ParseIntPipe,
   Query,
+  HttpStatus,
 } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
   ApiBearerAuth,
   ApiParam,
-  ApiBody,
-  ApiQuery,
   ApiCreatedResponse,
   ApiOkResponse,
   ApiUnauthorizedResponse,
@@ -33,52 +32,27 @@ import { CreateQuestionDto } from './dto/requests/create-question.dto';
 import { AnswerQuestionDto } from './dto/requests/answer-question.dto';
 import { QuestionListResponseDto } from './dto/responses/question-list-response.dto';
 import { QuestionDetailResponseDto } from './dto/responses/question-detail-response.dto';
+import { PaginationDto } from 'src/common/dto/pagination.dto';
 
 @ApiTags('Questions')
 @Controller()
 export class QuestionsController {
   constructor(private readonly questionsService: QuestionsService) {}
 
-  @Get('listings/:listingId/questions')
-  @HttpCode(200)
-  @ApiOperation({
-    summary: 'Получение вопросов к объявлению',
-    description:
-      'Возвращает список вопросов и ответов к конкретному объявлению. Аутентификация не требуется.',
-  })
-  @ApiParam({
-    name: 'listingId',
-    description: 'ID объявления',
-    type: Number,
-  })
-  @ApiQuery({
-    name: 'limit',
-    type: Number,
-    required: false,
-    description: 'Лимит записей (по умолчанию 20)',
-    example: 20,
-  })
-  @ApiQuery({
-    name: 'offset',
-    type: Number,
-    required: false,
-    description: 'Смещение (по умолчанию 0)',
-    example: 0,
-  })
-  @ApiOkResponse({
-    description: 'Список вопросов к объявлению',
-    type: QuestionListResponseDto,
-  })
+  @Get('listings/:id/questions')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Получение списка вопросов к объявлению' })
+  @ApiParam({ type: Number, name: 'id', description: 'ID объявления' })
+  @ApiOkResponse({ type: QuestionListResponseDto, description: 'Список вопросов к объявлению' })
   @ApiNotFoundResponse({ description: 'Объявление не найдено' })
   async getListingQuestions(
-    @Param('listingId', ParseIntPipe) listingId: number,
-    @Query('limit') limit?: number,
-    @Query('offset') offset?: number,
+    @Param('id', ParseIntPipe) listingId: number,
+    @Query() paginationDto: PaginationDto,
   ): Promise<QuestionListResponseDto> {
     const result = await this.questionsService.findByListing(
       listingId,
-      limit,
-      offset,
+      paginationDto.limit,
+      paginationDto.offset,
     );
     return QuestionMapper.toListResponseDto(
       result.questions,
@@ -88,63 +62,32 @@ export class QuestionsController {
     );
   }
 
-
   @UseGuards(JwtAuthGuard)
   @Post('questions')
-  @HttpCode(201)
+  @HttpCode(HttpStatus.CREATED)
   @ApiBearerAuth()
-  @ApiOperation({
-    summary: 'Создание вопроса к объявлению',
-    description:
-      'Создаёт вопрос от текущего пользователя к владельцу объявления. Требует аутентификации.',
-  })
-  @ApiBody({
-    type: CreateQuestionDto,
-    description: 'Данные для создания вопроса',
-  })
-  @ApiCreatedResponse({
-    description: 'Вопрос успешно создан',
-    type: QuestionDetailResponseDto,
-  })
+  @ApiOperation({ summary: 'Создание вопроса к объявлению' })
+  @ApiCreatedResponse({ type: QuestionDetailResponseDto, description: 'Вопрос успешно создан' })
   @ApiUnauthorizedResponse({ description: 'Не авторизован' })
-  @ApiNotFoundResponse({
-    description: 'Объявление или пользователь не найдены',
-  })
+  @ApiNotFoundResponse({ description: 'Объявление или пользователь не найдены' })
   @ApiBadRequestResponse({ description: 'Некорректные данные запроса' })
   async create(
     @Body() createQuestionDto: CreateQuestionDto,
     @User('userId') fromUserId: number,
   ): Promise<QuestionDetailResponseDto> {
-    const question = await this.questionsService.create(
-      createQuestionDto,
-      fromUserId,
-    );
+    const question = await this.questionsService.create(createQuestionDto, fromUserId);
     return QuestionMapper.toDetailResponseDto(question);
   }
-
   
   @UseGuards(JwtAuthGuard)
   @Patch('questions/:id/answer')
-  @HttpCode(200)
+  @HttpCode(HttpStatus.OK)
   @ApiBearerAuth()
   @ApiOperation({
-    summary: 'Добавление или обновление ответа на вопрос',
-    description:
-      'Добавляет или изменяет ответ на вопрос. Может выполнять только адресат вопроса (to_user_id).',
+    summary: 'Добавление ответа на вопрос'
   })
-  @ApiParam({
-    name: 'id',
-    description: 'ID вопроса',
-    type: Number,
-  })
-  @ApiBody({
-    type: AnswerQuestionDto,
-    description: 'Текст ответа',
-  })
-  @ApiOkResponse({
-    description: 'Ответ успешно добавлен/обновлён',
-    type: QuestionDetailResponseDto,
-  })
+  @ApiParam({ type: Number, name: 'id', description: 'ID вопроса' })
+  @ApiOkResponse({ type: QuestionDetailResponseDto, description: 'Ответ успешно добавлен' })
   @ApiUnauthorizedResponse({ description: 'Не авторизован' })
   @ApiForbiddenResponse({ description: 'Недостаточно прав для ответа' })
   @ApiNotFoundResponse({ description: 'Вопрос не найден' })
