@@ -99,7 +99,6 @@ export class TelegramSetupService implements OnModuleInit {
       this.logger.log(`Username бота инициализирован: @${this.botUsername}`);
     } catch (error) {
       this.logger.error('Не удалось получить username бота:', error);
-      throw new Error('Ошибка инициализации бота: не удалось получить username');
     }
   }
 
