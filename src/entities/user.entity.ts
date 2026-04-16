@@ -46,6 +46,9 @@ export class User {
   @Column({ type: 'bigint', nullable: true })
   telegramChatId: number | null;
 
+  @Column({ type: 'bigint', nullable: true })
+  telegramUsername: string | null;
+
   @Column({ default: false })
   verified: boolean;
 

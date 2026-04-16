@@ -66,6 +66,7 @@ CREATE TABLE users (
     last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     telegram_id BIGINT,
     telegram_chat_id BIGINT,
+    telegram_username VARCHAR(64),
     verified BOOLEAN NOT NULL DEFAULT FALSE,
     two_fa_enabled BOOLEAN NOT NULL DEFAULT FALSE,
     two_fa_secret TEXT,

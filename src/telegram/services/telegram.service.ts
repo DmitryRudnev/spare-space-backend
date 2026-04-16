@@ -58,6 +58,7 @@ export class TelegramService {
     }
 
     const telegramId = message.from.id;
+    const username = message.from.username;
     const command = message.text.trim();
     const chatId = message.chat.id;
 
@@ -68,7 +69,7 @@ export class TelegramService {
 
     if (command.startsWith('/start')) {
       const verificationToken = command.split(/\s+/)[1];
-      await this.startHandlerService.handle(telegramId, chatId, verificationToken);
+      await this.startHandlerService.handle(telegramId, chatId, verificationToken, username);
       return;
     } else if (command.startsWith('/help')) {
       await this.sendHelpMessage(chatId);

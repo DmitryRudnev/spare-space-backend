@@ -14,6 +14,9 @@ export class UserPrivateResponseDto extends UserPublicResponseDto {
   @ApiProperty({ type: Number, description: 'Telegram ID', example: 123456789, nullable: true })
   telegramId: number | null;
 
+  @ApiProperty({ type: String, description: 'Имя пользователя Telegram', example: '@username', nullable: true })
+  telegramUsername: string | null;
+
   @ApiProperty({ type: String, description: 'Дата обновления (ISO8601)', example: '2025-01-02T00:00:00.000Z' })
   updatedAt: string;
 }

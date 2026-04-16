@@ -26,6 +26,7 @@ export class UserMapper {
     dto.phone = user.phone;
     dto.twoFaEnabled = user.twoFaEnabled;
     dto.telegramId = user.telegramId;
+    dto.telegramUsername = user.telegramUsername;
     dto.updatedAt = new Date(user.updatedAt).toISOString();
 
     return dto;

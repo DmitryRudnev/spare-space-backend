@@ -18,14 +18,15 @@ export class TelegramStartHandlerService {
   async handle(
     telegramId: number, 
     chatId: number,
-    verificationToken?: string
+    verificationToken?: string,
+    username?: string,
   ): Promise<void> {
     try {
       const existingUser = await this.usersService.findByTelegramId(telegramId);
-      await this.handleExistingUserScenario(existingUser, telegramId, chatId, verificationToken);
+      await this.handleExistingUserScenario(existingUser, telegramId, chatId, verificationToken, username);
     } catch (error) {
       if (error instanceof NotFoundException) {
-        await this.handleNewUserScenario(telegramId, chatId, verificationToken);
+        await this.handleNewUserScenario(telegramId, chatId, verificationToken, username);
       }
       else {
         throw error;
@@ -43,7 +44,8 @@ export class TelegramStartHandlerService {
     existingUser: User,
     telegramId: number,
     chatId: number,
-    verificationToken?: string
+    verificationToken?: string,
+    username?: string,
   ): Promise<void> {
     if (!verificationToken) {
       await this.sendWelcomeMessage(chatId, existingUser.firstName);
@@ -52,14 +54,15 @@ export class TelegramStartHandlerService {
 
     this.logger.log(`Попытка смены привязки аккаунта для пользователя ${existingUser.id}`);
     await this.telegramSenderService.sendMessage(chatId, 'Обнаружена попытка смены привязанного аккаунта...');
-    await this.processTokenVerificationForExistingUser(existingUser, telegramId, chatId, verificationToken);
+    await this.processTokenVerificationForExistingUser(existingUser, telegramId, chatId, verificationToken, username);
   }
 
   
   private async handleNewUserScenario(
     telegramId: number,
     chatId: number,
-    verificationToken?: string
+    verificationToken?: string,
+    username?: string,
   ): Promise<void> {
     if (!verificationToken) {
       this.logger.log(`Новый пользователь ${telegramId} запросил инструкции по привязке`);
@@ -68,7 +71,7 @@ export class TelegramStartHandlerService {
     }
 
     this.logger.log(`Попытка привязки нового пользователя ${telegramId} по токену`);
-    await this.processTokenVerificationForNewUser(telegramId, chatId, verificationToken);
+    await this.processTokenVerificationForNewUser(telegramId, chatId, verificationToken, username);
   }
 
   
@@ -76,7 +79,8 @@ export class TelegramStartHandlerService {
     existingUser: User,
     telegramId: number,
     chatId: number,
-    token: string
+    token: string,
+    username?: string,
   ): Promise<void> {
     if (token.length !== 64) {
       this.logger.warn(`Неверный формат токена от пользователя ${telegramId}`);
@@ -98,6 +102,7 @@ export class TelegramStartHandlerService {
       await this.usersService.update(existingUser.id, {
         telegramId: null,
         telegramChatId: null,
+        telegramUsername: null,
       });
       
       
@@ -105,6 +110,7 @@ export class TelegramStartHandlerService {
       await this.usersService.update(userFromToken.id, {
         telegramId,
         telegramChatId: chatId,
+        telegramUsername: username ? `@${username}` : null,
       });
       
       await this.sendAccountRelinkedMessage(chatId, userFromToken.firstName);
@@ -120,7 +126,8 @@ export class TelegramStartHandlerService {
   private async processTokenVerificationForNewUser(
     telegramId: number,
     chatId: number,
-    token: string
+    token: string,
+    username?: string,
   ): Promise<void> {
     if (token.length !== 64) {
       this.logger.warn(`Неверный формат токена от нового пользователя ${telegramId}`);
@@ -133,6 +140,7 @@ export class TelegramStartHandlerService {
       await this.usersService.update(user.id, {
         telegramId,
         telegramChatId: chatId,
+        telegramUsername: username ? `@${username}` : null,
       });
 
       await this.sendWelcomeMessage(chatId, user.firstName);
