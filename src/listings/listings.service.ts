@@ -354,7 +354,16 @@ export class ListingsService {
           query.andWhere(`listing.amenities ->> '${key}' = :${paramName}`, { [paramName]: String(value) });
         });
     }
-    query.orderBy('listing.updated_at', 'DESC').limit(searchDto.limit).offset(searchDto.offset);
+    if (searchDto.title) {
+      query.andWhere('listing.title ILIKE :title', { title: `%${searchDto.title}%` });
+      // Сортируем по релевантности (насколько похоже), а не по дате
+      // query.orderBy(`similarity(listing.title, :title)`, 'DESC');
+      query.orderBy('listing.updated_at', 'DESC');
+    } else {
+      // Стандартная сортировка, если поиска по названию нет
+      query.orderBy('listing.updated_at', 'DESC');
+    }
+    query.limit(searchDto.limit).offset(searchDto.offset);
 
     return query;
   }

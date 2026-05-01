@@ -1,4 +1,5 @@
 CREATE EXTENSION IF NOT EXISTS postgis;
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE TYPE user_role_type AS ENUM ('RENTER', 'LANDLORD', 'ADMIN');
 CREATE TYPE listing_type AS ENUM ('GARAGE', 'STORAGE', 'PARKING');
@@ -161,6 +162,7 @@ CREATE INDEX idx_listings_type ON listings(type);
 CREATE INDEX idx_listings_location ON listings USING GIST(location);
 CREATE INDEX idx_listings_price ON listings(price);
 CREATE INDEX idx_listings_availability ON listings USING GIN(availability);
+CREATE INDEX idx_listings_title_trgm ON listings USING gin (title gin_trgm_ops);
 
 
 

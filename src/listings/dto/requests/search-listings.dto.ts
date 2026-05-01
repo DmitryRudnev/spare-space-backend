@@ -3,11 +3,13 @@ import { Type } from 'class-transformer';
 import {
   IsOptional,
   IsNumber,
+  IsString,
   IsEnum,
   Min,
   Max,
   IsObject,
-  ValidateNested
+  ValidateNested,
+  IsNotEmpty
 } from 'class-validator';
 
 import { CurrencyType } from '../../../common/enums/currency-type.enum';
@@ -24,6 +26,16 @@ export class SearchListingsDto {
   @IsOptional()
   @IsEnum(ListingStatus)
   status?: ListingStatus;
+
+  @ApiPropertyOptional({
+    type: String,
+    description: 'Поиск по названию',
+    example: 'Уютный гараж'
+  })
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  title?: string;
   
   @ApiPropertyOptional({
     enum: ListingType,
