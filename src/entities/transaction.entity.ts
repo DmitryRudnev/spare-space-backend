@@ -19,7 +19,7 @@ export class Transaction {
   @Column({ type: 'enum', enum: TransactionType })
   type: TransactionType;
 
-  @Column({ type: 'decimal', precision: 26, scale: 16 })
+  @Column({ type: 'decimal', precision: 10, scale: 2 })
   amount: number;
 
   @Column({ type: 'enum', enum: PaymentStatus, default: PaymentStatus.COMPLETED })

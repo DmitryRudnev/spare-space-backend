@@ -128,7 +128,7 @@ CREATE TABLE listings (
     type listing_type NOT NULL,
     title VARCHAR(255) NOT NULL,
     description TEXT,
-    price DECIMAL(26,16) NOT NULL,  -- цена за единицу времени(за день/неделю/месяц)
+    price DECIMAL(10,2) NOT NULL,  -- цена за единицу времени(за день/неделю/месяц)
     price_period listing_period_type NOT NULL DEFAULT 'DAY',  -- период времени, за который указывается цена
     location GEOMETRY(POINT, 4326),
     address VARCHAR(500) NOT NULL,
@@ -159,7 +159,7 @@ CREATE TABLE bookings (
     listing_id BIGINT NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
     renter_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     period TSTZRANGE NOT NULL,  -- период брони (start_date, end_date)
-    total_price DECIMAL(26,16) NOT NULL,  -- [цена за единицу времени] * [кол-во дней/недель/месяцев]
+    total_price DECIMAL(10,2) NOT NULL,  -- [цена за единицу времени] * [кол-во дней/недель/месяцев]
     status booking_status NOT NULL DEFAULT 'PENDING',
     completion_job_id VARCHAR(255),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -176,7 +176,7 @@ CREATE INDEX idx_bookings_period ON bookings USING GIST(period);
 CREATE TABLE wallets (
     id BIGSERIAL PRIMARY KEY,
     user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    balance DECIMAL(26,16) NOT NULL DEFAULT 0,
+    balance DECIMAL(10,2) NOT NULL DEFAULT 0,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 );
@@ -188,7 +188,7 @@ CREATE INDEX idx_wallets_user_id ON wallets(user_id);
 CREATE TABLE payments (
     id BIGSERIAL PRIMARY KEY,
     booking_id BIGINT UNIQUE REFERENCES bookings(id) ON DELETE CASCADE,
-    amount DECIMAL(26,16) NOT NULL,
+    amount DECIMAL(10,2) NOT NULL,
     method payment_method NOT NULL,
     status payment_status NOT NULL DEFAULT 'PENDING',
     gateway_transaction_id VARCHAR(255),  -- для РФ-шлюзов/крипты
@@ -205,10 +205,10 @@ CREATE TABLE transactions (
     id BIGSERIAL PRIMARY KEY,
     user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     type transaction_type NOT NULL,
-    amount DECIMAL(26,16) NOT NULL,
+    amount DECIMAL(10,2) NOT NULL,
     status payment_status NOT NULL DEFAULT 'COMPLETED',
     booking_id BIGINT REFERENCES bookings(id) ON DELETE SET NULL,
-    commission DECIMAL(26,16) NOT NULL DEFAULT 0,
+    commission DECIMAL(10,2) NOT NULL DEFAULT 0,
     description TEXT,
     gateway_transaction_id VARCHAR(255),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -224,7 +224,7 @@ CREATE TABLE subscription_plans (
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL UNIQUE,  -- Название тарифа, например, "Basic", "Pro"
     status subscription_plan_status NOT NULL DEFAULT 'ACTIVE',
-    price DECIMAL(26,16) NOT NULL,
+    price DECIMAL(10,2) NOT NULL,
     max_listings INTEGER NOT NULL,
     priority_search BOOLEAN NOT NULL,
     boosts_per_month INTEGER NOT NULL,  -- Количество доступных поднятий в месяц

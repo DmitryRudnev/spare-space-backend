@@ -34,7 +34,7 @@ export class Listing {
   @Column({ type: 'text', nullable: true })
   description: string | null;
 
-  @Column({ type: 'decimal', precision: 26, scale: 16 })
+  @Column({ type: 'decimal', precision: 10, scale: 2 })
   price: number;
 
   @Column({

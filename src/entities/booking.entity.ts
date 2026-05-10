@@ -22,7 +22,7 @@ export class Booking {
   @Column({ type: 'tstzrange' })
   period: string;
 
-  @Column({ type: 'decimal', precision: 26, scale: 16 })
+  @Column({ type: 'decimal', precision: 10, scale: 2 })
   totalPrice: number;
 
   @Column({ type: 'enum', enum: BookingStatus, enumName: 'booking_status', default: BookingStatus.PENDING })

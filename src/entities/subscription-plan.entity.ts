@@ -22,7 +22,7 @@ export class SubscriptionPlan {
   })
   status: SubscriptionPlanStatus;
 
-  @Column({ type: 'decimal', precision: 26, scale: 16 })
+  @Column({ type: 'decimal', precision: 10, scale: 2 })
   price: number;
 
   @Column()
