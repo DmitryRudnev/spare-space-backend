@@ -1,19 +1,19 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { TransactionType } from '../../../common/enums/transaction-type.enum';
-import { PaymentStatus } from '../../../common/enums/payment-status.enum';
+import { TransactionStatus } from '../../../common/enums/transaction-status.enum';
 
 export class TransactionResponseDto {
   @ApiProperty({ example: 1 })
   id: number;
 
-  @ApiProperty({ enum: TransactionType, description: 'Тип транзакции', example: TransactionType.TOPUP })
+  @ApiProperty({ enum: TransactionType, description: 'Тип транзакции', example: TransactionType.DEPOSIT })
   type: TransactionType;
 
   @ApiProperty({ type: Number, description: 'Сумма транзакции', example: 100.0 })
   amount: number;
 
-  @ApiProperty({ enum: PaymentStatus, description: 'Статус транзакции', example: PaymentStatus.COMPLETED })
-  status: PaymentStatus;
+  @ApiProperty({ enum: TransactionStatus, description: 'Статус транзакции', example: TransactionStatus.SUCCESS })
+  status: TransactionStatus;
 
   @ApiProperty({ type: Number, description: 'Комиссия за транзакцию', example: 10.0 })
   commission: number;

@@ -57,7 +57,10 @@ export class TelegramWalletHandlerService {
       transactions.forEach((transaction, index) => {
         const emoji = this.getTransactionEmoji(transaction.type);
         const typeText = this.getTypeText(transaction.type);
-        const sign = transaction.type === TransactionType.TOPUP ? '+' : '-';        
+        const sign = transaction.type === TransactionType.DEPOSIT ||  transaction.type === TransactionType.BOOKING_PAYOUT
+          ? '+'
+          : '-'
+        ;
         message += `${index + 1}. ${emoji} ${typeText}: ${sign}${transaction.amount} ₽\n`;
         if (transaction.description) {
           message += ` - ${transaction.description}`;
@@ -72,10 +75,11 @@ export class TelegramWalletHandlerService {
 
   private getTransactionEmoji(type: TransactionType): string {
     const emojiMap = {
-      [TransactionType.TOPUP]: '🟢',
-      [TransactionType.CHARGE]: '🔴',
-      [TransactionType.PAYOUT]: '🟠',
-    //   [TransactionType.REFUND]: '🟡',
+      [TransactionType.DEPOSIT]: '🟢',
+      [TransactionType.BOOKING_PAYOUT]: '🟢',
+      [TransactionType.WITHDRAWAL]: '🔴',
+      [TransactionType.BOOKING_PAYMENT]: '🔴',
+      [TransactionType.COMMISSION]: '🟡',
     };
     return emojiMap[type] || '⚪';
   }
@@ -83,11 +87,11 @@ export class TelegramWalletHandlerService {
 
   private getTypeText(type: TransactionType): string {
     const typeMap = {
-      [TransactionType.TOPUP]: 'Пополнение',
-      [TransactionType.CHARGE]: 'Списание',
-      [TransactionType.PAYOUT]: 'Вывод',
+      [TransactionType.DEPOSIT]: 'Зачисление из банка',
+      [TransactionType.BOOKING_PAYOUT]: 'Зачисление за завершённую аренду',
+      [TransactionType.WITHDRAWAL]: 'Вывод в банк',
+      [TransactionType.BOOKING_PAYMENT]: 'Оплата бронирования',
       [TransactionType.COMMISSION]: 'Комиссия',
-    //   [TransactionType.REFUND]: 'Возврат',
     };
     return typeMap[type] || type;
   }

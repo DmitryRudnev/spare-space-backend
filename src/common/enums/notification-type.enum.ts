@@ -19,10 +19,6 @@ export enum NotificationType {
   // Отзывы
   REVIEW_NEW = 'REVIEW_NEW', // Получен новый отзыв
 
-  // Платежи (бронирований)
-  PAYMENT_SUCCESS = 'PAYMENT_SUCCESS', // Платеж прошел успешно
-  PAYMENT_FAILED = 'PAYMENT_FAILED',   // Ошибка платежа
-
   // Подписки
   SUBSCRIPTION_STARTED = 'SUBSCRIPTION_STARTED',     // Подписка оформлена
   SUBSCRIPTION_RENEWED = 'SUBSCRIPTION_RENEWED',     // Подписка продлена

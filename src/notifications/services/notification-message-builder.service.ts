@@ -7,7 +7,6 @@ import {
   BookingPayload,
   ListingPayload,
   ReviewPayload,
-  PaymentPayload,
   SubscriptionPayload,
   LoginPayload,
 } from '../../common/interfaces/notification-payloads.interface';
@@ -53,12 +52,6 @@ export class NotificationMessageBuilder {
       // Отзывы
       case NotificationType.REVIEW_NEW:
         return this.buildReviewNew(payload as ReviewPayload | undefined);
-
-      // Платежи
-      case NotificationType.PAYMENT_SUCCESS:
-        return this.buildPaymentSuccess(payload as PaymentPayload | undefined);
-      case NotificationType.PAYMENT_FAILED:
-        return this.buildPaymentFailed(payload as PaymentPayload | undefined);
 
       // Подписки
       case NotificationType.SUBSCRIPTION_STARTED:
@@ -247,30 +240,6 @@ export class NotificationMessageBuilder {
     return {
       title,
       body: `${payload.fromUserName} оставил отзыв на «${payload.listingTitle}». Оценка: ${payload.rating}/5.`,
-    };
-  }
-
-  // ---------- Платежи ----------
-  private buildPaymentSuccess(payload?: PaymentPayload): { title: string; body: string } {
-    const title = '💰 Платёж успешен';
-    if (!payload) {
-      return { title, body: 'Платёж прошёл успешно' };
-    }
-    return {
-      title,
-      body: `Платёж на сумму ${payload.amount} ₽ прошёл успешно.`,
-    };
-  }
-
-  private buildPaymentFailed(payload?: PaymentPayload): { title: string; body: string } {
-    const title = '❌ Ошибка платежа';
-    if (!payload) {
-      return { title, body: 'Не удалось провести платёж' };
-    }
-    const desc = payload.description ? ` Причина: ${payload.description}` : '';
-    return {
-      title,
-      body: `Не удалось провести платёж на сумму ${payload.amount} ₽.${desc}`,
     };
   }
 

@@ -35,12 +35,6 @@ export interface ReviewPayload {
   rating: number;          // Оценка
 }
 
-export interface PaymentPayload {
-  transactionId: number;
-  amount: number;          // Сумма
-  description?: string;    // Для PAYMENT_FAILED - текст с причиной 
-}
-
 export interface SubscriptionPayload {
   subscriptionId: number;
   planName: string;            // Название тарифа
@@ -57,6 +51,5 @@ export type AnyNotificationPayload =
   | BookingPayload
   | ListingPayload
   | ReviewPayload
-  | PaymentPayload
   | SubscriptionPayload
   | LoginPayload;

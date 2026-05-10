@@ -6,9 +6,15 @@ CREATE TYPE listing_type AS ENUM ('GARAGE', 'STORAGE', 'PARKING');
 CREATE TYPE listing_period_type AS ENUM ('HOUR', 'DAY', 'WEEK', 'MONTH');
 CREATE TYPE listing_status AS ENUM ('DRAFT', 'PENDING_APPROVAL', 'ACTIVE', 'REJECTED', 'INACTIVE');
 CREATE TYPE booking_status AS ENUM ('PENDING', 'CONFIRMED', 'CANCELLED', 'COMPLETED');
-CREATE TYPE payment_method AS ENUM ('CARD', 'SBP', 'USDT', 'ETH', 'TRX');
-CREATE TYPE payment_status AS ENUM ('PENDING', 'BLOCKED', 'COMPLETED', 'REFUNDED');
-CREATE TYPE transaction_type AS ENUM ('TOPUP', 'CHARGE', 'PAYOUT', 'COMMISSION');
+CREATE TYPE transaction_status AS ENUM ('PENDING', 'SUCCESS', 'FAILED');
+CREATE TYPE transaction_type AS ENUM (
+    'DEPOSIT',          -- ввод средств на платформу
+    'WITHDRAWAL',       -- вывод с платформы
+    'BOOKING_PAYMENT',  -- оплата бронирования
+    'BOOKING_PAYOUT',   -- получение денег за бронирование
+    'COMMISSION'        -- комиссия
+);
+
 CREATE TYPE notification_channel AS ENUM ('WEBSOCKET', 'FCM', 'EMAIL', 'SMS', 'TG_BOT');
 CREATE TYPE notification_delivery_status AS ENUM ('PENDING', 'SUCCESS', 'FAILED');
 CREATE TYPE notification_type AS ENUM (
@@ -31,10 +37,6 @@ CREATE TYPE notification_type AS ENUM (
     
     -- Отзывы
     'REVIEW_NEW',        -- Получен новый отзыв
-    
-    -- Платежи
-    'PAYMENT_SUCCESS',   -- Платеж прошел успешно
-    'PAYMENT_FAILED',    -- Ошибка платежа
     
     -- Подписки
     'SUBSCRIPTION_STARTED',      -- Подписка оформлена
@@ -185,31 +187,14 @@ CREATE INDEX idx_wallets_user_id ON wallets(user_id);
 
 
 
-CREATE TABLE payments (
-    id BIGSERIAL PRIMARY KEY,
-    booking_id BIGINT UNIQUE REFERENCES bookings(id) ON DELETE CASCADE,
-    amount DECIMAL(10,2) NOT NULL,
-    method payment_method NOT NULL,
-    status payment_status NOT NULL DEFAULT 'PENDING',
-    gateway_transaction_id VARCHAR(255),  -- для РФ-шлюзов/крипты
-    refund_reason TEXT,  -- при возврате
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX idx_payments_booking_id ON payments(booking_id);
-CREATE INDEX idx_payments_status ON payments(status);
-
-
-
 CREATE TABLE transactions (
     id BIGSERIAL PRIMARY KEY,
     user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     type transaction_type NOT NULL,
+    status transaction_status NOT NULL DEFAULT 'PENDING',
     amount DECIMAL(10,2) NOT NULL,
-    status payment_status NOT NULL DEFAULT 'COMPLETED',
-    booking_id BIGINT REFERENCES bookings(id) ON DELETE SET NULL,
-    commission DECIMAL(10,2) NOT NULL DEFAULT 0,
-    description TEXT,
+    booking_id BIGINT REFERENCES bookings(id) ON DELETE SET NULL,  -- в случае BOOKING_PAYMENT или BOOKING_PAYOUT
+    description TEXT,  -- в случае неудачи
     gateway_transaction_id VARCHAR(255),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

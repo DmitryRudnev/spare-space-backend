@@ -2,7 +2,7 @@ import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDa
 import { User } from './user.entity';
 import { Booking } from './booking.entity';
 import { TransactionType } from '../common/enums/transaction-type.enum';
-import { PaymentStatus } from '../common/enums/payment-status.enum';
+import { TransactionStatus } from '../common/enums/transaction-status.enum';
 
 @Entity('transactions')
 export class Transaction {
@@ -22,8 +22,8 @@ export class Transaction {
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   amount: number;
 
-  @Column({ type: 'enum', enum: PaymentStatus, default: PaymentStatus.COMPLETED })
-  status: PaymentStatus;
+  @Column({ type: 'enum', enum: TransactionStatus, default: TransactionStatus.PENDING })
+  status: TransactionStatus;
 
   @ManyToOne(() => Booking, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'booking_id' })
