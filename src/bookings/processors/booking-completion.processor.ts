@@ -26,7 +26,7 @@ export class BookingCompletionProcessor extends WorkerHost {
       const booking = await this.bookingsService.findById(bookingId);
 
       // Проверяем, что бронирование действительно завершено
-      if (booking.status !== BookingStatus.CONFIRMED) {
+      if (booking.status !== BookingStatus.ACTIVE) {
         this.logger.debug(`Booking ${bookingId} status is ${booking.status}, skipping completion`);
         return;
       }

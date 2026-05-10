@@ -32,6 +32,8 @@ export class NotificationMessageBuilder {
         return this.buildBookingConfirmed(payload as BookingPayload | undefined);
       case NotificationType.BOOKING_CANCELLED:
         return this.buildBookingCancelled(payload as BookingPayload | undefined);
+        case NotificationType.BOOKING_REJECTED:
+        return this.buildBookingRejected(payload as BookingPayload | undefined);
       case NotificationType.BOOKING_REMINDER:
         return this.buildBookingReminder(payload as BookingPayload | undefined);
       case NotificationType.BOOKING_EXPIRING:
@@ -141,6 +143,18 @@ export class NotificationMessageBuilder {
       return { title, body: 'Ваше бронирование отменено' };
     }
     let body = `Бронирование для «${payload.listingTitle}» отменено`;
+    if (payload.startDate) {
+      body += ` (планировалось на ${this.formatDate(payload.startDate)})`;
+    }
+    return { title, body };
+  }
+
+  private buildBookingRejected(payload?: BookingPayload): { title: string; body: string } {
+    const title = '❌ Бронирование отклонено';
+    if (!payload) {
+      return { title, body: 'Ваше бронирование отклонено' };
+    }
+    let body = `Бронирование для «${payload.listingTitle}» отклонено`;
     if (payload.startDate) {
       body += ` (планировалось на ${this.formatDate(payload.startDate)})`;
     }

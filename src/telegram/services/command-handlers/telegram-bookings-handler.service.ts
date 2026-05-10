@@ -157,9 +157,11 @@ export class TelegramBookingsHandlerService {
   private getStatusText(status: BookingStatus): string {
     const statusMap = {
       [BookingStatus.PENDING]: '⏳ Ожидание',
+      [BookingStatus.CANCELLED]: '❌ Отменено',
+      [BookingStatus.REJECTED]: '❌ Отклонено',
       [BookingStatus.CONFIRMED]: '✅ Подтверждено',
+      [BookingStatus.ACTIVE]: '✅ Активно',
       [BookingStatus.COMPLETED]: '📦 Завершено',
-      [BookingStatus.CANCELLED]: '❌ Отменено'
     };
     return statusMap[status] || status;
   }

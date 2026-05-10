@@ -6,6 +6,7 @@ export enum NotificationType {
   BOOKING_NEW = 'BOOKING_NEW', // Новая бронь (для админа/исполнителя)
   BOOKING_CONFIRMED = 'BOOKING_CONFIRMED', // Бронь подтверждена (для клиента)
   BOOKING_CANCELLED = 'BOOKING_CANCELLED', // Бронь отменена
+  BOOKING_REJECTED = 'BOOKING_REJECTED',   // Бронь отклонена
   BOOKING_REMINDER = 'BOOKING_REMINDER',   // Напоминание о предстоящей брони
   BOOKING_EXPIRING = 'BOOKING_EXPIRING',   // Бронь скоро истечет
   BOOKING_COMPLETED = 'BOOKING_COMPLETED', // Бронь завершена

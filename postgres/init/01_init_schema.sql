@@ -5,7 +5,7 @@ CREATE TYPE user_role_type AS ENUM ('RENTER', 'LANDLORD', 'ADMIN');
 CREATE TYPE listing_type AS ENUM ('GARAGE', 'STORAGE', 'PARKING');
 CREATE TYPE listing_period_type AS ENUM ('HOUR', 'DAY', 'WEEK', 'MONTH');
 CREATE TYPE listing_status AS ENUM ('DRAFT', 'PENDING_APPROVAL', 'ACTIVE', 'REJECTED', 'INACTIVE');
-CREATE TYPE booking_status AS ENUM ('PENDING', 'CONFIRMED', 'CANCELLED', 'COMPLETED');
+CREATE TYPE booking_status AS ENUM ('PENDING', 'CANCELLED', 'REJECTED', 'CONFIRMED', 'ACTIVE', 'COMPLETED');
 CREATE TYPE transaction_status AS ENUM ('PENDING', 'SUCCESS', 'FAILED');
 CREATE TYPE transaction_type AS ENUM (
     'DEPOSIT',          -- ввод средств на платформу
@@ -23,8 +23,9 @@ CREATE TYPE notification_type AS ENUM (
     
     -- Бронирования
     'BOOKING_NEW',       -- Новая бронь (для админа/исполнителя)
-    'BOOKING_CONFIRMED', -- Бронь подтверждена (для клиента)
     'BOOKING_CANCELLED', -- Бронь отменена
+    'BOOKING_CONFIRMED', -- Бронь подтверждена (для клиента)
+    'BOOKING_REJECTED',  -- Бронь отклонена
     'BOOKING_REMINDER',  -- Напоминание о предстоящей брони
     'BOOKING_EXPIRING',  -- Бронь скоро истечет (неоплачена/неподтверждена)
     'BOOKING_COMPLETED', -- Бронь завершена

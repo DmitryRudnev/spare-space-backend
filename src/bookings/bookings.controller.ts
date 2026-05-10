@@ -104,21 +104,6 @@ export class BookingsController {
     const booking = await this.bookingsService.handleUpdatePeriod(userId, Number(bookingId), updateBookingDto);
     return BookingMapper.toDetailResponseDto(booking);
   }
-
-  @Patch(':id/confirm')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Подтверждение бронирования' })
-  @ApiParam({ type: Number, name: 'id', description: 'ID бронирования' })
-  @ApiOkResponse({ type: BookingDetailResponseDto, description: 'Бронирование подтверждено' })
-  @ApiNotFoundResponse({ description: 'Бронирование не найдено' })
-  @ApiBadRequestResponse({ description: 'Некорректный статус или операция' })
-  async updateStatus(
-    @Param('id') bookingId: string,
-    @User('userId') userId: number
-  ): Promise<BookingDetailResponseDto> {
-    const booking = await this.bookingsService.handleConfirm(userId, Number(bookingId));
-    return BookingMapper.toDetailResponseDto(booking);
-  }
   
   @Patch(':id/cancel')
   @HttpCode(HttpStatus.NO_CONTENT)
@@ -132,5 +117,34 @@ export class BookingsController {
     @User('userId') userId: number
   ): Promise<void> {
     await this.bookingsService.handleCancel(userId, Number(bookingId));
+  }
+
+  @Patch(':id/confirm')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Подтверждение бронирования' })
+  @ApiParam({ type: Number, name: 'id', description: 'ID бронирования' })
+  @ApiOkResponse({ type: BookingDetailResponseDto, description: 'Бронирование подтверждено' })
+  @ApiNotFoundResponse({ description: 'Бронирование не найдено' })
+  @ApiBadRequestResponse({ description: 'Некорректный статус или операция' })
+  async confirm(
+    @Param('id') bookingId: string,
+    @User('userId') userId: number
+  ): Promise<BookingDetailResponseDto> {
+    const booking = await this.bookingsService.handleConfirm(userId, Number(bookingId));
+    return BookingMapper.toDetailResponseDto(booking);
+  }
+
+  @Patch(':id/reject')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Отклонение бронирования' })
+  @ApiParam({ type: Number, name: 'id', description: 'ID бронирования' })
+  @ApiNoContentResponse({ description: 'Бронирование успешно отклонено' })
+  @ApiNotFoundResponse({ description: 'Бронирование не найдено' })
+  @ApiBadRequestResponse({ description: 'Невозможно отклонить бронирование' })
+  async reject(
+    @Param('id') bookingId: string,
+    @User('userId') userId: number
+  ): Promise<void> {
+    await this.bookingsService.handleReject(userId, Number(bookingId));
   }
 }

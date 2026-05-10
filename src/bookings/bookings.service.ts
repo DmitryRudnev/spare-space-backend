@@ -173,21 +173,19 @@ export class BookingsService {
 
 
   async handleCancel(userId: number, bookingId: number): Promise<Booking> {
-    await this.validateUserParticipation(bookingId, userId);
-    
     const booking = await this.findById(bookingId);
-    if (booking.status !== BookingStatus.PENDING) {
-      throw new BadRequestException('Only pending booking can be cancelled');
+    if (userId !== Number(booking.renter.id)) {
+      throw new UnauthorizedException('Only renter can cancel booking');
     }
+    if (booking.status !== BookingStatus.PENDING) {
+      throw new BadRequestException('Only pending booking can be confirmed');
+    }
+    
     const cancelledBooking = await this.updateStatus(bookingId, BookingStatus.CANCELLED);
-  
-    const targetUserId = userId === Number(cancelledBooking.renter.id)
-      ? Number(cancelledBooking.listing.user.id) 
-      : Number(cancelledBooking.renter.id);
     const { start: startDate, end: endDate } = cancelledBooking.periodDates;
 
     this.eventEmitter.emit('notification.signal', {
-      userId: targetUserId,
+      userId: Number(cancelledBooking.listing.user.id),
       type: NotificationType.BOOKING_CANCELLED,
       referenceId: Number(cancelledBooking.id),
       payload: {
@@ -201,6 +199,36 @@ export class BookingsService {
     });
     
     return cancelledBooking;
+  }
+
+
+  async handleReject(userId: number, bookingId: number): Promise<Booking> {
+    const booking = await this.findById(bookingId);
+    if (userId !== Number(booking.listing.user.id)) {
+      throw new UnauthorizedException('Only landlord can reject booking');
+    }
+    if (booking.status !== BookingStatus.PENDING) {
+      throw new BadRequestException('Only pending booking can be rejected');
+    }
+    
+    const rejectedBooking = await this.updateStatus(bookingId, BookingStatus.REJECTED);
+    const { start: startDate, end: endDate } = rejectedBooking.periodDates;
+
+    this.eventEmitter.emit('notification.signal', {
+      userId: Number(rejectedBooking.renter.id),
+      type: NotificationType.BOOKING_REJECTED,
+      referenceId: Number(rejectedBooking.id),
+      payload: {
+        bookingId: Number(rejectedBooking.id),
+        listingId: Number(rejectedBooking.listing.id),
+        listingTitle: rejectedBooking.listing.title,
+        startDate,
+        endDate,
+        price: rejectedBooking.totalPrice,
+      },
+    });
+    
+    return rejectedBooking;
   }
 
 
@@ -374,7 +402,7 @@ export class BookingsService {
     // Проверка 3: период не пересекается с другими бронированиями
     const where: FindOptionsWhere<Booking> = {
       listing: { id: listingId },
-      status: In([BookingStatus.PENDING, BookingStatus.CONFIRMED]),
+      status: In([BookingStatus.PENDING, BookingStatus.CONFIRMED, BookingStatus.ACTIVE]),
       period: Raw((alias) => `${alias} && tstzrange(:start, :end)`, { 
         start: startDate.toISOString(), 
         end: endDate.toISOString() 
