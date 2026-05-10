@@ -1,7 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { BookingResponseDto } from './booking-response.dto';
-import { LocationDto } from 'src/listings/dto/location.dto';
-import { ListingPeriodType } from 'src/common/enums/listing-period-type.enum';
+import { LocationDto } from '../../../listings/dto/location.dto';
+import { ListingPeriodType } from '../../../common/enums/listing-period-type.enum';
+import { SpaceAmenity } from '../../../common/enums/space-amenity.enum';
 
 export class BookingDetailResponseDto extends BookingResponseDto {
   @ApiProperty({ type: Number, description: 'Цена за период', example: 1500 })
@@ -20,11 +21,11 @@ export class BookingDetailResponseDto extends BookingResponseDto {
   listingLocation: LocationDto | null;
 
   @ApiProperty({
-    type: 'object',
-    additionalProperties: { type: 'string' },
-    description: 'Удобства в формате {"ключ": "значение"}',
-    example: { 'security': 'true', 'electricity': '220V' },
+    enum: SpaceAmenity,
+    isArray: true,
+    description: 'Массив удобств объекта',
+    example: [SpaceAmenity.SECURITY, SpaceAmenity.WIFI],
     nullable: true,
   })
-  listingAmenities: Record<string, string> | null;
+  listingAmenities: SpaceAmenity[] | null;
 }

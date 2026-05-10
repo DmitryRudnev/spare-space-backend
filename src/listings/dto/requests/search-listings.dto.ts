@@ -9,12 +9,14 @@ import {
   Max,
   IsObject,
   ValidateNested,
-  IsNotEmpty
+  IsNotEmpty,
+  IsArray
 } from 'class-validator';
 
 import { ListingPeriodType } from '../../../common/enums/listing-period-type.enum';
 import { ListingType } from '../../../common/enums/listing-type.enum';
 import { ListingStatus } from '../../../common/enums/listing-status.enum';
+import { SpaceAmenity } from '../../../common/enums/space-amenity.enum';
 
 export class SearchListingsDto {
   @ApiPropertyOptional({
@@ -114,14 +116,15 @@ export class SearchListingsDto {
   radius?: number;
 
   @ApiPropertyOptional({
-    type: 'object',
-    additionalProperties: { type: 'string' },
-    description: 'Удобства в формате {"ключ": "значение"}',
-    example: { security: 'true', electricity: '220V' }
+    enum: SpaceAmenity,
+    isArray: true,
+    description: 'Массив удобств',
+    example: [SpaceAmenity.SECURITY, SpaceAmenity.WIFI],
   })
   @IsOptional()
-  @IsObject()
-  amenities?: Record<string, string>;
+  @IsArray()
+  @IsEnum(SpaceAmenity, { each: true })
+  amenities?: SpaceAmenity[];
 
   @ApiPropertyOptional({
     type: Number,

@@ -12,6 +12,7 @@ import { Type } from 'class-transformer';
 import { ListingPeriodType } from '../common/enums/listing-period-type.enum';
 import { ListingStatus } from '../common/enums/listing-status.enum';
 import { ListingType } from '../common/enums/listing-type.enum';
+import { SpaceAmenity } from '../common/enums/space-amenity.enum';
 
 import { User } from './user.entity';
 
@@ -58,8 +59,8 @@ export class Listing {
   @Column({ type: 'jsonb', nullable: true })
   photoUrls: string[] | null;
 
-  @Column({ type: 'jsonb', nullable: true })
-  amenities: Record<string, string> | null;
+  @Column({ type: 'enum', enum: SpaceAmenity, array: true })
+  amenities: SpaceAmenity[] | null;
 
   @Column({ type: 'tstzrange', array: true })
   availability: string[];

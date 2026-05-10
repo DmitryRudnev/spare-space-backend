@@ -2,6 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { PeriodDto } from '../../../common/dto/period.dto';
 import { LocationDto } from '../location.dto';
 import { ListingBaseResponseDto } from './listing-base-response.dto';
+import { SpaceAmenity } from '../../../common/enums/space-amenity.enum';
 
 export class ListingDetailResponseDto extends ListingBaseResponseDto {
   @ApiProperty({ type: String, description: 'Описание объявления', example: 'Парковочное место на цокольном этаже', nullable: true })
@@ -14,13 +15,13 @@ export class ListingDetailResponseDto extends ListingBaseResponseDto {
   photoUrls: string[] | null;
 
   @ApiProperty({
-    type: 'object',
-    additionalProperties: { type: 'string' },
-    description: 'Удобства в формате {"ключ": "значение"}',
-    example: { 'security': 'true', 'electricity': '220V' },
+    enum: SpaceAmenity,
+    isArray: true,
+    description: 'Массив удобств',
+    example: [SpaceAmenity.SECURITY, SpaceAmenity.WIFI],
     nullable: true,
   })
-  amenities: Record<string, string> | null;
+  amenities: SpaceAmenity[] | null;
 
   @ApiProperty({ type: [PeriodDto], description: 'Периоды доступности' })
   availability: PeriodDto[];

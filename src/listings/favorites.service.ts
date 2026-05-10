@@ -128,13 +128,8 @@ export class FavoritesService {
         { lon: searchDto.longitude, lat: searchDto.latitude, radius: searchDto.radius },
       );
     }
-    if (searchDto.amenities !== undefined) {
-      Object.entries(searchDto.amenities).forEach(([key, value]) => {
-        const paramName = `value_${key.replace(/\W/g, '_')}`;
-        query.andWhere(`listing.amenities ->> '${key}' = :${paramName}`, {
-          [paramName]: String(value),
-        });
-      });
+    if (searchDto.amenities && searchDto.amenities.length > 0) {
+      query.andWhere('listing.amenities @> :amenities', { amenities: searchDto.amenities });
     }
 
     query.orderBy('favorite.created_at', 'DESC').limit(searchDto.limit).offset(searchDto.offset);

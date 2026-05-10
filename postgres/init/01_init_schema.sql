@@ -2,7 +2,8 @@ CREATE EXTENSION IF NOT EXISTS postgis;
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE TYPE user_role_type AS ENUM ('RENTER', 'LANDLORD', 'ADMIN');
-CREATE TYPE listing_type AS ENUM ('GARAGE', 'STORAGE', 'PARKING');
+CREATE TYPE listing_type AS ENUM ('GARAGE', 'STORAGE', 'PARKING', 'MOTO_SLOT', 'WORKSHOP', 'MINI_FACTORY', 'BOAT_SLOT', 'OTHER');
+CREATE TYPE space_amenity AS ENUM ('SECURITY', 'VIDEO_SURVEILLANCE', 'HEATING', 'VENTILATION', 'WATER_SUPPLY', 'ELECTRICITY', 'WIFI', 'ETHERNET');
 CREATE TYPE listing_period_type AS ENUM ('HOUR', 'DAY', 'WEEK', 'MONTH');
 CREATE TYPE listing_status AS ENUM ('DRAFT', 'PENDING_APPROVAL', 'ACTIVE', 'REJECTED', 'INACTIVE');
 CREATE TYPE booking_status AS ENUM ('PENDING', 'CANCELLED', 'REJECTED', 'CONFIRMED', 'ACTIVE', 'COMPLETED');
@@ -137,7 +138,7 @@ CREATE TABLE listings (
     address VARCHAR(500) NOT NULL,
     size DECIMAL(10,2),
     photo_urls JSONB,  -- массив URL в S3
-    amenities JSONB,  -- например, { "security": true, "electricity": true }
+    amenities space_amenity[],
     availability TSTZRANGE[] NOT NULL,  -- массив периодов доступности
     status listing_status NOT NULL DEFAULT 'DRAFT',
     rating DECIMAL(3,2),

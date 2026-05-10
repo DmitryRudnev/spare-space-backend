@@ -21,6 +21,7 @@ import { ListingPeriodType } from '../../../common/enums/listing-period-type.enu
 import { ListingType } from '../../../common/enums/listing-type.enum';
 import { PeriodDto } from '../../../common/dto/period.dto';
 import { LocationDto } from '../location.dto';
+import { SpaceAmenity } from '../../../common/enums/space-amenity.enum';
 
 export class CreateListingDto {
   @ApiProperty({
@@ -109,14 +110,15 @@ export class CreateListingDto {
   photoUrls?: string[];
 
   @ApiPropertyOptional({
-    type: 'object',
-    additionalProperties: { type: 'string' },
-    description: 'Удобства в формате {"ключ": "значение"}',
-    example: { security: 'true', electricity: '220V' }
+    enum: SpaceAmenity,
+    isArray: true,
+    description: 'Массив удобств',
+    example: [SpaceAmenity.SECURITY, SpaceAmenity.WIFI],
   })
   @IsOptional()
-  @IsObject()
-  amenities?: Record<string, string>;
+  @IsArray()
+  @IsEnum(SpaceAmenity, { each: true })
+  amenities?: SpaceAmenity[];
 
   @ApiProperty({
     type: [PeriodDto],
