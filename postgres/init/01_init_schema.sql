@@ -11,6 +11,7 @@ CREATE TYPE payment_status AS ENUM ('PENDING', 'BLOCKED', 'COMPLETED', 'REFUNDED
 CREATE TYPE transaction_type AS ENUM ('TOPUP', 'CHARGE', 'PAYOUT', 'COMMISSION');
 CREATE TYPE currency_type AS ENUM ('RUB', 'USD', 'USDT', 'ETH', 'TRX');
 CREATE TYPE notification_channel AS ENUM ('WEBSOCKET', 'FCM', 'EMAIL', 'SMS', 'TG_BOT');
+CREATE TYPE notification_delivery_status AS ENUM ('PENDING', 'SUCCESS', 'FAILED');
 CREATE TYPE notification_type AS ENUM (
     -- Сообщения
     'MESSAGE_NEW',      -- Новое сообщение в чате
@@ -88,17 +89,6 @@ CREATE TABLE user_devices (
     device_id TEXT NOT NULL, -- Уникальный ID самого устройства (UUID с фронта)
     fcm_token TEXT NOT NULL,
     platform VARCHAR(20), -- 'ios', 'android', 'web'
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-
-
-CREATE TABLE user_notification_settings (
-    id BIGSERIAL PRIMARY KEY,
-    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    send_push BOOLEAN DEFAULT true,
-    send_tg_bot BOOLEAN DEFAULT true,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -313,7 +303,6 @@ CREATE TABLE notifications (
     id BIGSERIAL PRIMARY KEY,
     user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     type notification_type NOT NULL,
-    channel notification_channel NOT NULL,
     reference_id BIGINT,  -- ID связанной сущности (например, booking_id для уведомлений о бронировании)
     payload JSONB,
     is_read BOOLEAN NOT NULL DEFAULT false,
@@ -322,6 +311,21 @@ CREATE TABLE notifications (
 
 CREATE INDEX idx_notifications_user_id ON notifications(user_id);
 CREATE INDEX idx_notifications_type ON notifications(type);
+
+
+
+CREATE TABLE notification_deliveries (
+    id BIGSERIAL PRIMARY KEY,
+    notification_id BIGINT NOT NULL REFERENCES notifications(id) ON DELETE CASCADE,
+    channel notification_channel NOT NULL,
+    status notification_delivery_status NOT NULL DEFAULT 'SUCCESS',
+    error_message TEXT,  -- в случае неудачи
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_notification_deliveries_notification_id ON notification_deliveries(notification_id);
+CREATE INDEX idx_notification_deliveries_channel ON notification_deliveries(channel);
+CREATE INDEX idx_notification_deliveries_status ON notification_deliveries(status);
 
 
 

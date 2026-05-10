@@ -6,6 +6,7 @@ import { Queue } from 'bullmq';
 import { NotificationsService } from './notifications.service';
 import { NotificationMessageBuilder } from './notification-message-builder.service';
 
+import { Notification } from '../../entities/notification.entity';
 import { NotificationMapper } from '../mappers/notification.mapper';
 import { MainWebSocketGateway } from '../../websocket/websocket.gateway';
 import { NotificationType } from '../../common/enums/notification-type.enum';
@@ -34,11 +35,12 @@ export class NotificationsListenerService {
     const { userId, type, referenceId, payload } = data;
 
     try {
+      const notification = await this.notificationsService.create(userId, type, referenceId, payload);
+
       // Если пользователь онлайн → отправляем через вебсокет синхронно
       if (await this.mainWsGateway.isOnline(userId)) {
         this.logger.log(`User ${userId} is online. Sending notification via WebSocket.`);
-        await this.handleWebSocketNotification(userId, type, referenceId, payload);
-        // return;
+        await this.handleWebSocketNotification(notification, userId, type, payload);
       }
 
       // Остальные каналы отправляем через очередь
@@ -48,8 +50,8 @@ export class NotificationsListenerService {
         {
           userId,
           type,
-          referenceId,
           payload,
+          notificationId: notification.id
         },
         {
           attempts: 3,
@@ -64,20 +66,13 @@ export class NotificationsListenerService {
     }
   }
 
-
   private async handleWebSocketNotification(
+    notification: Notification,
     userId: number,
     type: NotificationType,
-    referenceId?: number,
     payload?: AnyNotificationPayload,
   ): Promise<void> {
-    const notification = await this.notificationsService.create(
-      userId,
-      type,
-      NotificationChannel.WEBSOCKET,
-      referenceId,
-      payload
-    );
+    await this.notificationsService.createDelivery(notification.id, NotificationChannel.WEBSOCKET);
     const { title, body } = this.notificationMessageBuilder.build(type, payload);
     const wsNotification = NotificationMapper.toWsResponseDto(notification, title, body);
     await this.mainWsGateway.sendNotificationToUser(userId, wsNotification);

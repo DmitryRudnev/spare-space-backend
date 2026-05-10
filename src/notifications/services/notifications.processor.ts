@@ -30,26 +30,21 @@ export class NotificationsProcessor extends WorkerHost {
     job: Job<{
       userId: number;
       type: NotificationType;
-      referenceId?: number;
       payload?: AnyNotificationPayload;
+      notificationId: number;
     }>,
   ): Promise<void> {
-    const { userId, type, referenceId, payload } = job.data;
+    const { userId, type, payload, notificationId } = job.data;
 
     try {
-      const settings = await this.notificationsService.getUserNotificationSettings(userId);
-
       // FCM
-      if (settings.sendPush) {
-        this.logger.log(`Processing push notification for user ${userId}`);
-        await this.handlePushNotification(userId, type, referenceId, payload);
-      }
+      this.logger.log(`Processing push notification for user ${userId}`);
+      await this.handlePushNotification(userId, type, notificationId, payload);
 
       // TG bot
-      if (settings.sendTgBot) {
-        this.logger.log(`Processing Telegram notification for user ${userId}`);
-        await this.handleTelegramNotification(userId, type, referenceId, payload);
-      }
+      this.logger.log(`Processing Telegram notification for user ${userId}`);
+      await this.handleTelegramNotification(userId, type, notificationId, payload);
+
     } catch (error) {
       this.logger.error(`Failed to process notification for user ${userId}:`, error);
       throw error;
@@ -59,7 +54,7 @@ export class NotificationsProcessor extends WorkerHost {
   private async handlePushNotification(
     userId: number,
     type: NotificationType,
-    referenceId?: number,
+    notificationId: number,
     payload?: AnyNotificationPayload,
   ): Promise<void> {
     const tokens = await this.devicesService.getUserTokens(userId);
@@ -68,23 +63,15 @@ export class NotificationsProcessor extends WorkerHost {
       return;
     }
 
-    await this.notificationsService.create(
-      userId,
-      type,
-      NotificationChannel.FCM,
-      referenceId,
-      payload
-    );
-
+    await this.notificationsService.createDelivery(notificationId, NotificationChannel.FCM);
     const { title, body } = this.notificationMessageBuilder.build(type, payload);
     await this.fcmNotificationsService.sendPush(tokens, title, body, type, payload);
   }
   
-  
   private async handleTelegramNotification(
     userId: number,
     type: NotificationType,
-    referenceId?: number,
+    notificationId: number,
     payload?: AnyNotificationPayload,
   ): Promise<void> {
     const user = await this.usersService.findById(userId);
@@ -94,14 +81,7 @@ export class NotificationsProcessor extends WorkerHost {
       return;
     }
 
-    await this.notificationsService.create(
-      userId,
-      type,
-      NotificationChannel.TG_BOT,
-      referenceId,
-      payload
-    );
-
+    await this.notificationsService.createDelivery(notificationId, NotificationChannel.TG_BOT);
     const { title, body } = this.notificationMessageBuilder.build(type, payload);
     await this.telegramNotificationService.sendNotification(user.telegramChatId, title, body, type, payload);
   }

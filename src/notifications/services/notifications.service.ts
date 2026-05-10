@@ -2,43 +2,57 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In, FindOptionsWhere } from 'typeorm';
 import { Notification } from '../../entities/notification.entity';
+import { NotificationDelivery } from '../../entities/notification-delivery.entity';
 import { SearchNotificationsDto } from '.././dto/requests/search-notifications.dto';
 import { NotificationType } from '../../common/enums/notification-type.enum';
 import { NotificationChannel } from '../../common/enums/notification-channel.enum';
-import { NotificationSetting } from '../../entities/notification-setting.entity';
+import { NotificationDeliveryStatus } from '../../common/enums/notification-delivery-status.enum';
 
 @Injectable()
 export class NotificationsService {
   constructor(
     @InjectRepository(Notification)
     private notificationRepository: Repository<Notification>,
-    @InjectRepository(NotificationSetting)
-    private notificationSettingRepository: Repository<NotificationSetting>,
+    @InjectRepository(NotificationDelivery)
+    private notificationDeliveryRepository: Repository<NotificationDelivery>,
   ) {}
 
   async create(
     userId: number, 
     type: NotificationType, 
-    channel: NotificationChannel, 
     referenceId?: number, 
     payload?: any
   ): Promise<Notification> {
     const notification = this.notificationRepository.create({
       user: { id: userId },
       type,
-      channel,
-      referenceId: referenceId ?? null,
-      payload: payload ?? null,
+      referenceId,
+      payload,
       isRead: false,
     });
     return await this.notificationRepository.save(notification);
   }
 
 
-  async findAllPush(userId: number, dto: SearchNotificationsDto) {
+  async createDelivery(
+    notificationId: number,
+    channel: NotificationChannel,
+    status?: NotificationDeliveryStatus,
+    errorMessage?: string,
+  ): Promise<NotificationDelivery> {
+    const notificationDelivery = this.notificationDeliveryRepository.create({
+      notificationId,
+      channel,
+      status,
+      errorMessage,
+    });
+    return this.notificationDeliveryRepository.save(notificationDelivery);
+  }
+
+
+  async findAll(userId: number, dto: SearchNotificationsDto) {
     const where: FindOptionsWhere<Notification> = {
       user: { id: userId },
-      channel: NotificationChannel.FCM
     };
     if (dto.type !== undefined ) {
       where.type = dto.type;
@@ -88,21 +102,5 @@ export class NotificationsService {
     }
 
     await this.notificationRepository.update(where, { isRead: true });
-  }
-
-
-  async getUserNotificationSettings(userId: number): Promise<NotificationSetting> {
-    let settings = await this.notificationSettingRepository.findOne({
-      where: { user: { id: userId } },
-    });
-
-    if (!settings) {
-      settings = this.notificationSettingRepository.create({
-        user: { id: userId },
-      });
-      settings = await this.notificationSettingRepository.save(settings);
-    }
-
-    return settings;
   }
 }

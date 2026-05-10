@@ -1,7 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn } from 'typeorm';
 import { User } from './user.entity';
 import { NotificationType } from '../common/enums/notification-type.enum';
-import { NotificationChannel } from '../common/enums/notification-channel.enum';
 import { AnyNotificationPayload } from '../common/interfaces/notification-payloads.interface';
 
 @Entity('notifications')
@@ -15,9 +14,6 @@ export class Notification {
 
   @Column({ type: 'enum', enum: NotificationType, })
   type: NotificationType;
-
-  @Column({ type: 'enum', enum: NotificationChannel, })
-  channel: NotificationChannel;
 
   @Column({ type: 'bigint', nullable: true })
   referenceId: number | null;

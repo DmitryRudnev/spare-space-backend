@@ -24,7 +24,7 @@ export class NotificationsController {
     @Query() searchDto: SearchNotificationsDto, 
     @User('userId') userId: number
   ): Promise<NotificationListResponseDto> {
-    const { notifications, total, limit, offset } = await this.notificationsService.findAllPush(userId, searchDto);
+    const { notifications, total, limit, offset } = await this.notificationsService.findAll(userId, searchDto);
     return NotificationMapper.toListResponseDto(notifications, total, limit, offset);
   }
 

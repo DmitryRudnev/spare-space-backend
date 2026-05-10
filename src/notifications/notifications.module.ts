@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { Notification } from '../entities/notification.entity';
-import { NotificationSetting } from '../entities/notification-setting.entity';
+import { NotificationDelivery } from '../entities/notification-delivery.entity';
 import { UsersModule } from '../users/users.module';
 import { WebSocketModule } from '../websocket/websocket.module';
 import { DevicesModule } from '../devices/devices.module';
@@ -18,7 +18,7 @@ import { NotificationsProcessor } from './services/notifications.processor';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Notification, NotificationSetting]), 
+    TypeOrmModule.forFeature([Notification, NotificationDelivery]), 
     UsersModule, 
     WebSocketModule, 
     DevicesModule,
