@@ -9,7 +9,6 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
-import { CurrencyType } from '../../../../common/enums/currency-type.enum';
 
 export class CreateSubscriptionPlanDto {
   @ApiProperty({
@@ -29,14 +28,6 @@ export class CreateSubscriptionPlanDto {
   @IsNumber({ maxDecimalPlaces: 16 })
   @Min(0)
   price: number;
-
-  @ApiProperty({
-    enum: CurrencyType,
-    example: CurrencyType.RUB,
-    description: 'Валюта',
-  })
-  @IsEnum(CurrencyType)
-  currency: CurrencyType;
 
   @ApiProperty({
     example: 50,

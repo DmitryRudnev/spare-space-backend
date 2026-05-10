@@ -17,8 +17,7 @@ export class ListingMapper {
     dto.title = listing.title;
     dto.type = listing.type;
     dto.size = listing.size;
-    dto.price = listing.formattedPrice;
-    dto.currency = listing.currency;
+    dto.price = listing.price;
     dto.pricePeriod = listing.pricePeriod;
     dto.address = listing.address;
     dto.viewsCount = listing.viewsCount;
@@ -46,8 +45,7 @@ export class ListingMapper {
     dto.title = listing.title;
     dto.type = listing.type;
     dto.size = listing.size;
-    dto.price = listing.formattedPrice;
-    dto.currency = listing.currency;
+    dto.price = listing.price;
     dto.pricePeriod = listing.pricePeriod;
     dto.firstPhotoUrl = listing.photoUrls?.[0] || null;
 

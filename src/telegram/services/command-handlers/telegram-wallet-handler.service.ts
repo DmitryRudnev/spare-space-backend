@@ -5,7 +5,6 @@ import { TelegramSenderService } from '../telegram-sender.service';
 import { TransactionType } from '../../../common/enums/transaction-type.enum';
 import { Wallet } from 'src/entities/wallet.entity';
 import { Transaction } from '../../../entities/transaction.entity';
-import { CurrencyType } from 'src/common/enums/currency-type.enum';
 
 @Injectable()
 export class TelegramWalletHandlerService {
@@ -45,9 +44,7 @@ export class TelegramWalletHandlerService {
     } else {
       message += `📊 *Баланс:*\n`;
       balances.forEach(balance => {
-        const formattedBalance = this.isFiat(balance.currency) ? 
-          Number(balance.balance).toFixed(2) : balance.balance;
-        message += `• ${formattedBalance} ${balance.currency}\n`;
+        message += `• ${balance.balance} ₽\n`;
       });
       message += `\n`;
     }
@@ -60,12 +57,8 @@ export class TelegramWalletHandlerService {
       transactions.forEach((transaction, index) => {
         const emoji = this.getTransactionEmoji(transaction.type);
         const typeText = this.getTypeText(transaction.type);
-        const sign = transaction.type === TransactionType.TOPUP ? '+' : '-';
-        const amount = this.isFiat(transaction.currency) ? 
-          Number(transaction.amount).toFixed(2) : 
-          transaction.amount;
-        
-        message += `${index + 1}. ${emoji} ${typeText}: ${sign}${amount} ${transaction.currency}\n`;
+        const sign = transaction.type === TransactionType.TOPUP ? '+' : '-';        
+        message += `${index + 1}. ${emoji} ${typeText}: ${sign}${transaction.amount} ₽\n`;
         if (transaction.description) {
           message += ` - ${transaction.description}`;
         }
@@ -74,11 +67,6 @@ export class TelegramWalletHandlerService {
     }
 
     return message;
-  }
-
-
-  private isFiat(currency: CurrencyType): boolean {
-    return currency === CurrencyType.RUB || currency === CurrencyType.USD;
   }
 
 

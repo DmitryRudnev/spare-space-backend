@@ -15,8 +15,7 @@ export class BookingMapper {
     dto.listingFirstPhotoUrl = booking.listing.photoUrls?.[0] ?? null;
     dto.renter = UserMapper.toPublicResponseDto(booking.renter);
     dto.landlord = UserMapper.toPublicResponseDto(booking.listing.user);
-    dto.totalPrice = booking.formattedPrice;
-    dto.currency = booking.currency;
+    dto.totalPrice = booking.totalPrice;
     dto.status = booking.status;
     dto.period = booking.periodDates;
     dto.createdAt = booking.createdAt.toISOString();
@@ -31,7 +30,6 @@ export class BookingMapper {
     Object.assign(dto, baseDto);
 
     dto.listingPrice = booking.listing.price;
-    dto.listingCurrency = booking.listing.currency;
     dto.listingPricePeriod = booking.listing.pricePeriod
     dto.listingSize = booking.listing.size;
     dto.listingAdress = booking.listing.address;

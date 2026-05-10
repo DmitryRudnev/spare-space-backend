@@ -2,7 +2,6 @@ import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, JoinColumn, CreateDa
 import { Type } from 'class-transformer';
 import { User } from './user.entity';
 import { Listing } from './listing.entity';
-import { CurrencyType } from '../common/enums/currency-type.enum';
 import { BookingStatus } from '../common/enums/booking-status.enum';
 
 @Entity('bookings')
@@ -25,9 +24,6 @@ export class Booking {
 
   @Column({ type: 'decimal', precision: 26, scale: 16 })
   totalPrice: number;
-
-  @Column({ type: 'enum', enum: CurrencyType, enumName: 'currency_type', default: CurrencyType.RUB })
-  currency: CurrencyType;
 
   @Column({ type: 'enum', enum: BookingStatus, enumName: 'booking_status', default: BookingStatus.PENDING })
   status: BookingStatus;
@@ -56,11 +52,5 @@ export class Booking {
       start: new Date(parts[0]),
       end: new Date(parts[1]),
     };
-  }
-
-  get formattedPrice(): number {
-    return [CurrencyType.RUB, CurrencyType.USD].includes(this.currency)
-      ? Math.round(this.totalPrice * 100) / 100
-      : Number(this.totalPrice);
   }
 }

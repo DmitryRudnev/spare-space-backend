@@ -1,5 +1,3 @@
-import { CurrencyType } from "../enums/currency-type.enum";
-
 export interface MessagePayload {
   messageId: number;       // Для идентификации конкретного сообщения
   conversationId: number;  // Чтобы фронтенд знал, какой чат открыть
@@ -20,7 +18,6 @@ export interface BookingPayload {
   startDate?: Date;        // Для BOOKING_REMINDER
   endDate?: Date;          // Для BOOKING_EXPIRING
   price?: number;          // Сумма сделки
-  currency?: CurrencyType; // Валюта
 }
 
 export interface ListingPayload {
@@ -41,7 +38,6 @@ export interface ReviewPayload {
 export interface PaymentPayload {
   transactionId: number;
   amount: number;          // Сумма
-  currency: CurrencyType;  // Валюта (RUB, USDT и т.д.)
   description?: string;    // Для PAYMENT_FAILED - текст с причиной 
 }
 

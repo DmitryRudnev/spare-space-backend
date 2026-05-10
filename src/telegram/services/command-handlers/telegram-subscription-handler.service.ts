@@ -3,7 +3,6 @@ import { UsersService } from '../../../users/services/users.service';
 import { UserSubscriptionsService } from '../../../subscriptions//services/user-subscriptions.service';
 import { TelegramSenderService } from '../telegram-sender.service';
 import { UserSubscription } from '../../../entities/user-subscription.entity';
-import { CurrencyType } from 'src/common/enums/currency-type.enum';
 
 @Injectable()
 export class TelegramSubscriptionHandlerService {
@@ -41,15 +40,12 @@ export class TelegramSubscriptionHandlerService {
   
   private buildSubscriptionMessage(subscription: UserSubscription): string {
     const plan = subscription.plan;
-    const formattedPrice = this.isFiat(plan.currency) ? 
-          Number(plan.price).toFixed(2) : 
-          plan.price;
     const period = this.formatSubscriptionPeriod(subscription.startDate, subscription.endDate);
     const daysLeft = this.calculateDaysLeft(subscription.endDate);
     
     let message = `🎫 *Ваша текущая подписка*\n\n` +
       `📋 *План:* ${this.sanitizeMarkdown(plan.name)}\n` +
-      `💰 *Стоимость:* ${formattedPrice} ${plan.currency}\n` +
+      `💰 *Стоимость:* ${plan.price} ₽\n` +
       `🕒 *Период:* ${period}\n` +
       `${daysLeft}\n\n` +
       `⚡ *Возможности:*\n` +
@@ -65,11 +61,6 @@ export class TelegramSubscriptionHandlerService {
     }
     
     return message;
-  }
-
-
-  private isFiat(currency: CurrencyType): boolean {
-    return currency === CurrencyType.RUB || currency === CurrencyType.USD;
   }
 
 

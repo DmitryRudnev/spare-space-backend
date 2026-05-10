@@ -9,8 +9,7 @@ export class WalletMapper {
     const dto = new WalletResponseDto();
 
     dto.id = wallet.id;
-    dto.balance = wallet.formattedBalance;
-    dto.currency = wallet.currency;
+    dto.balance = wallet.balance;
     dto.createdAt = wallet.createdAt.toISOString();
     dto.updatedAt = wallet.updatedAt.toISOString();
 
@@ -22,8 +21,7 @@ export class WalletMapper {
 
     dto.id = transaction.id;
     dto.type = transaction.type;
-    dto.amount = transaction.formattedAmount;
-    dto.currency = transaction.currency;
+    dto.amount = transaction.amount;
     dto.status = transaction.status;
     dto.commission = transaction.commission;
     dto.description = transaction.description;

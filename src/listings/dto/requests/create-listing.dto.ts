@@ -17,7 +17,6 @@ import {
   ValidateNested,
 } from 'class-validator';
 
-import { CurrencyType } from '../../../common/enums/currency-type.enum';
 import { ListingPeriodType } from '../../../common/enums/listing-period-type.enum';
 import { ListingType } from '../../../common/enums/listing-type.enum';
 import { PeriodDto } from '../../../common/dto/period.dto';
@@ -70,14 +69,6 @@ export class CreateListingDto {
   })
   @IsEnum(ListingPeriodType)
   pricePeriod: ListingPeriodType;
-
-  @ApiProperty({
-    enum: CurrencyType,
-    description: 'Валюта',
-    example: CurrencyType.RUB
-  })
-  @IsEnum(CurrencyType)
-  currency: CurrencyType;
 
   @ApiPropertyOptional({ type: LocationDto, description: 'Координаты места' })
   @IsOptional()

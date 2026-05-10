@@ -36,7 +36,6 @@ export class WalletsController {
       userId,
       dto.limit,
       dto.offset,
-      dto.currency,
       dto.type
     );
     return WalletMapper.toTransactionListDto(transactions, total, dto.limit, dto.offset);

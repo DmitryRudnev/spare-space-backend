@@ -5,7 +5,6 @@ import {
   CreateDateColumn,
 } from 'typeorm';
 import { Type } from 'class-transformer';
-import { CurrencyType } from '../common/enums/currency-type.enum';
 import { SubscriptionPlanStatus } from '../common/enums/subscription-plan-status.enum';
 
 @Entity('subscription_plans')
@@ -25,13 +24,6 @@ export class SubscriptionPlan {
 
   @Column({ type: 'decimal', precision: 26, scale: 16 })
   price: number;
-
-  @Column({
-    type: 'enum',
-    enum: CurrencyType,
-    default: CurrencyType.RUB,
-  })
-  currency: CurrencyType;
 
   @Column()
   maxListings: number;
@@ -55,10 +47,4 @@ export class SubscriptionPlan {
   @Type(() => Date)
   @CreateDateColumn({ type: 'timestamptz' })
   updatedAt: Date;
-
-  get formattedPrice(): number {
-    return [CurrencyType.RUB, CurrencyType.USD].includes(this.currency)
-      ? Math.round(this.price * 100) / 100
-      : Number(this.price);
-  }
 }

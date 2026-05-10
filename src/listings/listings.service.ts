@@ -125,7 +125,6 @@ export class ListingsService {
       'listing.type',
       'listing.size',
       'listing.price',
-      'listing.currency',
       'listing.pricePeriod',
       'listing.location',
       'listing.photoUrls',
@@ -289,7 +288,6 @@ export class ListingsService {
     if (dto.description !== undefined) data.description = dto.description;
     if (dto.price !== undefined) data.price = dto.price;
     if (dto.pricePeriod !== undefined) data.pricePeriod = dto.pricePeriod;
-    if (dto.currency !== undefined) data.currency = dto.currency;
     if (dto.address !== undefined) data.address = dto.address;
     if (dto.size !== undefined) data.size = dto.size;
     if (dto.photoUrls !== undefined) data.photoUrls = dto.photoUrls;
@@ -325,9 +323,6 @@ export class ListingsService {
     }
     if (searchDto.type !== undefined) {
       query.andWhere('listing.type = :type', { type: searchDto.type });
-    }
-    if (searchDto.currency !== undefined) {
-      query.andWhere('listing.currency = :currency', { currency: searchDto.currency });
     }
     if (searchDto.minPrice !== undefined) {
       query.andWhere('listing.price >= :minPrice', { minPrice: searchDto.minPrice });

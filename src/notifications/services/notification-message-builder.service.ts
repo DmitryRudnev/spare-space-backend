@@ -110,8 +110,8 @@ export class NotificationMessageBuilder {
       return { title, body: 'Вам пришла новая заявка на бронирование' };
     }
     let body = `Вам пришла новая заявка на бронирование «${payload.listingTitle}»`;
-    if (payload.price && payload.currency) {
-      body += ` на сумму ${payload.price} ${payload.currency}`;
+    if (payload.price) {
+      body += ` на сумму ${payload.price} ₽`;
     }
     if (payload.startDate) {
       body += ` с ${this.formatDate(payload.startDate)}`;
@@ -136,8 +136,8 @@ export class NotificationMessageBuilder {
     if (payload.startDate) {
       body += ` на ${this.formatDate(payload.startDate)}`;
     }
-    if (payload.price && payload.currency) {
-      body += `. Сумма: ${payload.price} ${payload.currency}`;
+    if (payload.price) {
+      body += `. Сумма: ${payload.price} ₽`;
     }
     return { title, body };
   }
@@ -258,7 +258,7 @@ export class NotificationMessageBuilder {
     }
     return {
       title,
-      body: `Платёж на сумму ${payload.amount} ${payload.currency} прошёл успешно.`,
+      body: `Платёж на сумму ${payload.amount} ₽ прошёл успешно.`,
     };
   }
 
@@ -270,7 +270,7 @@ export class NotificationMessageBuilder {
     const desc = payload.description ? ` Причина: ${payload.description}` : '';
     return {
       title,
-      body: `Не удалось провести платёж на сумму ${payload.amount} ${payload.currency}.${desc}`,
+      body: `Не удалось провести платёж на сумму ${payload.amount} ₽.${desc}`,
     };
   }
 

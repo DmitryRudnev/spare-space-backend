@@ -4,8 +4,6 @@ import { Repository, DataSource, FindOptionsWhere } from 'typeorm';
 import { Wallet } from '../entities/wallet.entity';
 import { Transaction } from '../entities/transaction.entity';
 import { TransactionType } from '../common/enums/transaction-type.enum';
-import { PaymentStatus } from '../common/enums/payment-status.enum';
-import { CurrencyType } from '../common/enums/currency-type.enum';
 import { UsersService } from '../users/services/users.service';
 
 @Injectable()
@@ -24,7 +22,7 @@ export class WalletsService {
     }
     
     // Если кошельков нет, создаем новый с нулевым балансом в рублях
-    const wallet = this.walletRepository.create({ userId, currency: CurrencyType.RUB });
+    const wallet = this.walletRepository.create({ userId });
     await this.walletRepository.save(wallet);
     return [wallet];
   }
@@ -33,13 +31,9 @@ export class WalletsService {
     userId: number,
     limit: number,
     offset: number,
-    currency?: CurrencyType,
     type?: TransactionType,
   ): Promise<[Transaction[], number]> {
     const where: FindOptionsWhere<Transaction> = { userId };
-    if (currency) {
-      where.currency = currency;
-    }
     if (type) {
       where.type = type;
     }

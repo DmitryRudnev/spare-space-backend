@@ -1,5 +1,4 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { CurrencyType } from '../../../../common/enums/currency-type.enum';
 import { SubscriptionPlanStatus } from '../../../../common/enums/subscription-plan-status.enum';
 
 export class SubscriptionPlanResponseDto {
@@ -18,13 +17,6 @@ export class SubscriptionPlanResponseDto {
 
   @ApiProperty({ example: 999.99, description: 'Цена' })
   price: number;
-
-  @ApiProperty({
-    enum: CurrencyType,
-    example: CurrencyType.RUB,
-    description: 'Валюта',
-  })
-  currency: CurrencyType;
 
   @ApiProperty({ example: 50, description: 'Максимальное количество объявлений' })
   maxListings: number;

@@ -81,7 +81,6 @@ export class BookingsService {
         startDate,
         endDate,
         price: booking.totalPrice,
-        currency: booking.currency,
       },
     });
 
@@ -115,7 +114,6 @@ export class BookingsService {
         startDate,
         endDate,
         price: updatedBooking.totalPrice,
-        currency: updatedBooking.currency,
       },
     });
 
@@ -145,7 +143,6 @@ export class BookingsService {
         startDate,
         endDate,
         price: confirmedBooking.totalPrice,
-        currency: confirmedBooking.currency,
       },
     });
 
@@ -200,7 +197,6 @@ export class BookingsService {
         startDate,
         endDate,
         price: cancelledBooking.totalPrice,
-        currency: cancelledBooking.currency,
       },
     });
     
@@ -292,7 +288,6 @@ export class BookingsService {
       renter: { id: renterId },
       period,
       totalPrice,
-      currency: listing.currency,
       status: BookingStatus.PENDING,
     });
     await this.bookingRepository.save(booking);

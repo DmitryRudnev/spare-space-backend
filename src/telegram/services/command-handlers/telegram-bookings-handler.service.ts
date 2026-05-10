@@ -6,7 +6,6 @@ import { TelegramSenderService } from '../telegram-sender.service';
 import { SearchBookingsDto } from '../../../bookings/dto/requests/search-bookings.dto';
 import { UserRoleType } from '../../../common/enums/user-role-type.enum';
 import { BookingStatus } from '../../../common/enums/booking-status.enum';
-import { CurrencyType } from '../../../common/enums/currency-type.enum';
 import { ListingPeriodType } from '../../../common/enums/listing-period-type.enum';
 import { TelegramPaginationService } from '../telegram-pagination.service';
 
@@ -117,7 +116,6 @@ export class TelegramBookingsHandlerService {
 
     bookings.forEach((booking, index) => {
       const totalIndex = (page - 1) * this.paginationService.getItemsPerPage() + index + 1;
-      const formattedPrice = this.isFiat(booking.currency) ? Number(booking.totalPrice).toFixed(2) : booking.totalPrice;
       const formattedPeriod = this.formatPeriod(booking.period, booking.listing.pricePeriod);
       
       const isLandlordView = role === UserRoleType.LANDLORD;
@@ -130,15 +128,10 @@ export class TelegramBookingsHandlerService {
         `${otherParty}\n` +
         `📊 Статус: ${this.getStatusText(booking.status)}\n` +
         `🕒 Период: ${formattedPeriod}\n` +
-        `💰 Цена: ${formattedPrice} ${booking.currency}\n` +
+        `💰 Цена: ${booking.totalPrice} ₽\n` +
         `\n`;
     });
     return message;
-  }
-
-  
-  private isFiat(currency: CurrencyType): boolean {
-    return currency === CurrencyType.RUB || currency === CurrencyType.USD;
   }
 
 

@@ -12,7 +12,6 @@ import {
   IsNotEmpty
 } from 'class-validator';
 
-import { CurrencyType } from '../../../common/enums/currency-type.enum';
 import { ListingPeriodType } from '../../../common/enums/listing-period-type.enum';
 import { ListingType } from '../../../common/enums/listing-type.enum';
 import { ListingStatus } from '../../../common/enums/listing-status.enum';
@@ -45,15 +44,6 @@ export class SearchListingsDto {
   @IsOptional()
   @IsEnum(ListingType)
   type?: ListingType;
-
-  @ApiPropertyOptional({
-    enum: CurrencyType,
-    description: 'Валюта',
-    example: CurrencyType.RUB
-  })
-  @IsOptional()
-  @IsEnum(CurrencyType)
-  currency?: CurrencyType;
 
   @ApiPropertyOptional({
     type: Number,

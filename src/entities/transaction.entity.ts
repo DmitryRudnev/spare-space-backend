@@ -3,7 +3,6 @@ import { User } from './user.entity';
 import { Booking } from './booking.entity';
 import { TransactionType } from '../common/enums/transaction-type.enum';
 import { PaymentStatus } from '../common/enums/payment-status.enum';
-import { CurrencyType } from '../common/enums/currency-type.enum';
 
 @Entity('transactions')
 export class Transaction {
@@ -23,9 +22,6 @@ export class Transaction {
   @Column({ type: 'decimal', precision: 26, scale: 16 })
   amount: number;
 
-  @Column({ type: 'enum', enum: CurrencyType })
-  currency: CurrencyType;
-
   @Column({ type: 'enum', enum: PaymentStatus, default: PaymentStatus.COMPLETED })
   status: PaymentStatus;
 
@@ -44,10 +40,4 @@ export class Transaction {
 
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
-
-  get formattedAmount(): number {
-    return [CurrencyType.RUB, CurrencyType.USD].includes(this.currency)
-      ? Math.round(this.amount * 100) / 100
-      : Number(this.amount);
-  }
 }

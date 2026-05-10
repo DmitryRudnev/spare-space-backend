@@ -55,7 +55,6 @@ export class BookingCompletionProcessor extends WorkerHost {
           startDate,
           endDate,
           price: booking.totalPrice,
-          currency: booking.currency,
         },
       });
 
@@ -71,7 +70,6 @@ export class BookingCompletionProcessor extends WorkerHost {
           startDate,
           endDate,
           price: booking.totalPrice,
-          currency: booking.currency,
         },
       });
     } catch (error) {

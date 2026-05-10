@@ -109,9 +109,6 @@ export class FavoritesService {
     if (searchDto.type !== undefined) {
       query.andWhere('listing.type = :type', { type: searchDto.type });
     }
-    if (searchDto.currency !== undefined) {
-      query.andWhere('listing.currency = :currency', { currency: searchDto.currency });
-    }
     if (searchDto.minPrice !== undefined) {
       query.andWhere('listing.price >= :minPrice', { minPrice: searchDto.minPrice });
     }

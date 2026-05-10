@@ -5,7 +5,6 @@ import { TelegramSenderService } from '../telegram-sender.service';
 import { TelegramPaginationService } from '../telegram-pagination.service';
 import { SearchListingsDto } from '../../../listings/dto/requests/search-listings.dto';
 import { ListingStatus } from '../../../common/enums/listing-status.enum';
-import { CurrencyType } from '../../../common/enums/currency-type.enum';
 
 
 @Injectable()
@@ -85,12 +84,11 @@ export class TelegramListingsHandlerService {
     
     listings.forEach((listing, index) => {
       const totalIndex = (page - 1) * this.paginationService.getItemsPerPage() + index + 1;
-      const price = this.isFiat(listing.currency) ? Number(listing.price).toFixed(2)  : listing.price;
       message += 
         `${totalIndex}. *${listing.title}*\n` +
         `📊 Статус: ${this.getStatusText(listing.status)}\n` +
         `📍 Адрес: ${listing.address}\n` +
-        `💰 Цена: ${price} ${listing.currency} / ${listing.pricePeriod}\n` +
+        `💰 Цена: ${listing.price} ₽ / ${listing.pricePeriod}\n` +
         // `📝 Описание: ${this.getListingDescription(listing.description)}\n` +
         // `👁️ Просмотры: ${listing.viewsCount}\n` +
         // `🔄 Репосты: ${listing.repostsCount}\n` +
@@ -98,11 +96,6 @@ export class TelegramListingsHandlerService {
         `\n`;
     });
     return message;
-  }
-
-
-  private isFiat(currency: CurrencyType): boolean {
-    return currency === CurrencyType.RUB || currency === CurrencyType.USD;
   }
 
 

@@ -1,5 +1,4 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { CurrencyType } from '../../../common/enums/currency-type.enum';
 import { ListingPeriodType } from '../../../common/enums/listing-period-type.enum';
 import { ListingType } from '../../../common/enums/listing-type.enum';
 import { LocationDto } from '../location.dto';
@@ -19,9 +18,6 @@ export class ListingGeoResponseDto {
 
   @ApiProperty({ type: Number, description: 'Цена за период', example: 1500 })
   price: number;
-
-  @ApiProperty({ enum: CurrencyType, description: 'Валюта', example: CurrencyType.RUB })
-  currency: CurrencyType;
 
   @ApiProperty({ enum: ListingPeriodType, description: 'Период ценообразования', example: ListingPeriodType.DAY })
   pricePeriod: ListingPeriodType;

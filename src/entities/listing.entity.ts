@@ -9,7 +9,6 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { Type } from 'class-transformer';
-import { CurrencyType } from '../common/enums/currency-type.enum';
 import { ListingPeriodType } from '../common/enums/listing-period-type.enum';
 import { ListingStatus } from '../common/enums/listing-status.enum';
 import { ListingType } from '../common/enums/listing-type.enum';
@@ -45,14 +44,6 @@ export class Listing {
     default: ListingPeriodType.DAY,
   })
   pricePeriod: ListingPeriodType;
-
-  @Column({
-    type: 'enum',
-    enum: CurrencyType,
-    enumName: 'currency_type',
-    default: CurrencyType.RUB,
-  })
-  currency: CurrencyType;
 
   @Type(() => Object)
   @Column({ type: 'geometry', srid: 4326, nullable: true })
@@ -153,11 +144,5 @@ export class Listing {
       start: new Date(parts[0]),
       end: new Date(parts[1]),
     };
-  }
-
-  get formattedPrice(): number {
-    return [CurrencyType.RUB, CurrencyType.USD].includes(this.currency)
-      ? Math.round(this.price * 100) / 100
-      : Number(this.price);
   }
 }

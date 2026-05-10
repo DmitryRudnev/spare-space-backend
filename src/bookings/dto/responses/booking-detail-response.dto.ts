@@ -1,5 +1,4 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { CurrencyType } from '../../../common/enums/currency-type.enum';
 import { BookingResponseDto } from './booking-response.dto';
 import { LocationDto } from 'src/listings/dto/location.dto';
 import { ListingPeriodType } from 'src/common/enums/listing-period-type.enum';
@@ -7,9 +6,6 @@ import { ListingPeriodType } from 'src/common/enums/listing-period-type.enum';
 export class BookingDetailResponseDto extends BookingResponseDto {
   @ApiProperty({ type: Number, description: 'Цена за период', example: 1500 })
   listingPrice: number;
-  
-  @ApiProperty({ enum: CurrencyType, description: 'Валюта', example: CurrencyType.RUB })
-  listingCurrency: CurrencyType;
 
   @ApiProperty({ enum: ListingPeriodType, description: 'Период ценообразования', example: ListingPeriodType.DAY })
   listingPricePeriod: ListingPeriodType;

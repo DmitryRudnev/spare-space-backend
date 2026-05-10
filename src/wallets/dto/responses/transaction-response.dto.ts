@@ -1,6 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { TransactionType } from '../../../common/enums/transaction-type.enum';
-import { CurrencyType } from '../../../common/enums/currency-type.enum';
 import { PaymentStatus } from '../../../common/enums/payment-status.enum';
 
 export class TransactionResponseDto {
@@ -12,9 +11,6 @@ export class TransactionResponseDto {
 
   @ApiProperty({ type: Number, description: 'Сумма транзакции', example: 100.0 })
   amount: number;
-
-  @ApiProperty({ enum: CurrencyType, description: 'Валюта транзакции', example: CurrencyType.RUB })
-  currency: CurrencyType;
 
   @ApiProperty({ enum: PaymentStatus, description: 'Статус транзакции', example: PaymentStatus.COMPLETED })
   status: PaymentStatus;

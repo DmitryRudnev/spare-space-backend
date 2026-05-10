@@ -9,7 +9,6 @@ CREATE TYPE booking_status AS ENUM ('PENDING', 'CONFIRMED', 'CANCELLED', 'COMPLE
 CREATE TYPE payment_method AS ENUM ('CARD', 'SBP', 'USDT', 'ETH', 'TRX');
 CREATE TYPE payment_status AS ENUM ('PENDING', 'BLOCKED', 'COMPLETED', 'REFUNDED');
 CREATE TYPE transaction_type AS ENUM ('TOPUP', 'CHARGE', 'PAYOUT', 'COMMISSION');
-CREATE TYPE currency_type AS ENUM ('RUB', 'USD', 'USDT', 'ETH', 'TRX');
 CREATE TYPE notification_channel AS ENUM ('WEBSOCKET', 'FCM', 'EMAIL', 'SMS', 'TG_BOT');
 CREATE TYPE notification_delivery_status AS ENUM ('PENDING', 'SUCCESS', 'FAILED');
 CREATE TYPE notification_type AS ENUM (
@@ -131,7 +130,6 @@ CREATE TABLE listings (
     description TEXT,
     price DECIMAL(26,16) NOT NULL,  -- цена за единицу времени(за день/неделю/месяц)
     price_period listing_period_type NOT NULL DEFAULT 'DAY',  -- период времени, за который указывается цена
-    currency currency_type NOT NULL DEFAULT 'RUB',
     location GEOMETRY(POINT, 4326),
     address VARCHAR(500) NOT NULL,
     size DECIMAL(10,2),
@@ -162,7 +160,6 @@ CREATE TABLE bookings (
     renter_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     period TSTZRANGE NOT NULL,  -- период брони (start_date, end_date)
     total_price DECIMAL(26,16) NOT NULL,  -- [цена за единицу времени] * [кол-во дней/недель/месяцев]
-    currency currency_type NOT NULL DEFAULT 'RUB',
     status booking_status NOT NULL DEFAULT 'PENDING',
     completion_job_id VARCHAR(255),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -180,14 +177,11 @@ CREATE TABLE wallets (
     id BIGSERIAL PRIMARY KEY,
     user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     balance DECIMAL(26,16) NOT NULL DEFAULT 0,
-    currency currency_type NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE (user_id, currency)
 );
 
 CREATE INDEX idx_wallets_user_id ON wallets(user_id);
-CREATE INDEX idx_wallets_currency ON wallets(currency);
 
 
 
@@ -195,7 +189,6 @@ CREATE TABLE payments (
     id BIGSERIAL PRIMARY KEY,
     booking_id BIGINT UNIQUE REFERENCES bookings(id) ON DELETE CASCADE,
     amount DECIMAL(26,16) NOT NULL,
-    currency currency_type NOT NULL DEFAULT 'RUB',
     method payment_method NOT NULL,
     status payment_status NOT NULL DEFAULT 'PENDING',
     gateway_transaction_id VARCHAR(255),  -- для РФ-шлюзов/крипты
@@ -213,7 +206,6 @@ CREATE TABLE transactions (
     user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     type transaction_type NOT NULL,
     amount DECIMAL(26,16) NOT NULL,
-    currency currency_type NOT NULL,
     status payment_status NOT NULL DEFAULT 'COMPLETED',
     booking_id BIGINT REFERENCES bookings(id) ON DELETE SET NULL,
     commission DECIMAL(26,16) NOT NULL DEFAULT 0,
@@ -233,7 +225,6 @@ CREATE TABLE subscription_plans (
     name VARCHAR(100) NOT NULL UNIQUE,  -- Название тарифа, например, "Basic", "Pro"
     status subscription_plan_status NOT NULL DEFAULT 'ACTIVE',
     price DECIMAL(26,16) NOT NULL,
-    currency currency_type NOT NULL DEFAULT 'RUB',
     max_listings INTEGER NOT NULL,
     priority_search BOOLEAN NOT NULL,
     boosts_per_month INTEGER NOT NULL,  -- Количество доступных поднятий в месяц
