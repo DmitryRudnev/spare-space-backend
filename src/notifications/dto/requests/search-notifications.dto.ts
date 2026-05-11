@@ -3,7 +3,7 @@ import { IsEnum, IsOptional, IsBoolean } from 'class-validator';
 import { Transform } from 'class-transformer';
 
 import { NotificationType } from '../../../common/enums/notification-type.enum';
-import { PaginationDto } from 'src/common/dto/pagination.dto';
+import { PaginationDto } from '../../../common/dto/pagination.dto';
 
 export class SearchNotificationsDto extends PaginationDto {
   @ApiPropertyOptional({

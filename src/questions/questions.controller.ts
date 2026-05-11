@@ -32,7 +32,7 @@ import { CreateQuestionDto } from './dto/requests/create-question.dto';
 import { AnswerQuestionDto } from './dto/requests/answer-question.dto';
 import { QuestionListResponseDto } from './dto/responses/question-list-response.dto';
 import { QuestionDetailResponseDto } from './dto/responses/question-detail-response.dto';
-import { PaginationDto } from 'src/common/dto/pagination.dto';
+import { PaginationDto } from '../common/dto/pagination.dto';
 
 @ApiTags('Questions')
 @Controller()

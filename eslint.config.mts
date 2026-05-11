@@ -4,7 +4,7 @@ import tseslint from 'typescript-eslint';
 import prettier from 'eslint-config-prettier';
 import importPlugin from 'eslint-plugin-import';
 
-export default [
+export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,
@@ -45,4 +45,4 @@ export default [
       ],
     },
   },
-];
+);

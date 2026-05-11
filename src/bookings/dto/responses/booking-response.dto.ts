@@ -2,7 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { BookingStatus } from '../../../common/enums/booking-status.enum';
 import { UserPublicResponseDto } from '../../../users/dto/responses/user-public-response.dto';
 import { PeriodDto } from '../../../common/dto/period.dto';
-import { ListingType } from 'src/common/enums/listing-type.enum';
+import { ListingType } from '../../../common/enums/listing-type.enum';
 
 export class BookingResponseDto {
   @ApiProperty({ type: Number, description: 'ID бронирования', example: 1 })

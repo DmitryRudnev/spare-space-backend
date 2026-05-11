@@ -5,7 +5,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Conversation } from '../entities/conversation.entity';
 import { Message } from '../entities/message.entity';
 import { UsersService } from '../users/services/users.service';
-import { ListingsService } from 'src/listings/listings.service';
+import { ListingsService } from '../listings/listings.service';
 
 import { 
   ConversationNotFoundException, 

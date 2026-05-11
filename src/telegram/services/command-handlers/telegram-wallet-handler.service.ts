@@ -3,7 +3,7 @@ import { UsersService } from '../../../users/services/users.service';
 import { WalletsService } from '../../../wallets/wallets.service';
 import { TelegramSenderService } from '../telegram-sender.service';
 import { TransactionType } from '../../../common/enums/transaction-type.enum';
-import { Wallet } from 'src/entities/wallet.entity';
+import { Wallet } from '../../../entities/wallet.entity';
 import { Transaction } from '../../../entities/transaction.entity';
 
 @Injectable()
