@@ -12,6 +12,7 @@ import { Telegraf } from 'telegraf';
 @Injectable()
 export class TelegramSetupService implements OnModuleInit {
   private readonly logger = new Logger(TelegramSetupService.name);
+  private readonly launchBot: boolean;
   private readonly bot: Telegraf;
   private botUsername: string;
 
@@ -23,12 +24,9 @@ export class TelegramSetupService implements OnModuleInit {
    * @throws {Error} если TELEGRAM_BOT_TOKEN не настроен в конфигурации
    */
   constructor(private configService: ConfigService) {
-    const botToken = this.configService.get<string>('TELEGRAM_BOT_TOKEN');
+    this.launchBot = this.configService.get('ENABLE_TG_BOT') !== 'false';
     
-    if (!botToken) {
-      throw new Error('TELEGRAM_BOT_TOKEN не настроен в конфигурации');
-    }
-
+    const botToken = this.configService.getOrThrow<string>('TELEGRAM_BOT_TOKEN');
     this.bot = new Telegraf(botToken);
   }
 
@@ -50,6 +48,10 @@ export class TelegramSetupService implements OnModuleInit {
    * @throws {Error} если APP_URL или TELEGRAM_WEBHOOK_TOKEN не настроены в конфигурации
    */
   async setupWebhook(): Promise<boolean> {
+    if (!this.launchBot) {
+      return false;
+    }
+
     try {
       const appUrl = this.configService.get<string>('APP_URL');
       const secretToken = this.configService.get<string>('TELEGRAM_WEBHOOK_TOKEN');
@@ -93,6 +95,10 @@ export class TelegramSetupService implements OnModuleInit {
    * @throws {Error} Если не удалось получить username бота
    */
   private async initializeBotUsername(): Promise<void> {
+    if (!this.launchBot) {
+      return;
+    }
+
     try {
       const botInfo = await this.bot.telegram.getMe();
       this.botUsername = botInfo.username;
@@ -153,6 +159,10 @@ export class TelegramSetupService implements OnModuleInit {
    * Устанавливает подсказки команд для бота
    */
   async setBotCommands(): Promise<void> {
+    if (!this.launchBot) {
+      return;
+    }
+
     try {
       await this.bot.telegram.setMyCommands([
         {
