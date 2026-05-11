@@ -29,9 +29,6 @@ export class Transaction {
   @JoinColumn({ name: 'booking_id' })
   booking: Booking | null;
 
-  @Column({ type: 'decimal', precision: 26, scale: 16, default: 0 })
-  commission: number;
-
   @Column({ type: 'text', nullable: true })
   description: string | null;
 

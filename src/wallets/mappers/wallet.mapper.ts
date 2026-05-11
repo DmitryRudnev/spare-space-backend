@@ -23,7 +23,6 @@ export class WalletMapper {
     dto.type = transaction.type;
     dto.amount = transaction.amount;
     dto.status = transaction.status;
-    dto.commission = transaction.commission;
     dto.description = transaction.description;
     dto.gatewayTransactionId = transaction.gatewayTransactionId;
     dto.createdAt = transaction.createdAt.toISOString();

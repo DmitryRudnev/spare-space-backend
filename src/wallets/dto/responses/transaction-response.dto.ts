@@ -15,9 +15,6 @@ export class TransactionResponseDto {
   @ApiProperty({ enum: TransactionStatus, description: 'Статус транзакции', example: TransactionStatus.SUCCESS })
   status: TransactionStatus;
 
-  @ApiProperty({ type: Number, description: 'Комиссия за транзакцию', example: 10.0 })
-  commission: number;
-
   @ApiProperty({ type: String, description: 'Описание транзакции', example: 'Пополнение через Stripe', nullable: true })
   description: string | null;
 
