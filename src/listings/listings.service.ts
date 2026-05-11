@@ -124,8 +124,6 @@ export class ListingsService {
       'listing.title',
       'listing.type',
       'listing.size',
-      'listing.price',
-      'listing.pricePeriod',
       'listing.location',
       'listing.photoUrls',
       'pricing.id',
