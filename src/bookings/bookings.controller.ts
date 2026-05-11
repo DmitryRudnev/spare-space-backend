@@ -112,7 +112,7 @@ export class BookingsController {
   @ApiNoContentResponse({ description: 'Бронирование успешно отменено' })
   @ApiNotFoundResponse({ description: 'Бронирование не найдено' })
   @ApiBadRequestResponse({ description: 'Невозможно отменить бронирование' })
-  async remove(
+  async cancel(
     @Param('id') bookingId: string,
     @User('userId') userId: number
   ): Promise<void> {

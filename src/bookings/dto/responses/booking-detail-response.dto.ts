@@ -19,7 +19,7 @@ export class BookingDetailResponseDto extends BookingResponseDto {
   listingSize: number | null;
 
   @ApiProperty({ type: String, description: 'Адрес', example: 'Москва, ул. Пушкина, д. Колотушкина' })
-  listingAdress: string;
+  listingAddress: string;
 
   @ApiProperty({ type: LocationDto, description: 'Координаты места', nullable: true })
   listingLocation: LocationDto | null;

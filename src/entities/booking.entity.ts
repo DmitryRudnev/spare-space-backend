@@ -35,9 +35,6 @@ export class Booking {
   @Column({ type: 'enum', enum: BookingStatus, enumName: 'booking_status', default: BookingStatus.PENDING })
   status: BookingStatus;
 
-  @Column({ type: 'varchar', length: 255, nullable: true })
-  completionJobId: string | null;
-
   @Type(() => Date)
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;

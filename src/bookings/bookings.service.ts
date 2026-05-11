@@ -14,6 +14,7 @@ import { Queue } from 'bullmq';
 
 import { ListingsService } from '../listings/listings.service';
 import { UsersService } from '../users/services/users.service';
+import { WalletsService } from '../wallets/wallets.service';
 import { Booking } from '../entities/booking.entity';
 import { BookingStatus } from '../common/enums/booking-status.enum';
 import { ListingStatus } from '../common/enums/listing-status.enum';
@@ -34,8 +35,10 @@ export class BookingsService {
     @InjectRepository(Booking) private readonly bookingRepository: Repository<Booking>,
     private readonly listingsService: ListingsService,
     private readonly usersService: UsersService,
+    private readonly walletsService: WalletsService,
     private readonly eventEmitter: EventEmitter2,
     @InjectQueue('booking-completion') private bookingCompletionQueue: Queue,
+    @InjectQueue('booking-start') private bookingStartQueue: Queue,
   ) {}
 
 
@@ -60,6 +63,13 @@ export class BookingsService {
 
   async handleCreate(userId: number, createDto: CreateBookingDto): Promise<Booking> {
     const booking = await this.create(userId, createDto);
+
+    try {
+      await this.walletsService.processBookingPayment(userId, booking.id, booking.totalPrice);
+    } catch (error) {
+      await this.bookingRepository.remove(booking);
+      throw error;
+    }
     
     // Обновляем периоды доступности объявления
     const { start: startDate, end: endDate } = booking.periodDates;
@@ -146,27 +156,25 @@ export class BookingsService {
       },
     });
 
-    const delay = new Date(endDate).getTime() - Date.now();
-    if (delay > 0) {
-      this.logger.log(`Scheduling booking completion for booking ${confirmedBooking.id} with delay: ${delay/1000/60} minutes`);
-      const job = await this.bookingCompletionQueue.add(
-        'complete-booking',
-        { bookingId: confirmedBooking.id },
-        {
-          delay,
-          attempts: 3,
-          backoff: { type: 'exponential', delay: 5000 },
-          removeOnComplete: true,
-          removeOnFail: false,
-        }
-      );
-      if (!job.id) {
-        this.logger.error(`Failed to create delayed job for booking completion (booking id ${confirmedBooking.id})`);
-        throw new Error(`Failed to create delayed job for booking completion (booking id ${confirmedBooking.id})`);
+    const delay = new Date(startDate).getTime() - Date.now();
+    this.logger.log(`Scheduling booking start for booking ${confirmedBooking.id} with delay: ${Math.max(0, delay)/1000/60} minutes`);
+    
+    const job = await this.bookingStartQueue.add(
+      'start-booking',
+      { bookingId: confirmedBooking.id },
+      {
+        delay: Math.max(0, delay),
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 5000 },
+        removeOnComplete: true,
+        removeOnFail: false,
       }
-      confirmedBooking.completionJobId = job.id;
-      await this.bookingRepository.save(confirmedBooking);
+    );
+    
+    if (!job.id) {
+      throw new Error(`Failed to create delayed job for booking start (booking id ${confirmedBooking.id})`);
     }
+
 
     return confirmedBooking;
   }
@@ -182,6 +190,7 @@ export class BookingsService {
     }
     
     const cancelledBooking = await this.updateStatus(bookingId, BookingStatus.CANCELLED);
+    await this.walletsService.processRefund(Number(cancelledBooking.renter.id), cancelledBooking.id, cancelledBooking.totalPrice);
     const { start: startDate, end: endDate } = cancelledBooking.periodDates;
 
     this.eventEmitter.emit('notification.signal', {
@@ -212,6 +221,7 @@ export class BookingsService {
     }
     
     const rejectedBooking = await this.updateStatus(bookingId, BookingStatus.REJECTED);
+    await this.walletsService.processRefund(Number(rejectedBooking.renter.id), rejectedBooking.id, rejectedBooking.totalPrice);
     const { start: startDate, end: endDate } = rejectedBooking.periodDates;
 
     this.eventEmitter.emit('notification.signal', {

@@ -13,6 +13,7 @@ CREATE TYPE transaction_type AS ENUM (
     'WITHDRAWAL',       -- вывод с платформы
     'BOOKING_PAYMENT',  -- оплата бронирования
     'BOOKING_PAYOUT',   -- получение денег за бронирование
+    'REFUND',           -- возврат за отменённую/отклонённую бронь
     'COMMISSION'        -- комиссия
 );
 
@@ -175,7 +176,6 @@ CREATE TABLE bookings (
     price DECIMAL(10,2) NOT NULL,  -- цена объявления на момент создания брони
     price_period listing_period_type NOT NULL,  -- тариф объявления, по которому была оформлена бронь
     status booking_status NOT NULL DEFAULT 'PENDING',
-    completion_job_id VARCHAR(255),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

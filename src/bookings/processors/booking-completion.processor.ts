@@ -6,6 +6,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { BookingStatus } from '../../common/enums/booking-status.enum';
 import { NotificationType } from '../../common/enums/notification-type.enum';
 import { BookingsService } from '../bookings.service';
+import { WalletsService } from '../../wallets/wallets.service';
 
 @Processor('booking-completion')
 export class BookingCompletionProcessor extends WorkerHost {
@@ -13,6 +14,7 @@ export class BookingCompletionProcessor extends WorkerHost {
 
   constructor(
     private readonly bookingsService: BookingsService,
+    private readonly walletsService: WalletsService,
     private readonly eventEmitter: EventEmitter2,
   ) {
     super();
@@ -41,6 +43,13 @@ export class BookingCompletionProcessor extends WorkerHost {
       // Обновляем статус
       await this.bookingsService.updateStatus(bookingId, BookingStatus.COMPLETED);
       this.logger.log(`Booking ${bookingId} automatically completed`);
+
+      // Начисляем средства владельцу
+      await this.walletsService.processBookingPayout(
+        Number(booking.listing.user.id), 
+        booking.id, 
+        booking.totalPrice
+      );
 
       // Эмитим уведомление арендатору
       const { start: startDate, end: endDate } = booking.periodDates;

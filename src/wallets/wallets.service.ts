@@ -131,6 +131,26 @@ export class WalletsService {
     });
   }
 
+  async processRefund(userId: number, bookingId: number, amount: number): Promise<Transaction> {
+    return this.dataSource.transaction(async (manager) => {
+      const wallet = await this.getLockedWallet(manager, userId);
+
+      wallet.balance = Number(wallet.balance) + amount;
+      await manager.save(wallet);
+
+      const transaction = manager.create(Transaction, {
+        userId,
+        booking: { id: bookingId } as any,
+        type: TransactionType.REFUND,
+        amount,
+        status: TransactionStatus.SUCCESS,
+        description: `Refund for cancelled/rejected booking #${bookingId}`,
+      });
+
+      return manager.save(transaction);
+    });
+  }
+
   private async getLockedWallet(manager: EntityManager, userId: number): Promise<Wallet> {
     let wallet = await manager.findOne(Wallet, {
       where: { userId },

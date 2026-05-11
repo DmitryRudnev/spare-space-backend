@@ -37,7 +37,7 @@ export class BookingMapper {
       pricePeriod: p.pricePeriod,
     })) || [];
     dto.listingSize = booking.listing.size;
-    dto.listingAdress = booking.listing.address;
+    dto.listingAddress = booking.listing.address;
     dto.listingAmenities = booking.listing.amenities;
     dto.listingLocation = booking.listing.location?.coordinates
       ? { longitude: booking.listing.location.coordinates[0],

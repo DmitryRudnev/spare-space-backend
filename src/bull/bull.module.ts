@@ -17,6 +17,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
     BullModule.registerQueue(
       { name: 'notifications' },
       { name: 'booking-completion' },
+      { name: 'booking-start' },
     ),
   ],
   exports: [BullModule],
