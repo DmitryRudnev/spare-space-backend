@@ -1,5 +1,8 @@
-import { Controller, Get, Post, Body, Query, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Body, Query, UseGuards, HttpCode, HttpStatus, BadRequestException } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { WalletOperationDto } from './dto/requests/wallet-operation.dto';
+import { TransactionResponseDto } from './dto/responses/transaction-response.dto';
+
 import { WalletsService } from './wallets.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { User } from '../common/decorators/user.decorator';
@@ -39,5 +42,29 @@ export class WalletsController {
       dto.type
     );
     return WalletMapper.toTransactionListDto(transactions, total, dto.limit, dto.offset);
+  }
+
+  @Post('deposit')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Пополнить баланс кошелька (dev)' })
+  @ApiOkResponse({ type: TransactionResponseDto, description: 'Транзакция пополнения' })
+  async deposit(
+    @User('userId') userId: number,
+    @Body() dto: WalletOperationDto,
+  ): Promise<TransactionResponseDto> {
+    const transaction = await this.walletsService.deposit(userId, dto.amount);
+    return WalletMapper.toTransactionResponseDto(transaction);
+  }
+
+  @Post('withdraw')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Вывести средства с кошелька (dev)' })
+  @ApiOkResponse({ type: TransactionResponseDto, description: 'Транзакция вывода' })
+  async withdraw(
+    @User('userId') userId: number,
+    @Body() dto: WalletOperationDto,
+  ): Promise<TransactionResponseDto> {
+    const transaction = await this.walletsService.withdraw(userId, dto.amount);
+    return WalletMapper.toTransactionResponseDto(transaction);
   }
 }

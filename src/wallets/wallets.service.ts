@@ -1,9 +1,11 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource, FindOptionsWhere } from 'typeorm';
+import { Repository, DataSource, FindOptionsWhere, EntityManager } from 'typeorm';
+
 import { Wallet } from '../entities/wallet.entity';
 import { Transaction } from '../entities/transaction.entity';
 import { TransactionType } from '../common/enums/transaction-type.enum';
+import { TransactionStatus } from '../common/enums/transaction-status.enum';
 import { UsersService } from '../users/services/users.service';
 
 @Injectable()
@@ -45,92 +47,101 @@ export class WalletsService {
     });
   }
 
-  // async topup(userId: number, dto: TopupDto): Promise<Transaction> {
-  //   if (dto.amount <= 0) {
-  //     throw new BadRequestException('Amount must be positive');
-  //   }
-  //   return this.dataSource.transaction(async (manager) => {
-  //     const wallet = await this.getOrCreateWallet(userId);
-  //     const balance = await this.getOrCreateBalance(wallet, dto.currency);
-  //     balance.balance = +balance.balance + dto.amount;
-  //     await manager.save(balance);
+  async deposit(userId: number, amount: number): Promise<Transaction> {
+    return this.dataSource.transaction(async (manager) => {
+      const wallet = await this.getLockedWallet(manager, userId);
+      
+      wallet.balance = Number(wallet.balance) + amount;
+      await manager.save(wallet);
 
-  //     const transaction = manager.create(Transaction, {
-  //       wallet,
-  //       type: TransactionType.TOPUP,
-  //       amount: dto.amount,
-  //       currency: dto.currency,
-  //       status: PaymentStatus.COMPLETED,
-  //       description: `Topup via ${dto.method}`,
-  //       gatewayTransactionId: dto.gatewayTransactionId,
-  //     });
-  //     return manager.save(transaction);
-  //   });
-  // }
+      const transaction = manager.create(Transaction, {
+        userId,
+        type: TransactionType.DEPOSIT,
+        amount,
+        status: TransactionStatus.SUCCESS,
+        description: 'Development deposit',
+      });
+      return manager.save(transaction);
+    });
+  }
 
-  // async withdraw(userId: number, dto: WithdrawDto): Promise<Transaction> {
-  //   if (dto.amount <= 0) {
-  //     throw new BadRequestException('Amount must be positive');
-  //   }
-  //   return this.dataSource.transaction(async (manager) => {
-  //     const wallet = await this.getOrCreateWallet(userId);
-  //     const balance = await this.getOrCreateBalance(wallet, dto.currency);
-  //     if (+balance.balance < dto.amount) {
-  //       throw new BadRequestException('Insufficient balance');
-  //     }
-  //     balance.balance = +balance.balance - dto.amount;
-  //     await manager.save(balance);
+  async withdraw(userId: number, amount: number): Promise<Transaction> {
+    return this.dataSource.transaction(async (manager) => {
+      const wallet = await this.getLockedWallet(manager, userId);
+      
+      if (Number(wallet.balance) < amount) {
+        throw new BadRequestException('Insufficient balance');
+      }
 
-  //     const transaction = manager.create(Transaction, {
-  //       wallet,
-  //       type: TransactionType.PAYOUT,
-  //       amount: -dto.amount,
-  //       currency: dto.currency,
-  //       status: PaymentStatus.COMPLETED,
-  //       description: `Withdraw to ${dto.destination}`,
-  //     });
-  //     return manager.save(transaction);
-  //   });
-  // }
+      wallet.balance = Number(wallet.balance) - amount;
+      await manager.save(wallet);
 
-  // async transfer(userId: number, dto: TransferDto): Promise<{ fromTransaction: Transaction; toTransaction: Transaction }> {
-  //   await this.usersService.findById(dto.toUserId);
+      const transaction = manager.create(Transaction, {
+        userId,
+        type: TransactionType.WITHDRAWAL,
+        amount,
+        status: TransactionStatus.SUCCESS,
+        description: 'Development withdrawal',
+      });
+      return manager.save(transaction);
+    });
+  }
 
-  //   return this.dataSource.transaction(async (manager) => {
-  //     const fromWallet = await this.getOrCreateWallet(userId);
-  //     const fromBalance = await this.getOrCreateBalance(fromWallet, dto.currency);
-  //     if (+fromBalance.balance < dto.amount) {
-  //       throw new BadRequestException('Insufficient balance');
-  //     }
-  //     fromBalance.balance = +fromBalance.balance - dto.amount;
-  //     await manager.save(fromBalance);
+  async processBookingPayment(userId: number, bookingId: number, amount: number): Promise<Transaction> {
+    return this.dataSource.transaction(async (manager) => {
+      const wallet = await this.getLockedWallet(manager, userId);
 
-  //     const toWallet = await this.getOrCreateWallet(dto.toUserId);
-  //     const toBalance = await this.getOrCreateBalance(toWallet, dto.currency);
-  //     toBalance.balance = +toBalance.balance + dto.amount;
-  //     await manager.save(toBalance);
+      if (Number(wallet.balance) < amount) {
+        throw new BadRequestException('Insufficient funds for booking');
+      }
 
-  //     const fromTransaction = manager.create(Transaction, {
-  //       wallet: fromWallet,
-  //       type: TransactionType.CHARGE,
-  //       amount: -dto.amount,
-  //       currency: dto.currency,
-  //       status: PaymentStatus.COMPLETED,
-  //       booking: undefined,
-  //       description: dto.description || `Transfer to user ${dto.toUserId}`,
-  //     });
-  //     const toTransaction = manager.create(Transaction, {
-  //       wallet: toWallet,
-  //       type: TransactionType.TOPUP,
-  //       amount: dto.amount,
-  //       currency: dto.currency,
-  //       status: PaymentStatus.COMPLETED,
-  //       booking: undefined,
-  //       description: dto.description || `Transfer from user ${userId}`,
-  //     });
+      wallet.balance = Number(wallet.balance) - amount;
+      await manager.save(wallet);
 
-  //     await manager.save([fromTransaction, toTransaction]);
-  //     return { fromTransaction, toTransaction };
-  //   });
-  // }
+      const transaction = manager.create(Transaction, {
+        userId,
+        booking: { id: bookingId } as any,
+        type: TransactionType.BOOKING_PAYMENT,
+        amount,
+        status: TransactionStatus.SUCCESS,
+        description: `Payment for booking #${bookingId}`,
+      });
+
+      return manager.save(transaction);
+    });
+  }
+
+  async processBookingPayout(userId: number, bookingId: number, amount: number): Promise<Transaction> {
+    return this.dataSource.transaction(async (manager) => {
+      const wallet = await this.getLockedWallet(manager, userId);
+
+      wallet.balance = Number(wallet.balance) + amount;
+      await manager.save(wallet);
+
+      const transaction = manager.create(Transaction, {
+        userId,
+        booking: { id: bookingId } as any,
+        type: TransactionType.BOOKING_PAYOUT,
+        amount,
+        status: TransactionStatus.SUCCESS,
+        description: `Payout for booking #${bookingId}`,
+      });
+
+      return manager.save(transaction);
+    });
+  }
+
+  private async getLockedWallet(manager: EntityManager, userId: number): Promise<Wallet> {
+    let wallet = await manager.findOne(Wallet, {
+      where: { userId },
+      lock: { mode: 'pessimistic_write' },
+    });
+
+    if (!wallet) {
+      wallet = manager.create(Wallet, { userId, balance: 0 });
+      await manager.save(wallet);
+    }
+
+    return wallet;
+  }
 }
