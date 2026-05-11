@@ -18,10 +18,10 @@ export class TelegramWalletHandlerService {
   
   async handle(chatId: number, userId: number): Promise<void> {
     try {
-      const balances = await this.walletsService.findWalletsByUser(userId);
+      const wallet = await this.walletsService.findWalletByUser(userId);
       const [transactions, total] = await this.walletsService.findTransactionsByUser(userId, 5, 0);
 
-      const message = this.buildWalletMessage(balances, transactions);
+      const message = this.buildWalletMessage(wallet, transactions);
       await this.telegramSenderService.sendMessage(chatId, message);
     } catch (error) {
       this.logger.error(`Ошибка получения кошелька: ${error.message}`);
@@ -35,19 +35,11 @@ export class TelegramWalletHandlerService {
   // ==========================================================================
 
 
-  private buildWalletMessage(balances: Wallet[], transactions: Transaction[]): string {
+  private buildWalletMessage(wallet: Wallet, transactions: Transaction[]): string {
     let message = `💰 *Ваш кошелёк*\n\n`;
 
     // Секция балансов
-    if (balances.length === 0) {
-      message += `📭 *Баланс:* отсутсвует\n\n`;
-    } else {
-      message += `📊 *Баланс:*\n`;
-      balances.forEach(balance => {
-        message += `• ${balance.balance} ₽\n`;
-      });
-      message += `\n`;
-    }
+    message += `📊 *Баланс:* ${wallet.balance} ₽\n\n`;
 
     // Секция последних транзакций
     if (transactions.length === 0) {

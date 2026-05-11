@@ -18,13 +18,13 @@ import { WalletMapper } from './mappers/wallet.mapper';
 export class WalletsController {
   constructor(private readonly walletsService: WalletsService) {}
 
-  @Get('balances/my')
+  @Get('balance/my')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Получить балансы всех кошельков пользователя' })
-  @ApiOkResponse({ type: [WalletResponseDto], description: 'Баланс всех кошельков пользователя' })
-  async findWalletsByUser(@User('userId') userId: number): Promise<WalletResponseDto[]> {
-    const wallets = await this.walletsService.findWalletsByUser(userId);
-    return wallets.map(wallet => WalletMapper.toWalletResponseDto(wallet));
+  @ApiOperation({ summary: 'Получить баланс кошелька пользователя' })
+  @ApiOkResponse({ type: WalletResponseDto, description: 'Баланс кошелька пользователя' })
+  async findWalletsByUser(@User('userId') userId: number): Promise<WalletResponseDto> {
+    const wallet = await this.walletsService.findWalletByUser(userId);
+    return WalletMapper.toWalletResponseDto(wallet);
   }
   
   @Get('transactions/my')

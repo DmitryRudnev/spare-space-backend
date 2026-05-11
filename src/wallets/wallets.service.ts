@@ -17,16 +17,16 @@ export class WalletsService {
     private readonly dataSource: DataSource,
   ) {}
 
-  async findWalletsByUser(userId: number): Promise<Wallet[]> {
-    const wallets = await this.walletRepository.find({ where: { userId }});
-    if (wallets.length !== 0) {
-      return wallets;
+  async findWalletByUser(userId: number): Promise<Wallet> {
+    const wallet = await this.walletRepository.findOneBy({ userId });
+    if (wallet) {
+      return wallet;
     }
     
-    // Если кошельков нет, создаем новый с нулевым балансом в рублях
-    const wallet = this.walletRepository.create({ userId });
-    await this.walletRepository.save(wallet);
-    return [wallet];
+    // Если кошелька нет, создаем новый
+    const newWallet = this.walletRepository.create({ userId });
+    await this.walletRepository.save(newWallet);
+    return newWallet;
   }
 
   async findTransactionsByUser(
