@@ -3,6 +3,7 @@ import { Type } from 'class-transformer';
 import { User } from './user.entity';
 import { Listing } from './listing.entity';
 import { BookingStatus } from '../common/enums/booking-status.enum';
+import { ListingPeriodType } from '../common/enums/listing-period-type.enum';
 
 @Entity('bookings')
 export class Booking {
@@ -13,6 +14,12 @@ export class Booking {
   @ManyToOne(() => Listing, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'listing_id' })
   listing: Listing;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2 })
+  price: number;
+
+  @Column({ type: 'enum', enum: ListingPeriodType, enumName: 'listing_period_type' })
+  pricePeriod: ListingPeriodType;
 
   @Type(() => User)
   @ManyToOne(() => User, { onDelete: 'CASCADE' })

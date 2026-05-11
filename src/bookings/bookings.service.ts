@@ -264,7 +264,7 @@ export class BookingsService {
     const [bookings, total] = await this.bookingRepository.findAndCount({
       where,
       relations: {
-          listing: { user: true },
+          listing: { user: true, pricings: true },
           renter: true,
       },
       order: { updatedAt: 'DESC' },
@@ -280,7 +280,7 @@ export class BookingsService {
     const booking = await this.bookingRepository.findOne({
       where: { id: bookingId },
       relations: {
-        listing: { user: true },
+        listing: { user: true, pricings: true },
         renter: true,
       }
     });
@@ -307,14 +307,21 @@ export class BookingsService {
     const { start: startDate, end: endDate } = createDto.period;
     await this.validateBookingDates(startDate, endDate, listing.id, listing.availability);
 
-    const duration = this.calculateDuration(startDate, endDate, listing.pricePeriod);
-    const totalPrice = listing.price * duration;
+    const selectedPricing = listing.pricings.find(p => p.pricePeriod === createDto.pricePeriod);
+    if (!selectedPricing) {
+      throw new BadRequestException(`Listing does not support ${createDto.pricePeriod} pricing`);
+    }
+
+    const duration = this.calculateDuration(startDate, endDate, selectedPricing.pricePeriod);
+    const totalPrice = selectedPricing.price * duration;
     const period = `[${startDate.toISOString()},${endDate.toISOString()})`;
 
     const booking = this.bookingRepository.create({
       listing,
       renter: { id: renterId },
       period,
+      price: selectedPricing.price,
+      pricePeriod: selectedPricing.pricePeriod,
       totalPrice,
       status: BookingStatus.PENDING,
     });
@@ -329,9 +336,9 @@ export class BookingsService {
     const { start: startDate, end: endDate } = updatePeriodDto.period;
     await this.validateBookingDates(startDate, endDate, booking.listing.id, booking.listing.availability, bookingId);
 
-    const duration = this.calculateDuration(startDate, endDate, booking.listing.pricePeriod);
+    const duration = this.calculateDuration(startDate, endDate, booking.pricePeriod);
     booking.period = `[${startDate.toISOString()},${endDate.toISOString()})`;
-    booking.totalPrice = booking.listing.price * duration;
+    booking.totalPrice = booking.price * duration;
 
     return this.bookingRepository.save(booking);
   }

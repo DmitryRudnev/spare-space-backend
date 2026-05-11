@@ -105,7 +105,7 @@ export class ListingsService {
   async findById(listingId: number): Promise<Listing> {
     const listing = await this.listingRepository.findOne({
       where: { id: listingId },
-      relations: { user: true },
+      relations: { user: true, pricings: true },
     });
     if (!listing) {
       throw new NotFoundException('Listing not found');
@@ -128,6 +128,9 @@ export class ListingsService {
       'listing.pricePeriod',
       'listing.location',
       'listing.photoUrls',
+      'pricing.id',
+      'pricing.price',
+      'pricing.pricePeriod',
     ]);
     const [listings, total] = await query.getManyAndCount();
     return { listings, total, limit: searchDto.limit, offset: searchDto.offset };
@@ -286,8 +289,8 @@ export class ListingsService {
     if (dto.type !== undefined) data.type = dto.type;
     if (dto.title !== undefined) data.title = dto.title;
     if (dto.description !== undefined) data.description = dto.description;
-    if (dto.price !== undefined) data.price = dto.price;
-    if (dto.pricePeriod !== undefined) data.pricePeriod = dto.pricePeriod;
+    if (dto.pricings !== undefined) data.pricings = dto.pricings as any; // TypeORM сам замапит массив объектов в сущности из-за cascade: true
+    
     if (dto.address !== undefined) data.address = dto.address;
     if (dto.size !== undefined) data.size = dto.size;
     if (dto.photoUrls !== undefined) data.photoUrls = dto.photoUrls;
@@ -313,7 +316,8 @@ export class ListingsService {
   ): SelectQueryBuilder<Listing> {
     const query = this.listingRepository
       .createQueryBuilder('listing')
-      .leftJoinAndSelect('listing.user', 'user');
+      .leftJoinAndSelect('listing.user', 'user')
+      .leftJoinAndSelect('listing.pricings', 'pricing');
 
     if (userId !== undefined) {
       query.andWhere('listing.user_id = :userId', { userId });
@@ -324,14 +328,18 @@ export class ListingsService {
     if (searchDto.type !== undefined) {
       query.andWhere('listing.type = :type', { type: searchDto.type });
     }
-    if (searchDto.minPrice !== undefined) {
-      query.andWhere('listing.price >= :minPrice', { minPrice: searchDto.minPrice });
-    }
-    if (searchDto.maxPrice !== undefined) {
-      query.andWhere('listing.price <= :maxPrice', { maxPrice: searchDto.maxPrice });
-    }
-    if (searchDto.pricePeriod !== undefined) {
-      query.andWhere('listing.price_period = :pricePeriod', { pricePeriod: searchDto.pricePeriod });
+    if (searchDto.pricePeriod !== undefined || searchDto.minPrice !== undefined || searchDto.maxPrice !== undefined) {
+      query.innerJoin('listing.pricings', 'filterPricing');
+      
+      if (searchDto.pricePeriod !== undefined) {
+        query.andWhere('filterPricing.price_period = :pricePeriod', { pricePeriod: searchDto.pricePeriod });
+      }
+      if (searchDto.minPrice !== undefined) {
+        query.andWhere('filterPricing.price >= :minPrice', { minPrice: searchDto.minPrice });
+      }
+      if (searchDto.maxPrice !== undefined) {
+        query.andWhere('filterPricing.price <= :maxPrice', { maxPrice: searchDto.maxPrice });
+      }
     }
     if (
       searchDto.longitude !== undefined &&

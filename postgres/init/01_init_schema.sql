@@ -132,8 +132,6 @@ CREATE TABLE listings (
     type listing_type NOT NULL,
     title VARCHAR(255) NOT NULL,
     description TEXT,
-    price DECIMAL(10,2) NOT NULL,  -- цена за единицу времени(за день/неделю/месяц)
-    price_period listing_period_type NOT NULL DEFAULT 'DAY',  -- период времени, за который указывается цена
     location GEOMETRY(POINT, 4326),
     address VARCHAR(500) NOT NULL,
     size DECIMAL(10,2),
@@ -152,9 +150,19 @@ CREATE TABLE listings (
 CREATE INDEX idx_listings_user_id ON listings(user_id);
 CREATE INDEX idx_listings_type ON listings(type);
 CREATE INDEX idx_listings_location ON listings USING GIST(location);
-CREATE INDEX idx_listings_price ON listings(price);
 CREATE INDEX idx_listings_availability ON listings USING GIN(availability);
 CREATE INDEX idx_listings_title_trgm ON listings USING gin (title gin_trgm_ops);
+
+
+
+CREATE TABLE listing_pricings (
+    id BIGSERIAL PRIMARY KEY,
+    listing_id BIGINT NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
+    price DECIMAL(10,2) NOT NULL,  -- цена за единицу времени(за день/неделю/месяц)
+    price_period listing_period_type NOT NULL,  -- период времени, за который указывается цена
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(listing_id, price_period)
+);
 
 
 
@@ -162,8 +170,10 @@ CREATE TABLE bookings (
     id BIGSERIAL PRIMARY KEY,
     listing_id BIGINT NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
     renter_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    period TSTZRANGE NOT NULL,  -- период брони (start_date, end_date)
+    period TSTZRANGE NOT NULL,  -- период брони [start_date, end_date)
     total_price DECIMAL(10,2) NOT NULL,  -- [цена за единицу времени] * [кол-во дней/недель/месяцев]
+    price DECIMAL(10,2) NOT NULL,  -- цена объявления на момент создания брони
+    price_period listing_period_type NOT NULL,  -- тариф объявления, по которому была оформлена бронь
     status booking_status NOT NULL DEFAULT 'PENDING',
     completion_job_id VARCHAR(255),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -182,7 +192,7 @@ CREATE TABLE wallets (
     user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     balance DECIMAL(10,2) NOT NULL DEFAULT 0,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_wallets_user_id ON wallets(user_id);

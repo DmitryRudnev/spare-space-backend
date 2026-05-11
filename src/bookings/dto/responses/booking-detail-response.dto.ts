@@ -3,13 +3,17 @@ import { BookingResponseDto } from './booking-response.dto';
 import { LocationDto } from '../../../listings/dto/location.dto';
 import { ListingPeriodType } from '../../../common/enums/listing-period-type.enum';
 import { SpaceAmenity } from '../../../common/enums/space-amenity.enum';
+import { PricingDto } from '../../../listings/dto/pricing.dto';
 
 export class BookingDetailResponseDto extends BookingResponseDto {
-  @ApiProperty({ type: Number, description: 'Цена за период', example: 1500 })
-  listingPrice: number;
+  @ApiProperty({ type: Number, description: 'Зафиксированная базовая ставка', example: 1500 })
+  appliedPrice: number;
 
-  @ApiProperty({ enum: ListingPeriodType, description: 'Период ценообразования', example: ListingPeriodType.DAY })
-  listingPricePeriod: ListingPeriodType;
+  @ApiProperty({ enum: ListingPeriodType, description: 'Зафиксированный период ставки', example: ListingPeriodType.DAY })
+  appliedPricePeriod: ListingPeriodType;
+
+  @ApiProperty({ type: [PricingDto], description: 'Все актуальные тарифы объявления на данный момент' })
+  listingPricings: PricingDto[];
 
   @ApiProperty({ type: Number, description: 'Размер в квадратных метрах', example: 5.5, nullable: true })
   listingSize: number | null;

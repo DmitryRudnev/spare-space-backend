@@ -17,10 +17,10 @@ import {
   ValidateNested,
 } from 'class-validator';
 
-import { ListingPeriodType } from '../../../common/enums/listing-period-type.enum';
 import { ListingType } from '../../../common/enums/listing-type.enum';
 import { PeriodDto } from '../../../common/dto/period.dto';
 import { LocationDto } from '../location.dto';
+import { PricingDto } from '../pricing.dto';
 import { SpaceAmenity } from '../../../common/enums/space-amenity.enum';
 
 export class CreateListingDto {
@@ -53,23 +53,12 @@ export class CreateListingDto {
   @MinLength(1)
   description?: string;
 
-  @ApiProperty({
-    type: Number,
-    description: 'Цена за период',
-    minimum: 0,
-    example: 1500
-  })
-  @IsNumber()
-  @Min(0)
-  price: number;
-
-  @ApiProperty({
-    enum: ListingPeriodType,
-    description: 'Период ценообразования',
-    example: ListingPeriodType.DAY
-  })
-  @IsEnum(ListingPeriodType)
-  pricePeriod: ListingPeriodType;
+  @ApiProperty({ type: [PricingDto], description: 'Варианты цен для разных периодов' })
+  @IsArray()
+  @ArrayMinSize(1)
+  @Type(() => PricingDto)
+  @ValidateNested({ each: true })
+  pricings: PricingDto[];
 
   @ApiPropertyOptional({ type: LocationDto, description: 'Координаты места' })
   @IsOptional()

@@ -1,12 +1,16 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { PeriodDto } from '../../../common/dto/period.dto';
 import { LocationDto } from '../location.dto';
+import { PricingDto } from '../pricing.dto';
 import { ListingBaseResponseDto } from './listing-base-response.dto';
 import { SpaceAmenity } from '../../../common/enums/space-amenity.enum';
 
 export class ListingDetailResponseDto extends ListingBaseResponseDto {
   @ApiProperty({ type: String, description: 'Описание объявления', example: 'Парковочное место на цокольном этаже', nullable: true })
   description: string | null;
+
+  @ApiProperty({ type: [PricingDto], description: 'Все доступные тарифы' })
+  pricings: PricingDto[];
 
   @ApiProperty({ type: LocationDto, description: 'Координаты места', nullable: true })
   location: LocationDto | null;

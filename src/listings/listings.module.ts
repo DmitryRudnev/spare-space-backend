@@ -8,6 +8,7 @@ import { ListingsController } from './listings.controller';
 import { FavoritesController } from './favorites.controller';
 import { ListingsControllerHandler } from './listings.controller-handler';
 import { Listing } from '../entities/listing.entity';
+import { ListingPricing } from '../entities/listing-pricing.entity';
 import { Favorite } from '../entities/favorite.entity';
 import { ViewHistory } from '../entities/view-history.entity';
 import { UsersModule } from '../users/users.module';
@@ -15,7 +16,7 @@ import { RedisModule } from '../common/redis/redis.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Listing, Favorite, ViewHistory]),
+    TypeOrmModule.forFeature([Listing, ListingPricing, Favorite, ViewHistory]),
     PassportModule,
     UsersModule,
     RedisModule,

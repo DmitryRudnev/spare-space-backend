@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsOptional,
   IsNumber,
@@ -118,10 +118,26 @@ export class SearchListingsDto {
   @ApiPropertyOptional({
     enum: SpaceAmenity,
     isArray: true,
-    description: 'Массив удобств',
+    description: 'Массив удобств (можно передавать как JSON-строку, через запятую, либо повторяя параметр)',
     example: [SpaceAmenity.SECURITY, SpaceAmenity.WIFI],
   })
   @IsOptional()
+  @Transform(({ value }) => {
+    if (typeof value === 'string') {
+      // Если клиент передал массив в виде JSON-строки '["SECURITY"]'
+      if (value.startsWith('[') && value.endsWith(']')) {
+        try {
+          return JSON.parse(value);
+        } catch {
+          return [value];
+        }
+      }
+      // Если передано через запятую: 'SECURITY,WIFI'
+      return value.split(',').map((item) => item.trim());
+    }
+    // Если передано как ?amenities=SECURITY&amenities=WIFI
+    return Array.isArray(value) ? value : [value];
+  })
   @IsArray()
   @IsEnum(SpaceAmenity, { each: true })
   amenities?: SpaceAmenity[];

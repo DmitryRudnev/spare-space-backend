@@ -19,7 +19,7 @@ INSERT INTO user_roles (user_id, role, assigned_at) VALUES
 (4, 'LANDLORD', NOW()),
 (5, 'LANDLORD', NOW());
 
-
+-- УДАЛИТЬ price И price_period из listings - в новую таблицу. И amenities тоже изменить
 
 -- LISTINGS
 INSERT INTO listings (user_id, type, title, description, price, price_period, location, address, size, photo_urls, amenities, availability, status, views_count, reposts_count, favorites_count, created_at, updated_at) VALUES
@@ -101,7 +101,7 @@ INSERT INTO wallets (user_id, balance) VALUES
 (2, 8000.00),
 (3, 25000.00),
 (4, 3000.00),
-(5, 50000.00),
+(5, 50000.00);
 
 
 
@@ -132,35 +132,35 @@ INSERT INTO user_subscriptions (user_id, plan_id, start_date, end_date, status, 
 -- TRANSACTIONS
 INSERT INTO transactions (user_id, type, amount, status, booking_id, commission, description, gateway_transaction_id, created_at) VALUES
 -- Транзакции пользователя 1
-(1, 'TOPUP', 20000.00, 'COMPLETED', NULL, 0.00, 'Пополнение с банковской карты', 'card_txn_001', NOW() - INTERVAL '35 days'),
-(1, 'CHARGE', 500.00, 'COMPLETED', 1, 50.00, 'Оплата подписки Pro', 'sub_txn_001', NOW() - INTERVAL '30 days'),
-(1, 'COMMISSION', 50.00, 'COMPLETED', 1, 0.00, 'Комиссия платформы за бронирование #1', 'comm_txn_001', NOW() - INTERVAL '20 days'),
-(1, 'CHARGE', 3200.00, 'COMPLETED', 1, 320.00, 'Оплата бронирования #1', 'book_txn_001', NOW() - INTERVAL '20 days'),
-(1, 'TOPUP', 1000.00, 'COMPLETED', NULL, 100.00, 'Пополнение RUB', 'crypto_txn_001', NOW() - INTERVAL '10 days'),
+(1, 'DEPOSIT', 20000.00, 'SUCCESS', NULL, 0.00, 'Пополнение с банковской карты', 'card_txn_001', NOW() - INTERVAL '35 days'),
+(1, 'BOOKING_PAYMENT', 500.00, 'SUCCESS', 1, 50.00, 'Оплата подписки Pro', 'sub_txn_001', NOW() - INTERVAL '30 days'),
+(1, 'COMMISSION', 50.00, 'SUCCESS', 1, 0.00, 'Комиссия платформы за бронирование #1', 'comm_txn_001', NOW() - INTERVAL '20 days'),
+(1, 'BOOKING_PAYMENT', 3200.00, 'SUCCESS', 1, 320.00, 'Оплата бронирования #1', 'book_txn_001', NOW() - INTERVAL '20 days'),
+(1, 'DEPOSIT', 1000.00, 'SUCCESS', NULL, 100.00, 'Пополнение RUB', 'crypto_txn_001', NOW() - INTERVAL '10 days'),
 
 -- Транзакции пользователя 2
-(2, 'TOPUP', 10000.00, 'COMPLETED', NULL, 0.00, 'Пополнение через СБП', 'sbp_txn_001', NOW() - INTERVAL '65 days'),
-(2, 'CHARGE', 500.00, 'COMPLETED', NULL, 0.00, 'Оплата подписки Pro', 'sub_txn_002', NOW() - INTERVAL '60 days'),
-(2, 'PAYOUT', 1500.00, 'COMPLETED', NULL, 15.00, 'Вывод средств на карту', 'payout_txn_001', NOW() - INTERVAL '40 days'),
+(2, 'DEPOSIT', 10000.00, 'SUCCESS', NULL, 0.00, 'Пополнение через СБП', 'sbp_txn_001', NOW() - INTERVAL '65 days'),
+(2, 'BOOKING_PAYMENT', 500.00, 'SUCCESS', NULL, 0.00, 'Оплата подписки Pro', 'sub_txn_002', NOW() - INTERVAL '60 days'),
+(2, 'WITHDRAWAL', 1500.00, 'SUCCESS', NULL, 15.00, 'Вывод средств на карту', 'payout_txn_001', NOW() - INTERVAL '40 days'),
 
 -- Транзакции пользователя 3
-(3, 'TOPUP', 30000.00, 'COMPLETED', NULL, 0.00, 'Пополнение счета', 'card_txn_002', NOW() - INTERVAL '20 days'),
-(3, 'TOPUP', 2000.00, 'COMPLETED', NULL, 0.00, 'Пополнение RUB', 'crypto_txn_002', NOW() - INTERVAL '18 days'),
-(3, 'CHARGE', 1500.00, 'COMPLETED', NULL, 0.00, 'Оплата подписки Business', 'sub_txn_003', NOW() - INTERVAL '15 days'),
-(3, 'COMMISSION', 100.00, 'COMPLETED', 4, 0.00, 'Комиссия за бронирование #4', 'comm_txn_002', NOW() - INTERVAL '12 days'),
-(3, 'CHARGE', 1000.00, 'COMPLETED', 4, 100.00, 'Оплата бронирования #4', 'book_txn_002', NOW() - INTERVAL '12 days'),
+(3, 'DEPOSIT', 30000.00, 'SUCCESS', NULL, 0.00, 'Пополнение счета', 'card_txn_002', NOW() - INTERVAL '20 days'),
+(3, 'DEPOSIT', 2000.00, 'SUCCESS', NULL, 0.00, 'Пополнение RUB', 'crypto_txn_002', NOW() - INTERVAL '18 days'),
+(3, 'BOOKING_PAYMENT', 1500.00, 'SUCCESS', NULL, 0.00, 'Оплата подписки Business', 'sub_txn_003', NOW() - INTERVAL '15 days'),
+(3, 'COMMISSION', 100.00, 'SUCCESS', 4, 0.00, 'Комиссия за бронирование #4', 'comm_txn_002', NOW() - INTERVAL '12 days'),
+(3, 'BOOKING_PAYMENT', 1000.00, 'SUCCESS', 4, 100.00, 'Оплата бронирования #4', 'book_txn_002', NOW() - INTERVAL '12 days'),
 
 -- Транзакции пользователя 4
-(4, 'TOPUP', 5000.00, 'COMPLETED', NULL, 0.00, 'Пополнение счета', 'card_txn_003', NOW() - INTERVAL '10 days'),
-(4, 'CHARGE', 0.00, 'COMPLETED', NULL, 0.00, 'Активация Basic подписки', 'sub_txn_004', NOW() - INTERVAL '5 days'),
+(4, 'DEPOSIT', 5000.00, 'SUCCESS', NULL, 0.00, 'Пополнение счета', 'card_txn_003', NOW() - INTERVAL '10 days'),
+(4, 'BOOKING_PAYMENT', 0.00, 'SUCCESS', NULL, 0.00, 'Активация Basic подписки', 'sub_txn_004', NOW() - INTERVAL '5 days'),
 
 -- Транзакции пользователя 5
-(5, 'TOPUP', 60000.00, 'COMPLETED', NULL, 0.00, 'Пополнение бизнес-счета', 'card_txn_004', NOW() - INTERVAL '30 days'),
-(5, 'TOPUP', 2000.00, 'COMPLETED', NULL, 123.45, 'Пополнение RUB', 'crypto_txn_003', NOW() - INTERVAL '25 days'),
-(5, 'CHARGE', 1500.00, 'COMPLETED', NULL, 120.00, 'Оплата Crypto Pro подписки', 'sub_txn_005', NOW() - INTERVAL '7 days'),
-(5, 'COMMISSION', 400.00, 'COMPLETED', 6, 0.00, 'Комиссия за бронирование #6', 'comm_txn_003', NOW() - INTERVAL '16 days'),
-(5, 'CHARGE', 4000.00, 'COMPLETED', 6, 400.00, 'Оплата бронирования #6', 'book_txn_003', NOW() - INTERVAL '16 days'),
-(5, 'PAYOUT', 10000.00, 'COMPLETED', NULL, 100.00, 'Вывод дохода', 'payout_txn_002', NOW() - INTERVAL '5 days');
+(5, 'DEPOSIT', 60000.00, 'SUCCESS', NULL, 0.00, 'Пополнение бизнес-счета', 'card_txn_004', NOW() - INTERVAL '30 days'),
+(5, 'DEPOSIT', 2000.00, 'SUCCESS', NULL, 123.45, 'Пополнение RUB', 'crypto_txn_003', NOW() - INTERVAL '25 days'),
+(5, 'BOOKING_PAYMENT', 1500.00, 'SUCCESS', NULL, 120.00, 'Оплата Crypto Pro подписки', 'sub_txn_005', NOW() - INTERVAL '7 days'),
+(5, 'COMMISSION', 400.00, 'SUCCESS', 6, 0.00, 'Комиссия за бронирование #6', 'comm_txn_003', NOW() - INTERVAL '16 days'),
+(5, 'BOOKING_PAYMENT', 4000.00, 'SUCCESS', 6, 400.00, 'Оплата бронирования #6', 'book_txn_003', NOW() - INTERVAL '16 days'),
+(5, 'WITHDRAWAL', 10000.00, 'SUCCESS', NULL, 100.00, 'Вывод дохода', 'payout_txn_002', NOW() - INTERVAL '5 days');
 
 
 

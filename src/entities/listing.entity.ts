@@ -7,12 +7,14 @@ import {
   JoinColumn,
   CreateDateColumn,
   UpdateDateColumn,
+  OneToMany,
 } from 'typeorm';
 import { Type } from 'class-transformer';
-import { ListingPeriodType } from '../common/enums/listing-period-type.enum';
+
 import { ListingStatus } from '../common/enums/listing-status.enum';
 import { ListingType } from '../common/enums/listing-type.enum';
 import { SpaceAmenity } from '../common/enums/space-amenity.enum';
+import { ListingPricing } from './listing-pricing.entity';
 
 import { User } from './user.entity';
 
@@ -35,16 +37,12 @@ export class Listing {
   @Column({ type: 'text', nullable: true })
   description: string | null;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2 })
-  price: number;
-
-  @Column({
-    type: 'enum',
-    enum: ListingPeriodType,
-    enumName: 'listing_period_type',
-    default: ListingPeriodType.DAY,
+  @Type(() => ListingPricing)
+  @OneToMany(() => ListingPricing, pricing => pricing.listing, {
+    cascade: true,
+    orphanedRowAction: 'delete'
   })
-  pricePeriod: ListingPeriodType;
+  pricings: ListingPricing[];
 
   @Type(() => Object)
   @Column({ type: 'geometry', srid: 4326, nullable: true })
