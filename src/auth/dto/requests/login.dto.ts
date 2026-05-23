@@ -35,5 +35,5 @@ export class LoginDto {
   password: string;
 
   @Validate(EmailOrPhoneValidator)
-  readonly emailOrPhone: string;
+  readonly emailOrPhone?: string;
 }
