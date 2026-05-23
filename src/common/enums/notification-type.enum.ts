@@ -10,6 +10,7 @@ export enum NotificationType {
   BOOKING_REMINDER = 'BOOKING_REMINDER',   // Напоминание о предстоящей брони
   BOOKING_EXPIRING = 'BOOKING_EXPIRING',   // Бронь скоро истечет
   BOOKING_COMPLETED = 'BOOKING_COMPLETED', // Бронь завершена
+  BOOKING_PERIOD_UPDATED = 'BOOKING_PERIOD_UPDATED', // Арендатор изменил дату брони
 
   // Объявления
   LISTING_APPROVED = 'LISTING_APPROVED', // Объявление прошло модерацию

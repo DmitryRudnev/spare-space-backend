@@ -40,6 +40,8 @@ export class NotificationMessageBuilder {
         return this.buildBookingExpiring(payload as BookingPayload | undefined);
       case NotificationType.BOOKING_COMPLETED:
         return this.buildBookingCompleted(payload as BookingPayload | undefined);
+      case NotificationType.BOOKING_PERIOD_UPDATED:
+        return this.buildBookingPeriodUpdated(payload as BookingPayload | undefined);
 
       // Объявления
       case NotificationType.LISTING_APPROVED:
@@ -196,6 +198,19 @@ export class NotificationMessageBuilder {
       body += ` ${this.formatDate(payload.endDate)}`;
     }
     body += '. Оставьте отзыв!';
+    return { title, body };
+  }
+
+  private buildBookingPeriodUpdated(payload?: BookingPayload): { title: string; body: string } {
+    const title = '⌛ Арендатор перенёс бронирование';
+    if (!payload) {
+      return { title, body: 'Изменён период бронирования' };
+    }
+    let body = `Период бронирования «${payload.listingTitle}» изменён`;
+    if (payload.startDate && payload.endDate && payload.prevPeriod) {
+      body += `\nс ${this.formatDate(payload.prevPeriod.start)} - ${this.formatDate(payload.prevPeriod.end)}`;
+      body += `\nна ${this.formatDate(payload.startDate)} - ${this.formatDate(payload.endDate)}`;
+    }
     return { title, body };
   }
 

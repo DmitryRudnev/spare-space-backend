@@ -1,3 +1,5 @@
+import { PeriodDto } from "../dto/period.dto";
+
 export interface MessagePayload {
   messageId: number;       // Для идентификации конкретного сообщения
   conversationId: number;  // Чтобы фронтенд знал, какой чат открыть
@@ -18,6 +20,7 @@ export interface BookingPayload {
   startDate?: Date;        // Для BOOKING_REMINDER
   endDate?: Date;          // Для BOOKING_EXPIRING
   price?: number;          // Сумма сделки
+  prevPeriod: PeriodDto;   // Предыдущйи период бронирования (для BOOKING_PERIOD_UPDATED)
 }
 
 export interface ListingPayload {
