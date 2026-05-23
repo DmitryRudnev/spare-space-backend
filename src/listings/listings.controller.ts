@@ -15,6 +15,9 @@ import {
 import { ListingsControllerHandler } from './listings.controller-handler';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { OptionalJwtGuard } from '../auth/optional-jwt.guard';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { Roles } from '../common/decorators/roles.decorator';
+import { UserRoleType } from '../common/enums/user-role-type.enum';
 import { User } from '../common/decorators/user.decorator';
 import { ListingMapper } from './mappers/listing.mapper';
 
@@ -110,7 +113,8 @@ export class ListingsController {
     return ListingMapper.toDetailResponseDto(listing, isFavorite);
   }
   
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRoleType.ADMIN)
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @ApiBearerAuth()

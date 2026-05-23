@@ -119,6 +119,7 @@ export class AuthService {
       dto.patronymic ?? null,
     );
     await this.usersService.addRole(user.id, UserRoleType.RENTER);
+    await this.usersService.addRole(user.id, UserRoleType.LANDLORD);
 
     // Возвращаем access и refresh токены
     return this.issueTokens(user.id);

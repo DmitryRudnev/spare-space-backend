@@ -139,11 +139,6 @@ export class ListingsService {
     const listingData = this.prepareListingData(createDto, { user, status: ListingStatus.ACTIVE });  // пока что для разработки статус ACTIVE; потом сделать DRAFT
     const listing = this.listingRepository.create(listingData);
 
-    const hasLandlordRole = await this.usersService.hasRole(userId, UserRoleType.LANDLORD);
-    if (!hasLandlordRole) {
-      await this.usersService.addRole(userId, UserRoleType.LANDLORD);
-    }
-
     // Инвалидируем кэш списка активных объявлений пользователя
     await this.redisService.deleteByPattern(this.getUserActiveListingsPattern(userId));  // удалить, когда при создании объявления будут иметь статуст DRAFT, а не ACTIVE, как это сейчас
 
