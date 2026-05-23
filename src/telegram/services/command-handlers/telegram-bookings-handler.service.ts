@@ -1,7 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Markup } from 'telegraf';
-import { UsersService } from '../../../users/services/users.service';
-import { BookingsService } from '../../../bookings/bookings.service';
+import { BookingsHandler } from '../../../bookings/bookings.handler';
 import { TelegramSenderService } from '../telegram-sender.service';
 import { SearchBookingsDto } from '../../../bookings/dto/requests/search-bookings.dto';
 import { UserRoleType } from '../../../common/enums/user-role-type.enum';
@@ -15,8 +14,7 @@ export class TelegramBookingsHandlerService {
   constructor(
     private readonly telegramSenderService: TelegramSenderService,
     private readonly paginationService: TelegramPaginationService,
-    private readonly usersService: UsersService,
-    private readonly bookingsService: BookingsService,
+    private readonly bookingsHandler: BookingsHandler,
   ) {}
 
 
@@ -48,16 +46,21 @@ export class TelegramBookingsHandlerService {
     role: UserRoleType,
     page: number,
   ): Promise<void> {
-    const bookingsCount = await this.bookingsService.countByUser(userId, role);
-    const totalPages = this.paginationService.calculateTotalPages(bookingsCount);
+    const searchDto: SearchBookingsDto = {
+      userRole: role,
+      limit: this.paginationService.getItemsPerPage(),
+      offset: (page - 1) * this.paginationService.getItemsPerPage(),
+    };
+    const result = await this.bookingsHandler.findAll(userId, searchDto);
 
+    const totalPages = this.paginationService.calculateTotalPages(result.total);
     if (page < 1) {
       throw new Error('⚠️ Вы уже на первой странице');
     }
-    if (page > totalPages && totalPages > 0) {
+    if (page > totalPages) {
       throw new Error('⚠️ Вы уже на последней странице');
     }
-    if (bookingsCount === 0) {
+    if (result.total === 0) {
       const emptyText = role === UserRoleType.LANDLORD 
         ? '📭 Вы ничего не сдавали в аренду.' 
         : '📭 Вы ничего не арендовали.';
@@ -68,12 +71,6 @@ export class TelegramBookingsHandlerService {
       return;
     }
 
-    const searchDto: SearchBookingsDto = {
-      userRole: role,
-      limit: this.paginationService.getItemsPerPage(),
-      offset: (page - 1) * this.paginationService.getItemsPerPage(),
-    };
-    const result = await this.bookingsService.findAll(userId, searchDto);
     const message = this.buildBookingsMessage(result.bookings, page, result.total, role);
     const roleStr = role === UserRoleType.LANDLORD ? 'landlord' : 'renter';
     const keyboard = this.paginationService.createPaginationKeyboard(page, totalPages, 'bookings', roleStr);
@@ -90,12 +87,12 @@ export class TelegramBookingsHandlerService {
   ): Promise<void> {
     switch (action) {
       case 'approve':
-        await this.bookingsService.handleConfirm(userId, bookingId);
+        await this.bookingsHandler.confirm(userId, bookingId);
         await this.telegramSenderService.sendMessage(chatId, '✅ Бронирование подтверждено!');
         await this.telegramSenderService.editMessage(chatId, messageId, undefined, { inline_keyboard: [] })
         break;
       case 'reject':
-        await this.bookingsService.handleCancel(userId, bookingId);
+        await this.bookingsHandler.reject(userId, bookingId);
         await this.telegramSenderService.sendMessage(chatId, '↩️ Бронирование отклонено!');
         await this.telegramSenderService.editMessage(chatId, messageId, undefined, { inline_keyboard: [] })
         break;
