@@ -123,6 +123,10 @@ export class SearchListingsDto {
   })
   @IsOptional()
   @Transform(({ value }) => {
+    if (!value) {
+      return undefined;
+    }
+
     if (typeof value === 'string') {
       // Если клиент передал массив в виде JSON-строки '["SECURITY"]'
       if (value.startsWith('[') && value.endsWith(']')) {

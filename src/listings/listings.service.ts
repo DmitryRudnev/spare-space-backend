@@ -7,7 +7,6 @@ import { UsersService } from '../users/services/users.service';
 import { Listing } from '../entities/listing.entity';
 import { ViewHistory } from '../entities/view-history.entity';
 import { ListingStatus } from '../common/enums/listing-status.enum';
-import { UserRoleType } from '../common/enums/user-role-type.enum';
 import { ListingType } from '../common/enums/listing-type.enum';
 import { RedisService } from '../common/redis/redis.service';
 
@@ -176,6 +175,13 @@ export class ListingsService {
     }
   }
 
+  // Неправильный подход. Временно. listing.availability менять нельзя. Настоящие периоды
+  // доступности объекта должны вычисляться на сервере исходя из listing.availability и всех
+  // бронирований со статусами PENDING/CONFIRMED/ACTIVE по этому объявлению - то есть надо будет
+  // аналогично(примерно) применить алгоритм, опсианный ниже, для вычета всех периодов бронирований
+  // из периодов listing.availability.
+  // В общем в ListingDetailResponseDto поле availability должно быть как раз вот этими
+  // "настоящими" периодами доступности.
   async updateAvailabilityAfterBooking(
     listingId: number,
     bookingStart: Date,
@@ -282,7 +288,13 @@ export class ListingsService {
     if (dto.type !== undefined) data.type = dto.type;
     if (dto.title !== undefined) data.title = dto.title;
     if (dto.description !== undefined) data.description = dto.description;
-    if (dto.pricings !== undefined) data.pricings = dto.pricings as any; // TypeORM сам замапит массив объектов в сущности из-за cascade: true
+    if (dto.pricings !== undefined) {
+      const periods = dto.pricings.map(p => p.pricePeriod);
+      if (new Set(periods).size !== periods.length) {
+        throw new BadRequestException('Price periods cannot be dublicated');
+      }
+      data.pricings = dto.pricings as any; // TypeORM сам замапит массив объектов в сущности из-за cascade: true
+    }
     
     if (dto.address !== undefined) data.address = dto.address;
     if (dto.size !== undefined) data.size = dto.size;
@@ -313,7 +325,7 @@ export class ListingsService {
       .leftJoinAndSelect('listing.pricings', 'pricing');
 
     if (userId !== undefined) {
-      query.andWhere('listing.user_id = :userId', { userId });
+      query.andWhere('listing.user.id = :userId', { userId });
     }
     if (searchDto.status !== undefined) {
       query.andWhere('listing.status = :status', { status: searchDto.status });
@@ -325,7 +337,7 @@ export class ListingsService {
       query.innerJoin('listing.pricings', 'filterPricing');
       
       if (searchDto.pricePeriod !== undefined) {
-        query.andWhere('filterPricing.price_period = :pricePeriod', { pricePeriod: searchDto.pricePeriod });
+        query.andWhere('filterPricing.pricePeriod = :pricePeriod', { pricePeriod: searchDto.pricePeriod });
       }
       if (searchDto.minPrice !== undefined) {
         query.andWhere('filterPricing.price >= :minPrice', { minPrice: searchDto.minPrice });
@@ -351,10 +363,10 @@ export class ListingsService {
       query.andWhere('listing.title ILIKE :title', { title: `%${searchDto.title}%` });
       // Сортируем по релевантности (насколько похоже), а не по дате
       // query.orderBy(`similarity(listing.title, :title)`, 'DESC');
-      query.orderBy('listing.updated_at', 'DESC');
+      query.orderBy('listing.updatedAt', 'DESC');
     } else {
       // Стандартная сортировка, если поиска по названию нет
-      query.orderBy('listing.updated_at', 'DESC');
+      query.orderBy('listing.updatedAt', 'DESC');
     }
     query.limit(searchDto.limit).offset(searchDto.offset);
 
