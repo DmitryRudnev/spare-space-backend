@@ -43,7 +43,8 @@ export class ListingsController {
       result.listings,
       result.total,
       result.limit,
-      result.offset
+      result.offset,
+      searchDto.pricePeriod
     );
   }
 
@@ -58,6 +59,7 @@ export class ListingsController {
       result.total,
       result.limit,
       result.offset,
+      searchDto.pricePeriod,
     );
   }
 
@@ -75,7 +77,8 @@ export class ListingsController {
       result.listings,
       result.total,
       result.limit,
-      result.offset
+      result.offset,
+      searchDto.pricePeriod
     );
   }
 
@@ -94,7 +97,8 @@ export class ListingsController {
       result.listings,
       result.total,
       result.limit,
-      result.offset
+      result.offset,
+      searchDto.pricePeriod
     );
   }
 

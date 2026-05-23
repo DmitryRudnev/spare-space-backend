@@ -2,13 +2,14 @@ import { Favorite } from '../../entities/favorite.entity';
 import { FavoriteResponseDto } from '../dto/responses/favorite-response.dto';
 import { FavoritesListResponseDto } from '../dto/responses/favorites-list-response.dto';
 import { ListingMapper } from '../../listings/mappers/listing.mapper';
+import { ListingPeriodType } from '../../common/enums/listing-period-type.enum';
 
 export class FavoriteMapper {
-  static toResponseDto(favorite: Favorite): FavoriteResponseDto {
+  static toResponseDto(favorite: Favorite, requestedPricePeriod?: ListingPeriodType): FavoriteResponseDto {
     const dto = new FavoriteResponseDto();
     
     dto.id = favorite.id;
-    dto.listing = ListingMapper.toResponseDto(favorite.listing);
+    dto.listing = ListingMapper.toResponseDto(favorite.listing, requestedPricePeriod);
     dto.createdAt = new Date(favorite.createdAt).toISOString();
     
     return dto;
@@ -19,10 +20,11 @@ export class FavoriteMapper {
     total: number,
     limit: number,
     offset: number,
+    requestedPricePeriod?: ListingPeriodType,
   ): FavoritesListResponseDto {
     const dto = new FavoritesListResponseDto();
     
-    dto.favorites = favorites.map(favorite => this.toResponseDto(favorite));
+    dto.favorites = favorites.map(favorite => this.toResponseDto(favorite, requestedPricePeriod));
     dto.total = total;
     dto.limit = limit;
     dto.offset = offset;

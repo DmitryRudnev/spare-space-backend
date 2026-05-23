@@ -9,11 +9,16 @@ import { ListingBaseResponseDto } from '../dto/responses/listing-base-response.d
 import { ListingPeriodType } from '../../common/enums/listing-period-type.enum';
 
 export class ListingMapper {
-  private static getMinPricing(listing: Listing) {
+  private static getDisplayPricing(listing: Listing, requestedPricePeriod?: ListingPeriodType) {
     if (!listing.pricings || listing.pricings.length === 0) {
       return { price: 0, pricePeriod: ListingPeriodType.DAY };
     }
     
+    if (requestedPricePeriod) {
+      const requestedPricing = listing.pricings.find(p => p.pricePeriod === requestedPricePeriod);
+      if (requestedPricing) return requestedPricing;
+    }
+
     const weights: Record<ListingPeriodType, number> = {
       [ListingPeriodType.HOUR]: 1,
       [ListingPeriodType.DAY]: 2,
@@ -26,9 +31,9 @@ export class ListingMapper {
     );
   }
 
-  private static toBaseResponseDto(listing: Listing): ListingBaseResponseDto {
+  private static toBaseResponseDto(listing: Listing, requestedPricePeriod?: ListingPeriodType): ListingBaseResponseDto {
     const dto = new ListingBaseResponseDto();
-    const minPricing = this.getMinPricing(listing);
+    const displayPricing = this.getDisplayPricing(listing, requestedPricePeriod);
 
     dto.id = listing.id;
     dto.user = UserMapper.toPublicResponseDto(listing.user);
@@ -36,8 +41,8 @@ export class ListingMapper {
     dto.title = listing.title;
     dto.type = listing.type;
     dto.size = listing.size;
-    dto.price = Number(minPricing.price);
-    dto.pricePeriod = minPricing.pricePeriod;
+    dto.price = Number(displayPricing.price);
+    dto.pricePeriod = displayPricing.pricePeriod;
     dto.address = listing.address;
     dto.viewsCount = listing.viewsCount;
     dto.repostsCount = listing.repostsCount;
@@ -59,14 +64,14 @@ export class ListingMapper {
 
   static toGeoResponseDto(listing: Listing): ListingGeoResponseDto {
     const dto = new ListingGeoResponseDto();
-    const minPricing = this.getMinPricing(listing);
+    const displayPricing = this.getDisplayPricing(listing, requestedPricePeriod);
 
     dto.id = listing.id;
     dto.title = listing.title;
     dto.type = listing.type;
     dto.size = listing.size;
-    dto.price = Number(minPricing.price);
-    dto.pricePeriod = minPricing.pricePeriod;
+    dto.price = Number(displayPricing.price);
+    dto.pricePeriod = displayPricing.pricePeriod;
     dto.firstPhotoUrl = listing.photoUrls?.[0] || null;
 
     if (!listing.location) {
@@ -107,11 +112,12 @@ export class ListingMapper {
     listings: Listing[], 
     total: number, 
     limit: number, 
-    offset: number
+    offset: number,
+    requestedPricePeriod?: ListingPeriodType,
   ): ListingListResponseDto {
     const dto = new ListingListResponseDto();
 
-    dto.listings = listings.map(listing => this.toResponseDto(listing));
+    dto.listings = listings.map(listing => this.toResponseDto(listing, requestedPricePeriod));
     dto.total = total;
     dto.limit = limit;
     dto.offset = offset;
@@ -124,10 +130,11 @@ export class ListingMapper {
     total: number,
     limit: number,
     offset: number,
+    requestedPricePeriod?: ListingPeriodType,
   ): ListingGeoListResponseDto {
     const dto = new ListingGeoListResponseDto();
 
-    dto.listings = listings.map(listing => this.toGeoResponseDto(listing));
+    dto.listings = listings.map(listing => this.toGeoResponseDto(listing, requestedPricePeriod));
     dto.total = total;
     dto.limit = limit;
     dto.offset = offset;

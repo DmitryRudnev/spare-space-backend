@@ -56,6 +56,7 @@ export class FavoritesController {
       result.total,
       result.limit,
       result.offset,
+      searchDto.pricePeriod,
     );
   }
 
@@ -75,17 +76,17 @@ export class FavoritesController {
     return FavoriteMapper.toResponseDto(favorite);
   }
   
-  @Delete(':id')
+  @Delete(':listingId')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Удалить объявление из избранного' })
-  @ApiParam({ name: 'id', description: 'ID объявления', type: Number })
+  @ApiParam({ name: 'listingId', description: 'ID объявления', type: Number })
   @ApiNoContentResponse({ description: 'Запись успешно удалена из избранного' })
   @ApiUnauthorizedResponse({ description: 'Не авторизован или доступ запрещен' })
   @ApiNotFoundResponse({ description: 'Запись избранного не найдена' })
   async remove(
-    @Param('id') id: string,
+    @Param('listingId') listingId: string,
     @User('userId') userId: number,
   ): Promise<void> {
-    await this.favoritesService.remove(Number(id), userId);
+    await this.favoritesService.remove(Number(listingId), userId);
   }
 }
