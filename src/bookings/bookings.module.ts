@@ -9,6 +9,7 @@ import { BullQueueModule } from '../bull/bull.module';
 import { WalletsModule } from '../wallets/wallets.module';
 import { BookingCompletionProcessor } from './processors/booking-completion.processor';
 import { BookingStartProcessor } from './processors/booking-start.processor';
+import { BookingsHandler } from './bookings.handler';
 
 @Module({
   imports: [
@@ -19,7 +20,7 @@ import { BookingStartProcessor } from './processors/booking-start.processor';
     BullQueueModule,
   ],
   controllers: [BookingsController],
-  providers: [BookingsService, BookingCompletionProcessor, BookingStartProcessor],
-  exports: [BookingsService],
+  providers: [BookingsService, BookingsHandler, BookingCompletionProcessor, BookingStartProcessor],
+  exports: [BookingsService, BookingsHandler],
 })
 export class BookingsModule {}

@@ -25,7 +25,7 @@ import {
   ApiConflictResponse,
 } from '@nestjs/swagger';
 
-import { BookingsService } from './bookings.service';
+import { BookingsHandler } from './bookings.handler';
 import { CreateBookingDto } from './dto/requests/create-booking.dto';
 import { UpdateBookingPeriodDto } from './dto/requests/update-booking-period.dto';
 import { SearchBookingsDto } from './dto/requests/search-bookings.dto';
@@ -41,7 +41,7 @@ import { BookingMapper } from './mappers/booking.mapper';
 @ApiBearerAuth()
 @ApiUnauthorizedResponse({ description: 'Не авторизован' })
 export class BookingsController {
-  constructor(private readonly bookingsService: BookingsService) {}
+  constructor(private readonly bookingsHandler: BookingsHandler) {}
 
   @Get('my')
   @HttpCode(HttpStatus.OK)
@@ -51,7 +51,7 @@ export class BookingsController {
     @Query() searchDto: SearchBookingsDto, 
     @User('userId') userId: number
   ): Promise<BookingListResponseDto> {
-    const result = await this.bookingsService.handleFindAll(userId, searchDto);
+    const result = await this.bookingsHandler.findAll(userId, searchDto);
     return BookingMapper.toListResponseDto(
       result.bookings,
       result.total,
@@ -70,7 +70,7 @@ export class BookingsController {
     @Param('id') bookingId: string,
     @User('userId') userId: number
   ): Promise<BookingDetailResponseDto> {
-    const booking = await this.bookingsService.handleFindById(userId, Number(bookingId));
+    const booking = await this.bookingsHandler.findById(userId, Number(bookingId));
     return BookingMapper.toDetailResponseDto(booking);
   }
 
@@ -84,7 +84,7 @@ export class BookingsController {
     @Body() createBookingDto: CreateBookingDto,
     @User('userId') userId: number
   ): Promise<BookingDetailResponseDto> {
-    const booking = await this.bookingsService.handleCreate(userId, createBookingDto);
+    const booking = await this.bookingsHandler.create(userId, createBookingDto);
     return BookingMapper.toDetailResponseDto(booking);
   }
 
@@ -101,7 +101,7 @@ export class BookingsController {
     @Body() updateBookingDto: UpdateBookingPeriodDto,
     @User('userId') userId: number
   ): Promise<BookingDetailResponseDto> {
-    const booking = await this.bookingsService.handleUpdatePeriod(userId, Number(bookingId), updateBookingDto);
+    const booking = await this.bookingsHandler.updatePeriod(userId, Number(bookingId), updateBookingDto);
     return BookingMapper.toDetailResponseDto(booking);
   }
   
@@ -116,7 +116,7 @@ export class BookingsController {
     @Param('id') bookingId: string,
     @User('userId') userId: number
   ): Promise<void> {
-    await this.bookingsService.handleCancel(userId, Number(bookingId));
+    await this.bookingsHandler.cancel(userId, Number(bookingId));
   }
 
   @Patch(':id/confirm')
@@ -130,7 +130,7 @@ export class BookingsController {
     @Param('id') bookingId: string,
     @User('userId') userId: number
   ): Promise<BookingDetailResponseDto> {
-    const booking = await this.bookingsService.handleConfirm(userId, Number(bookingId));
+    const booking = await this.bookingsHandler.confirm(userId, Number(bookingId));
     return BookingMapper.toDetailResponseDto(booking);
   }
 
@@ -145,6 +145,6 @@ export class BookingsController {
     @Param('id') bookingId: string,
     @User('userId') userId: number
   ): Promise<void> {
-    await this.bookingsService.handleReject(userId, Number(bookingId));
+    await this.bookingsHandler.reject(userId, Number(bookingId));
   }
 }
