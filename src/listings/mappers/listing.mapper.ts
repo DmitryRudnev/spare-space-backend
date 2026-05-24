@@ -52,8 +52,8 @@ export class ListingMapper {
     return dto;
   }
 
-  static toResponseDto(listing: Listing): ListingResponseDto {
-    const baseDto = this.toBaseResponseDto(listing);
+  static toResponseDto(listing: Listing, requestedPricePeriod?: ListingPeriodType): ListingResponseDto {
+    const baseDto = this.toBaseResponseDto(listing, requestedPricePeriod);
     const dto = new ListingResponseDto();
     Object.assign(dto, baseDto);
 
@@ -62,7 +62,7 @@ export class ListingMapper {
     return dto;
   }
 
-  static toGeoResponseDto(listing: Listing): ListingGeoResponseDto {
+  static toGeoResponseDto(listing: Listing, requestedPricePeriod?: ListingPeriodType): ListingGeoResponseDto {
     const dto = new ListingGeoResponseDto();
     const displayPricing = this.getDisplayPricing(listing, requestedPricePeriod);
 
