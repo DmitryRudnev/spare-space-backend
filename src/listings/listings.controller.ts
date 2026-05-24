@@ -118,7 +118,7 @@ export class ListingsController {
   }
   
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRoleType.ADMIN)
+  @Roles(UserRoleType.LANDLORD)
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @ApiBearerAuth()

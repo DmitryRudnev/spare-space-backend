@@ -312,7 +312,7 @@ export class ListingsService {
       );
     }
     if (searchDto.amenities && searchDto.amenities.length > 0) {
-      query.andWhere(`listing.amenities @> :amenities`, { amenities: searchDto.amenities });
+      query.andWhere(`listing.amenities @> ARRAY[:...amenities]::varchar[]`, { amenities: searchDto.amenities });
     }
     if (searchDto.title) {
       query.andWhere(`listing.title ILIKE :title`, { title: `%${searchDto.title}%` });
@@ -356,7 +356,7 @@ export class ListingsService {
     if (dto.pricings !== undefined) {
       const periods = dto.pricings.map(p => p.pricePeriod);
       if (new Set(periods).size !== periods.length) {
-        throw new BadRequestException('Price periods cannot be dublicated');
+        throw new BadRequestException('Price periods cannot be duplicated');
       }
       data.pricings = dto.pricings as any; // TypeORM сам замапит массив объектов в сущности из-за cascade: true
     }
