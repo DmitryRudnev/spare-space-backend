@@ -74,20 +74,11 @@ export class BookingsListener {
       },
     });
 
-    const delayStart = new Date(booking.periodDates.start).getTime() - Date.now();
-    this.logger.log(`Scheduling booking start for booking ${booking.id} with delay: ${Math.max(0, delayStart)/1000/60} minutes`);
+    const delay = new Date(booking.periodDates.start).getTime() - Date.now();
+    this.logger.log(`Scheduling booking start for booking ${booking.id} with delay: ${Math.max(0, delay)/1000/60} minutes`);
     await this.bookingStartQueue.add('start-booking', { bookingId: booking.id }, {
-      delay: Math.max(0, delayStart),
-      attempts: 3,
-      backoff: { type: 'exponential', delay: 5000 },
-      removeOnComplete: true,
-      removeOnFail: false,
-    });
-
-    const delayCompletion = new Date(booking.periodDates.end).getTime() - Date.now();
-    this.logger.log(`Scheduling booking completion for booking ${booking.id} with delay: ${Math.max(0, delayCompletion)/1000/60} minutes`);
-    await this.bookingCompletionQueue.add('complete-booking', { bookingId: booking.id }, {
-      delay: Math.max(0, delayCompletion),
+      jobId: `start-${booking.id}`,
+      delay: Math.max(0, delay),
       attempts: 3,
       backoff: { type: 'exponential', delay: 5000 },
       removeOnComplete: true,
@@ -98,11 +89,13 @@ export class BookingsListener {
   @OnEvent('booking.cancelled')
   async handleBookingCancelled(booking: Booking) {
     this.emitStatusChangeNotification(booking, Number(booking.listing.user.id), NotificationType.BOOKING_CANCELLED);
+    await this.bookingStartQueue.remove(`start-${booking.id}`);
   }
 
   @OnEvent('booking.rejected')
   async handleBookingRejected(booking: Booking) {
     this.emitStatusChangeNotification(booking, Number(booking.renter.id), NotificationType.BOOKING_REJECTED);
+    await this.bookingStartQueue.remove(`start-${booking.id}`);
   }
 
   private emitStatusChangeNotification(booking: Booking, targetUserId: number, type: NotificationType) {

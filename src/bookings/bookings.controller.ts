@@ -10,6 +10,7 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  ParseIntPipe,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -67,10 +68,10 @@ export class BookingsController {
   @ApiOkResponse({ type: BookingDetailResponseDto, description: 'Бронирование найдено' })
   @ApiNotFoundResponse({ description: 'Бронирование не найдено' })
   async findById(
-    @Param('id') bookingId: string,
+    @Param('id', ParseIntPipe) bookingId: number,
     @User('userId') userId: number
   ): Promise<BookingDetailResponseDto> {
-    const booking = await this.bookingsHandler.findById(userId, Number(bookingId));
+    const booking = await this.bookingsHandler.findById(userId, bookingId);
     return BookingMapper.toDetailResponseDto(booking);
   }
 
@@ -97,11 +98,11 @@ export class BookingsController {
   @ApiBadRequestResponse({ description: 'Некорректные данные запроса' })
   @ApiConflictResponse({ description: 'Конфликт: объект недоступен для новых дат' })
   async update(
-    @Param('id') bookingId: string,
+    @Param('id', ParseIntPipe) bookingId: number,
     @Body() updateBookingDto: UpdateBookingPeriodDto,
     @User('userId') userId: number
   ): Promise<BookingDetailResponseDto> {
-    const booking = await this.bookingsHandler.updatePeriod(userId, Number(bookingId), updateBookingDto);
+    const booking = await this.bookingsHandler.updatePeriod(userId, bookingId, updateBookingDto);
     return BookingMapper.toDetailResponseDto(booking);
   }
   
@@ -113,10 +114,10 @@ export class BookingsController {
   @ApiNotFoundResponse({ description: 'Бронирование не найдено' })
   @ApiBadRequestResponse({ description: 'Невозможно отменить бронирование' })
   async cancel(
-    @Param('id') bookingId: string,
+    @Param('id', ParseIntPipe) bookingId: number,
     @User('userId') userId: number
   ): Promise<void> {
-    await this.bookingsHandler.cancel(userId, Number(bookingId));
+    await this.bookingsHandler.cancel(userId, bookingId);
   }
 
   @Patch(':id/confirm')
@@ -127,10 +128,10 @@ export class BookingsController {
   @ApiNotFoundResponse({ description: 'Бронирование не найдено' })
   @ApiBadRequestResponse({ description: 'Некорректный статус или операция' })
   async confirm(
-    @Param('id') bookingId: string,
+    @Param('id', ParseIntPipe) bookingId: number,
     @User('userId') userId: number
   ): Promise<BookingDetailResponseDto> {
-    const booking = await this.bookingsHandler.confirm(userId, Number(bookingId));
+    const booking = await this.bookingsHandler.confirm(userId, bookingId);
     return BookingMapper.toDetailResponseDto(booking);
   }
 
@@ -142,9 +143,9 @@ export class BookingsController {
   @ApiNotFoundResponse({ description: 'Бронирование не найдено' })
   @ApiBadRequestResponse({ description: 'Невозможно отклонить бронирование' })
   async reject(
-    @Param('id') bookingId: string,
+    @Param('id', ParseIntPipe) bookingId: number,
     @User('userId') userId: number
   ): Promise<void> {
-    await this.bookingsHandler.reject(userId, Number(bookingId));
+    await this.bookingsHandler.reject(userId, bookingId);
   }
 }

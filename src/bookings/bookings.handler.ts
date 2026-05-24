@@ -55,7 +55,16 @@ export class BookingsHandler {
     if (booking.status !== BookingStatus.PENDING) throw new BadRequestException(`Only pending booking can be updated`);
 
     const prevPeriod = booking.periodDates;
+    const prevPrice = booking.totalPrice;
     const updatedBooking = await this.bookingsService.updatePeriod(bookingId, updateDto);
+
+    const priceDiff = updatedBooking.totalPrice - prevPrice;
+    if (priceDiff > 0) {
+      await this.walletsService.processBookingPayment(userId, booking.id, priceDiff);
+    } else if (priceDiff < 0) {
+      await this.walletsService.processRefund(userId, booking.id, Math.abs(priceDiff));
+    }
+    
     this.eventEmitter.emit('booking.period_updated', updatedBooking, prevPeriod);
     return updatedBooking;
   }

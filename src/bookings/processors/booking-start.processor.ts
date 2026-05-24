@@ -31,11 +31,15 @@ export class BookingStartProcessor extends WorkerHost {
       this.logger.log(`Booking ${bookingId} is now ACTIVE`);
 
       const delay = new Date(booking.periodDates.end).getTime() - Date.now();
-      await this.bookingCompletionQueue.add(
-        'complete-booking',
-        { bookingId },
-        { delay: Math.max(0, delay), attempts: 3, removeOnComplete: true }
-      );
+      this.logger.log(`Scheduling booking completion for booking ${booking.id} with delay: ${Math.max(0, delay)/1000/60} minutes`);
+      await this.bookingCompletionQueue.add('complete-booking', { bookingId }, {
+        jobId: `complete-${bookingId}`,
+        delay: Math.max(0, delay),
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 5000 },
+        removeOnComplete: true,
+        removeOnFail: false,
+      });
     } catch (error) {
       this.logger.error(`Failed to process start for booking ${bookingId}:`, error);
       throw error;
