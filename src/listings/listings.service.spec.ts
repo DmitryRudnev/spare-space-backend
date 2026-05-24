@@ -18,12 +18,15 @@ describe('ListingsService (Integration)', () => {
 
   const mockQueryBuilder = {
     leftJoinAndSelect: jest.fn().mockReturnThis(),
+    innerJoinAndSelect: jest.fn().mockReturnThis(),
     andWhere: jest.fn().mockReturnThis(),
     innerJoin: jest.fn().mockReturnThis(),
     orderBy: jest.fn().mockReturnThis(),
     limit: jest.fn().mockReturnThis(),
     offset: jest.fn().mockReturnThis(),
     select: jest.fn().mockReturnThis(),
+    take: jest.fn().mockReturnThis(),
+    skip: jest.fn().mockReturnThis(),
     getManyAndCount: jest.fn().mockResolvedValue([[], 0]),
   };
 
@@ -74,6 +77,13 @@ describe('ListingsService (Integration)', () => {
             getOrSet: jest.fn().mockImplementation((key, ttl, cb) => cb()),
             deleteByPattern: jest.fn().mockResolvedValue(undefined),
             delete: jest.fn().mockResolvedValue(undefined),
+          },
+        },
+        {
+          provide: getRepositoryToken(ViewHistory),
+          useValue: {
+            insert: jest.fn().mockResolvedValue(undefined),
+            existsBy: jest.fn().mockResolvedValue(false),
           },
         },
       ],
