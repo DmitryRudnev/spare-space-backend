@@ -98,41 +98,14 @@ export class FavoritesService {
     searchDto: SearchListingsDto,
     userId: number,
   ): SelectQueryBuilder<Favorite> {
-    const query = this.favoriteRepository
+    let query = this.favoriteRepository
       .createQueryBuilder('favorite')
       .innerJoinAndSelect('favorite.listing', 'listing')
       .innerJoinAndSelect('listing.user', 'listingUser')
-      .where('favorite.user_id = :userId', { userId })
-      .andWhere('listing.status = :status', { status: ListingStatus.ACTIVE });
+      .innerJoinAndSelect('listing.pricings', 'pricing')
+      .where('favorite.user.id = :userId', { userId });
 
-    // Применяем фильтры из SearchListingsDto к связанному объявлению
-    if (searchDto.type !== undefined) {
-      query.andWhere('listing.type = :type', { type: searchDto.type });
-    }
-    if (searchDto.minPrice !== undefined) {
-      query.andWhere('listing.price >= :minPrice', { minPrice: searchDto.minPrice });
-    }
-    if (searchDto.maxPrice !== undefined) {
-      query.andWhere('listing.price <= :maxPrice', { maxPrice: searchDto.maxPrice });
-    }
-    if (searchDto.pricePeriod !== undefined) {
-      query.andWhere('listing.price_period = :pricePeriod', { pricePeriod: searchDto.pricePeriod });
-    }
-    if (
-      searchDto.longitude !== undefined &&
-      searchDto.latitude !== undefined &&
-      searchDto.radius !== undefined
-    ) {
-      query.andWhere(
-        'ST_DWithin(listing.location::geography, ST_SetSRID(ST_MakePoint(:lon, :lat), 4326)::geography, :radius)',
-        { lon: searchDto.longitude, lat: searchDto.latitude, radius: searchDto.radius },
-      );
-    }
-    if (searchDto.amenities && searchDto.amenities.length > 0) {
-      query.andWhere('listing.amenities @> :amenities', { amenities: searchDto.amenities });
-    }
-
-    query.orderBy('favorite.created_at', 'DESC').limit(searchDto.limit).offset(searchDto.offset);
-    return query;
+    query = this.listingsService.applySearchFilters(query, searchDto);
+    return query.orderBy('favorite.createdAt', 'DESC');
   }
 }

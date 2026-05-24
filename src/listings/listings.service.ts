@@ -1,11 +1,12 @@
-import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, SelectQueryBuilder, In, FindOptionsWhere } from 'typeorm';
+import { Repository, SelectQueryBuilder, In, FindOptionsWhere, ObjectLiteral } from 'typeorm';
 import type { Point } from 'geojson';
 
 import { UsersService } from '../users/services/users.service';
 import { Listing } from '../entities/listing.entity';
 import { ViewHistory } from '../entities/view-history.entity';
+import { Favorite } from '../entities/favorite.entity';
 import { ListingStatus } from '../common/enums/listing-status.enum';
 import { ListingType } from '../common/enums/listing-type.enum';
 import { RedisService } from '../common/redis/redis.service';
@@ -264,7 +265,16 @@ export class ListingsService {
   }
 
   async updateViewHistory(listingId: number, userId: number): Promise<void> {
-    await this.usersService.validateExistence(userId);
+    // Проверяем, смотрел ли пользователь это объявление ранее
+    const alreadyViewed = await this.viewHistoryRepository.existsBy({
+      user: { id: userId },
+      listing: { id: listingId },
+    });
+
+    if (alreadyViewed) {
+      return;
+    }
+
     const listing = await this.findByIdWithCache(listingId);
     listing.viewsCount += 1;
     await this.listingRepository.save(listing);
@@ -275,9 +285,64 @@ export class ListingsService {
     });
   }
 
+  public applySearchFilters<T extends ObjectLiteral>(
+    query: SelectQueryBuilder<T>,
+    searchDto: SearchListingsDto,
+  ): SelectQueryBuilder<T> {
+    if (searchDto.type !== undefined) {
+      query.andWhere(`listing.type = :type`, { type: searchDto.type });
+    }
+    if (searchDto.pricePeriod !== undefined) {
+      query.andWhere(`pricing.pricePeriod = :pricePeriod`, { pricePeriod: searchDto.pricePeriod });
+    }
+    if (searchDto.minPrice !== undefined) {
+      query.andWhere(`pricing.price >= :minPrice`, { minPrice: searchDto.minPrice });
+    }
+    if (searchDto.maxPrice !== undefined) {
+      query.andWhere(`pricing.price <= :maxPrice`, { maxPrice: searchDto.maxPrice });
+    }
+    if (
+      searchDto.longitude !== undefined &&
+      searchDto.latitude !== undefined &&
+      searchDto.radius !== undefined
+    ) {
+      query.andWhere(
+        'ST_DWithin(listing.location::geography, ST_SetSRID(ST_MakePoint(:lon, :lat), 4326)::geography, :radius)',
+        { lon: searchDto.longitude, lat: searchDto.latitude, radius: searchDto.radius }
+      );
+    }
+    if (searchDto.amenities && searchDto.amenities.length > 0) {
+      query.andWhere(`listing.amenities @> :amenities`, { amenities: searchDto.amenities });
+    }
+    if (searchDto.title) {
+      query.andWhere(`listing.title ILIKE :title`, { title: `%${searchDto.title}%` });
+    }
+    return query.take(searchDto.limit).skip(searchDto.offset);
+  }
+
   // ==========================================================================
   // ================================ PRIVATE =================================
   // ==========================================================================
+
+  private buildSearchQuery(
+    searchDto: SearchListingsDto,
+    userId?: number
+  ): SelectQueryBuilder<Listing> {
+    let query = this.listingRepository
+      .createQueryBuilder('listing')
+      .innerJoinAndSelect('listing.user', 'user')
+      .innerJoinAndSelect('listing.pricings', 'pricing');
+
+    if (userId !== undefined) {
+      query.andWhere('user.id = :userId', { userId });
+    }
+    if (searchDto.status !== undefined) {
+      query.andWhere('listing.status = :status', { status: searchDto.status });
+    }
+
+    query = this.applySearchFilters(query, searchDto);
+    return query.orderBy('listing.updatedAt', 'DESC');
+  }
 
   private prepareListingData(
     dto: CreateListingDto | UpdateListingDto,
@@ -312,65 +377,6 @@ export class ListingsService {
       data.availability = dto.availability.map((interval) => `[${interval.start.toISOString()},${interval.end.toISOString()})`);
     }
     return data;
-  }
-
-  
-  private buildSearchQuery(
-    searchDto: SearchListingsDto,
-    userId?: number
-  ): SelectQueryBuilder<Listing> {
-    const query = this.listingRepository
-      .createQueryBuilder('listing')
-      .leftJoinAndSelect('listing.user', 'user')
-      .leftJoinAndSelect('listing.pricings', 'pricing');
-
-    if (userId !== undefined) {
-      query.andWhere('listing.user.id = :userId', { userId });
-    }
-    if (searchDto.status !== undefined) {
-      query.andWhere('listing.status = :status', { status: searchDto.status });
-    }
-    if (searchDto.type !== undefined) {
-      query.andWhere('listing.type = :type', { type: searchDto.type });
-    }
-    if (searchDto.pricePeriod !== undefined || searchDto.minPrice !== undefined || searchDto.maxPrice !== undefined) {
-      query.innerJoin('listing.pricings', 'filterPricing');
-      
-      if (searchDto.pricePeriod !== undefined) {
-        query.andWhere('filterPricing.pricePeriod = :pricePeriod', { pricePeriod: searchDto.pricePeriod });
-      }
-      if (searchDto.minPrice !== undefined) {
-        query.andWhere('filterPricing.price >= :minPrice', { minPrice: searchDto.minPrice });
-      }
-      if (searchDto.maxPrice !== undefined) {
-        query.andWhere('filterPricing.price <= :maxPrice', { maxPrice: searchDto.maxPrice });
-      }
-    }
-    if (
-      searchDto.longitude !== undefined &&
-      searchDto.latitude !== undefined &&
-      searchDto.radius !== undefined
-    ) {
-      query.andWhere(
-        'ST_DWithin(listing.location::geography, ST_SetSRID(ST_MakePoint(:lon, :lat), 4326)::geography, :radius)',
-        { lon: searchDto.longitude, lat: searchDto.latitude, radius: searchDto.radius }
-      );
-    }
-    if (searchDto.amenities && searchDto.amenities.length > 0) {
-      query.andWhere('listing.amenities @> :amenities', { amenities: searchDto.amenities });
-    }
-    if (searchDto.title) {
-      query.andWhere('listing.title ILIKE :title', { title: `%${searchDto.title}%` });
-      // Сортируем по релевантности (насколько похоже), а не по дате
-      // query.orderBy(`similarity(listing.title, :title)`, 'DESC');
-      query.orderBy('listing.updatedAt', 'DESC');
-    } else {
-      // Стандартная сортировка, если поиска по названию нет
-      query.orderBy('listing.updatedAt', 'DESC');
-    }
-    query.limit(searchDto.limit).offset(searchDto.offset);
-
-    return query;
   }
 
   private canCacheUserActiveListings(

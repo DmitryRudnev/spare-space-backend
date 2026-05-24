@@ -46,18 +46,18 @@ export class ListingsControllerHandler {
   }
 
   async findById(listingId: number, currentUserId?: number): Promise<{ listing: Listing; isFavorite?: boolean }> {
+    const isFavorite = currentUserId
+      ? await this.favoritesService.existsByUser(listingId, currentUserId)
+      : undefined;
+
     const listing = await this.listingsService.findByIdWithCache(listingId);
-    if (listing.status !== ListingStatus.ACTIVE && currentUserId !== Number(listing.user.id)) {
+    if (listing.status !== ListingStatus.ACTIVE && currentUserId !== Number(listing.user.id) && !isFavorite) {
       throw new UnauthorizedException('Not authorized to see this listing');
     }
 
     if (currentUserId !== undefined) {
       await this.listingsService.updateViewHistory(listingId, currentUserId);
     }
-    
-    const isFavorite = currentUserId
-      ? await this.favoritesService.existsByUser(listingId, currentUserId)
-      : undefined; 
 
     return { listing, isFavorite };
   }
