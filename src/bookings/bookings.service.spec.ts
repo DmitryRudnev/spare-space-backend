@@ -109,16 +109,18 @@ describe('BookingsService (Integration)', () => {
   });
 
   describe('Create Booking Logic', () => {
-    const getFutureDates = (daysOffset = 1, duration = 1) => {
-      const start = new Date(); start.setDate(start.getDate() + daysOffset);
-      const end = new Date(start); end.setDate(end.getDate() + duration);
-      return { start, end };
+    const getFutureStartDate = (daysOffset = 1) => {
+      const start = new Date(); 
+      start.setDate(start.getDate() + daysOffset);
+      start.setSeconds(0, 0); // Обнуляем секунды и миллисекунды
+      return start;
     };
 
     const createDto: any = {
       listingId: 50,
       pricePeriod: ListingPeriodType.DAY,
-      period: getFutureDates(),
+      startDate: getFutureStartDate(),
+      periodsCount: 1,
     };
 
     it('should successfully create a booking (Positive)', async () => {
@@ -150,29 +152,29 @@ describe('BookingsService (Integration)', () => {
       await expect(service.create(1, createDto)).rejects.toThrow('Cannot book owned listing');
     });
 
-    it('should throw BadRequestException if dates are in the past', async () => {
+    it('should throw BadRequestException if start date is in the past', async () => {
       listingsService.findByIdWithCache.mockResolvedValue({ status: ListingStatus.ACTIVE, user: { id: 2 } } as any);
-      const pastDto = { ...createDto, period: { start: new Date('2000-01-01'), end: new Date('2000-01-02') } };
+      const pastDto = { ...createDto, startDate: new Date('2000-01-01T12:00:00.000Z') };
       await expect(service.create(1, pastDto)).rejects.toThrow('Start date cannot be in the past');
     });
 
-    it('should throw BadRequestException if end date is before start date', async () => {
+    it('should throw BadRequestException if start date is not a multiple of one minute', async () => {
       listingsService.findByIdWithCache.mockResolvedValue({ status: ListingStatus.ACTIVE, user: { id: 2 } } as any);
-      const invalidDates = getFutureDates();
-      invalidDates.end.setDate(invalidDates.start.getDate() - 1);
+      const invalidDate = getFutureStartDate();
+      invalidDate.setSeconds(30); // Добавляем секунды
       
-      const invalidDto = { ...createDto, period: invalidDates };
-      await expect(service.create(1, invalidDto)).rejects.toThrow('End date must be after start date');
+      const invalidDto = { ...createDto, startDate: invalidDate };
+      await expect(service.create(1, invalidDto)).rejects.toThrow('Start date must be a multiple of one minute');
     });
 
     it('should throw BadRequestException if period is outside availability', async () => {
-      listingsService.findByIdWithCache.mockResolvedValue({ status: ListingStatus.ACTIVE, user: { id: 2 } } as any);
+      listingsService.findByIdWithCache.mockResolvedValue({ status: ListingStatus.ACTIVE, user: { id: 2 }, pricings: [{ pricePeriod: ListingPeriodType.DAY, price: 1000 }] } as any);
       repo.query.mockResolvedValueOnce([{ contained: false }]);
       await expect(service.create(1, createDto)).rejects.toThrow('completely within one of the listing');
     });
 
     it('should throw ConflictException if period overlaps with existing bookings', async () => {
-      listingsService.findByIdWithCache.mockResolvedValue({ status: ListingStatus.ACTIVE, user: { id: 2 } } as any);
+      listingsService.findByIdWithCache.mockResolvedValue({ status: ListingStatus.ACTIVE, user: { id: 2 }, pricings: [{ pricePeriod: ListingPeriodType.DAY, price: 1000 }] } as any);
       repo.query.mockResolvedValueOnce([{ contained: true }]);
       repo.exists.mockResolvedValueOnce(true);
       await expect(service.create(1, createDto)).rejects.toThrow(ConflictException);
@@ -200,14 +202,32 @@ describe('BookingsService (Integration)', () => {
     });
 
     it('updatePeriod should recalculate price and save', async () => {
-      repo.findOne.mockResolvedValue({ ...mockBooking, price: 1000, pricePeriod: ListingPeriodType.DAY });
+      // Подготавливаем дату начала, кратную одной минуте
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() + 1);
+      startDate.setSeconds(0, 0); 
+
+      // Расширяем мок объявления актуальными тарифами
+      const mockListing = {
+        ...mockBooking.listing,
+        pricings: [{ pricePeriod: ListingPeriodType.DAY, price: 1000 }]
+      };
+
+      repo.findOne.mockResolvedValue({ 
+        ...mockBooking, 
+        listing: mockListing, 
+        price: 1000, 
+        pricePeriod: ListingPeriodType.DAY 
+      });
       repo.query.mockResolvedValueOnce([{ contained: true }]);
       repo.exists.mockResolvedValueOnce(false);
       
-      const start = new Date(); start.setDate(start.getDate() + 1);
-      const end = new Date(start); end.setDate(end.getDate() + 5);
-
-      await service.updatePeriod(100, { period: { start, end } });
+      // Вызываем сервис с новым форматом DTO
+      await service.updatePeriod(100, { 
+        startDate, 
+        periodsCount: 5, 
+        pricePeriod: ListingPeriodType.DAY 
+      });
       
       const savedBooking = repo.save.mock.calls[repo.save.mock.calls.length - 1][0];
       expect(savedBooking.totalPrice).toBe(5000); 

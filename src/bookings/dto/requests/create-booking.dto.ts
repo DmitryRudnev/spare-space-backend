@@ -1,7 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsEnum, IsInt, Min, ValidateNested } from 'class-validator';
-import { PeriodDto } from '../../../common/dto/period.dto';
+import { IsDate, IsEnum, IsInt, Max, Min } from 'class-validator';
 import { ListingPeriodType } from '../../../common/enums/listing-period-type.enum';
 
 export class CreateBookingDto {
@@ -23,13 +22,14 @@ export class CreateBookingDto {
   @IsEnum(ListingPeriodType)
   pricePeriod: ListingPeriodType;
 
-  @ApiProperty({
-    type: PeriodDto,
-    description: 'Период бронирования'
-  })
-  @Type(() => PeriodDto)
-  @ValidateNested()
-  period: PeriodDto;
+  @ApiProperty({ type: Date, description: 'Дата и время начала бронирования', example: '2026-06-01T12:00:00.000Z' })
+  @Type(() => Date)
+  @IsDate()
+  startDate: Date;
 
-  // вместо period передавать startDate и количество pricePeriod(1-100) "periodsCount"
+  @ApiProperty({ type: Number, description: 'Количество периодов (1-100)', example: 1, minimum: 1, maximum: 100 })
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  periodsCount: number;
 }

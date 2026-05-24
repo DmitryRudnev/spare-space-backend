@@ -79,11 +79,17 @@ export class BookingsService {
   }
 
   async create(renterId: number, createDto: CreateBookingDto): Promise<Booking> {
-    const listing = await this.listingsService.findByIdWithCache(createDto.listingId);
+    const { listingId, pricePeriod, startDate, periodsCount } = createDto;
+
+    const listing = await this.listingsService.findByIdWithCache(listingId);
     if (listing.status !== ListingStatus.ACTIVE) throw new BadRequestException('Cannot book an inactive listing');
     if (renterId === Number(listing.user.id)) throw new BadRequestException('Cannot book owned listing');
     
-    const { start: startDate, end: endDate } = createDto.period;
+    if (startDate.getSeconds() !== 0 || startDate.getMilliseconds() !== 0) {
+      throw new BadRequestException('Start date must be a multiple of one minute (no seconds or milliseconds allowed)');
+    }
+
+    const endDate = this.calculateEndDate(startDate, pricePeriod, periodsCount);
     await this.validateBookingDates(startDate, endDate, listing.id, listing.availability);
 
     const selectedPricing = listing.pricings.find(p => p.pricePeriod === createDto.pricePeriod);
@@ -91,8 +97,7 @@ export class BookingsService {
       throw new BadRequestException(`Listing does not support ${createDto.pricePeriod} pricing`);
     }
 
-    const duration = this.calculateDuration(startDate, endDate, selectedPricing.pricePeriod);
-    const totalPrice = selectedPricing.price * duration;
+    const totalPrice = Number(selectedPricing.price) * periodsCount;
     const period = `[${startDate.toISOString()},${endDate.toISOString()})`;
 
     const booking = this.bookingRepository.create({
@@ -109,14 +114,26 @@ export class BookingsService {
   }
 
   async updatePeriod(bookingId: number, updatePeriodDto: UpdateBookingPeriodDto): Promise<Booking> {
-    const booking = await this.findById(bookingId);
+    const { startDate, periodsCount, pricePeriod } = updatePeriodDto;
+    if (startDate.getSeconds() !== 0 || startDate.getMilliseconds() !== 0) {
+      throw new BadRequestException('Start date must be a multiple of one minute (no seconds or milliseconds allowed)');
+    }
 
-    const { start: startDate, end: endDate } = updatePeriodDto.period;
+    const booking = await this.findById(bookingId);
+    if (booking.pricePeriod !== pricePeriod) {
+      const selectedPricing = booking.listing.pricings.find(p => p.pricePeriod === pricePeriod);
+      if (!selectedPricing) {
+        throw new BadRequestException(`Listing does not support ${pricePeriod} pricing`);
+      }
+      booking.pricePeriod = selectedPricing.pricePeriod;
+      booking.price = selectedPricing.price;
+    }
+
+    const endDate = this.calculateEndDate(startDate, booking.pricePeriod, periodsCount);
     await this.validateBookingDates(startDate, endDate, booking.listing.id, booking.listing.availability, bookingId);
 
-    const duration = this.calculateDuration(startDate, endDate, booking.pricePeriod);
     booking.period = `[${startDate.toISOString()},${endDate.toISOString()})`;
-    booking.totalPrice = booking.price * duration;
+    booking.totalPrice = Number(booking.price) * periodsCount;
 
     return this.bookingRepository.save(booking);
   }
@@ -194,18 +211,24 @@ export class BookingsService {
     }
   }
 
-  private calculateDuration(start: Date, end: Date, pricePeriod: ListingPeriodType): number {
-    const ms = end.getTime() - start.getTime();
+  private calculateEndDate(startDate: Date, pricePeriod: ListingPeriodType, periodsCount: number): Date {
+    const end = new Date(startDate.getTime());
     switch (pricePeriod) {
-      // case ListingPeriodType.HOUR:  return Math.ceil(ms / (1000 * 60 * 60));
-      // case ListingPeriodType.DAY:   return Math.ceil(ms / (1000 * 60 * 60 * 24));
-      // case ListingPeriodType.WEEK:  return Math.ceil(ms / (1000 * 60 * 60 * 24 * 7));
-      // case ListingPeriodType.MONTH: return Math.ceil(ms / (1000 * 60 * 60 * 24 * 30));
-      case ListingPeriodType.HOUR:  return (ms / (1000 * 60 * 60));
-      case ListingPeriodType.DAY:   return (ms / (1000 * 60 * 60 * 24));
-      case ListingPeriodType.WEEK:  return (ms / (1000 * 60 * 60 * 24 * 7));
-      case ListingPeriodType.MONTH: return (ms / (1000 * 60 * 60 * 24 * 30));
-      default: throw new BadRequestException('Unknown price period');
+      case ListingPeriodType.HOUR:
+        end.setHours(end.getHours() + periodsCount);
+        break;
+      case ListingPeriodType.DAY:
+        end.setDate(end.getDate() + periodsCount);
+        break;
+      case ListingPeriodType.WEEK:
+        end.setDate(end.getDate() + periodsCount * 7);
+        break;
+      case ListingPeriodType.MONTH:
+        end.setMonth(end.getMonth() + periodsCount);
+        break;
+      default:
+        throw new BadRequestException('Unknown price period');
     }
+    return end;
   }
 }
