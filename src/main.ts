@@ -3,8 +3,12 @@ import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { types } from 'pg';
 
 async function bootstrap() {
+  types.setTypeParser(20, (val) => parseInt(val, 10));  // bigint (int8) -> number
+  types.setTypeParser(1700, (val) => parseFloat(val));  // numeric/decimal -> number
+
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
 
