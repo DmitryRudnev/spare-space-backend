@@ -162,8 +162,8 @@ export class ListingsController {
   @ApiNoContentResponse({ description: 'Объявление успешно удалено' })
   @ApiUnauthorizedResponse({ description: 'Не авторизован' })
   @ApiNotFoundResponse({ description: 'Объявление не найдено' })
-  async delete(@Param(
-    'id', ParseIntPipe) listingId: number,
+  async delete(
+    @Param('id', ParseIntPipe) listingId: number,
     @User('userId') userId: number
   ): Promise<void> {
     await this.handler.delete(listingId, userId);

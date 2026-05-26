@@ -312,10 +312,13 @@ export class ListingsService {
       );
     }
     if (searchDto.amenities && searchDto.amenities.length > 0) {
-      query.andWhere(`listing.amenities @> ARRAY[:...amenities]::varchar[]`, { amenities: searchDto.amenities });
+      query.andWhere(`listing.amenities @> :amenities::varchar[]`, { amenities: searchDto.amenities });
     }
     if (searchDto.title) {
-      query.andWhere(`listing.title ILIKE :title`, { title: `%${searchDto.title}%` });
+      query
+        .andWhere(`:title <% listing.title`, { title: searchDto.title })
+        .addSelect('word_similarity(:title, listing.title)', 'similarity_score')
+        .orderBy('similarity_score', 'DESC');
     }
     return query.take(searchDto.limit).skip(searchDto.offset);
   }
@@ -339,9 +342,10 @@ export class ListingsService {
     if (searchDto.status !== undefined) {
       query.andWhere('listing.status = :status', { status: searchDto.status });
     }
-
-    query = this.applySearchFilters(query, searchDto);
-    return query.orderBy('listing.updatedAt', 'DESC');
+    if (!searchDto.title) {
+      query.orderBy('listing.updatedAt', 'DESC');
+    }
+    return this.applySearchFilters(query, searchDto);
   }
 
   private prepareListingData(

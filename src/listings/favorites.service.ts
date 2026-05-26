@@ -105,7 +105,9 @@ export class FavoritesService {
       .innerJoinAndSelect('listing.pricings', 'pricing')
       .where('favorite.user.id = :userId', { userId });
 
-    query = this.listingsService.applySearchFilters(query, searchDto);
-    return query.orderBy('favorite.createdAt', 'DESC');
+    if (!searchDto.title) {
+      query.orderBy('favorite.createdAt', 'DESC');
+    }
+    return this.listingsService.applySearchFilters(query, searchDto);
   }
 }
