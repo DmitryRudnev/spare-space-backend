@@ -24,12 +24,15 @@ import {
   ApiNotFoundResponse,
   ApiBadRequestResponse,
   ApiConflictResponse,
+  ApiQuery,
 } from '@nestjs/swagger';
 
 import { BookingsHandler } from './bookings.handler';
 import { CreateBookingDto } from './dto/requests/create-booking.dto';
 import { UpdateBookingPeriodDto } from './dto/requests/update-booking-period.dto';
 import { SearchBookingsDto } from './dto/requests/search-bookings.dto';
+import { GetAvailabilityDto } from './dto/requests/get-availability.dto';
+import { PeriodDto } from '../common/dto/period.dto';
 import { User } from '../common/decorators/user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { BookingDetailResponseDto } from './dto/responses/booking-detail-response.dto';
@@ -73,6 +76,25 @@ export class BookingsController {
   ): Promise<BookingDetailResponseDto> {
     const booking = await this.bookingsHandler.findById(userId, bookingId);
     return BookingMapper.toDetailResponseDto(booking);
+  }
+
+  @Get('availability/:listingId')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Получение фактических периодов доступности объявления' })
+  @ApiParam({ type: Number, name: 'listingId', description: 'ID объявления' })
+  @ApiQuery({ 
+    name: 'excludeBookingId', 
+    type: Number, 
+    required: false, 
+    description: 'ID бронирования, которое нужно исключить из вычислений (например, при обновлении дат)' 
+  })
+  @ApiOkResponse({ type: [PeriodDto], description: 'Список доступных периодов' })
+  async getListingAvailability(
+    @Param('listingId', ParseIntPipe) listingId: number,
+    @User('userId') userId: number,
+    @Query() query: GetAvailabilityDto,
+  ): Promise<PeriodDto[]> {
+    return this.bookingsHandler.getListingAvailability(userId, listingId, query.excludeBookingId);
   }
 
   @Post()

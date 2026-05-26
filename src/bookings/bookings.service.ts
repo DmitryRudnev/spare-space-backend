@@ -14,6 +14,7 @@ import { BookingStatus } from '../common/enums/booking-status.enum';
 import { ListingStatus } from '../common/enums/listing-status.enum';
 import { ListingPeriodType } from '../common/enums/listing-period-type.enum';
 import { UserRoleType } from '../common/enums/user-role-type.enum';
+import { PeriodDto } from '../common/dto/period.dto';
 
 import { CreateBookingDto } from './dto/requests/create-booking.dto';
 import { SearchBookingsDto } from './dto/requests/search-bookings.dto';
@@ -156,6 +157,65 @@ export class BookingsService {
     if (!isRenter && !isLandlord) {
       throw new UnauthorizedException('User is not a participant of this booking');
     }
+  }
+
+  async getListingAvailability(listingId: number, excludeBookingId?: number): Promise<PeriodDto[]> {
+    const listing = await this.listingsService.findByIdWithCache(listingId);
+
+    // 1. Обрезаем доступность по началу текущего дня (00:00:00)
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+
+    let freePeriods = listing.availabilityPeriodDates.reduce((acc, period) => {
+      if (period.end <= startOfToday) return acc;
+      const start = period.start < startOfToday ? startOfToday : period.start;
+      acc.push({ start, end: period.end });
+      return acc;
+    }, [] as PeriodDto[]);
+
+    if (freePeriods.length === 0) return [];
+
+    // 2. Получаем бронирования, влияющие на доступность
+    const where: FindOptionsWhere<Booking> = {
+      listing: { id: listingId },
+      status: In([BookingStatus.PENDING, BookingStatus.CONFIRMED, BookingStatus.ACTIVE]),
+    };
+
+    // Если передан ID бронирования для исключения
+    if (excludeBookingId) {
+      where.id = Not(excludeBookingId);
+    }
+
+    const overlappingBookings = await this.bookingRepository.find({ where });
+
+    // 3. Безопасное вычитание (пересечение периодов)
+    for (const booking of overlappingBookings) {
+      const bStart = booking.periodDates.start;
+      const bEnd = booking.periodDates.end;
+
+      if (bEnd <= startOfToday) continue;
+
+      const actualBStart = bStart < startOfToday ? startOfToday : bStart;
+      const nextFreePeriods: PeriodDto[] = [];
+
+      for (const p of freePeriods) {
+        if (actualBStart >= p.end || bEnd <= p.start) {
+          // Нет пересечения, оставляем слот
+          nextFreePeriods.push(p);
+        } else {
+          // Вырезаем пересекающуюся часть
+          if (p.start < actualBStart) {
+            nextFreePeriods.push({ start: p.start, end: actualBStart });
+          }
+          if (p.end > bEnd) {
+            nextFreePeriods.push({ start: bEnd, end: p.end });
+          }
+        }
+      }
+      freePeriods = nextFreePeriods;
+    }
+
+    return freePeriods;
   }
 
   // ==========================================================================

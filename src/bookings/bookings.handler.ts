@@ -9,6 +9,7 @@ import { WalletsService } from '../wallets/wallets.service';
 import { UsersService } from '../users/services/users.service';
 import { BookingStatus } from '../common/enums/booking-status.enum';
 import { UserRoleType } from '../common/enums/user-role-type.enum';
+import { PeriodDto } from '../common/dto/period.dto';
 import { Booking } from '../entities/booking.entity';
 
 @Injectable()
@@ -30,6 +31,20 @@ export class BookingsHandler {
   async findById(userId: number, bookingId: number): Promise<Booking> {
     await this.bookingsService.validateUserParticipation(bookingId, userId);
     return this.bookingsService.findById(bookingId);
+  }
+
+  async getListingAvailability(userId: number, listingId: number, excludeBookingId?: number): Promise<PeriodDto[]> {
+    if (excludeBookingId) {
+      const booking = await this.bookingsService.findById(excludeBookingId);
+      if (booking.renter.id !== userId) {
+        throw new UnauthorizedException('You can only exclude your own booking');
+      }
+      if (booking.listing.id !== listingId) {
+        throw new BadRequestException('Excluded booking does not belong to the specified listing');
+      }
+    }
+    
+    return this.bookingsService.getListingAvailability(listingId, excludeBookingId);
   }
 
   async create(userId: number, createDto: CreateBookingDto) {
