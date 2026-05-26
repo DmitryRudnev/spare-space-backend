@@ -9,6 +9,7 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  ParseIntPipe,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -84,9 +85,9 @@ export class FavoritesController {
   @ApiUnauthorizedResponse({ description: 'Не авторизован или доступ запрещен' })
   @ApiNotFoundResponse({ description: 'Запись избранного не найдена' })
   async remove(
-    @Param('listingId') listingId: string,
+    @Param('listingId', ParseIntPipe) listingId: number,
     @User('userId') userId: number,
   ): Promise<void> {
-    await this.favoritesService.remove(Number(listingId), userId);
+    await this.favoritesService.remove(listingId, userId);
   }
 }

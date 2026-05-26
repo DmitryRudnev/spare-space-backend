@@ -41,7 +41,7 @@ export class ListingMapper {
     dto.title = listing.title;
     dto.type = listing.type;
     dto.size = listing.size;
-    dto.price = Number(displayPricing.price);
+    dto.price = displayPricing.price;
     dto.pricePeriod = displayPricing.pricePeriod;
     dto.address = listing.address;
     dto.viewsCount = listing.viewsCount;
@@ -70,7 +70,7 @@ export class ListingMapper {
     dto.title = listing.title;
     dto.type = listing.type;
     dto.size = listing.size;
-    dto.price = Number(displayPricing.price);
+    dto.price = displayPricing.price;
     dto.pricePeriod = displayPricing.pricePeriod;
     dto.firstPhotoUrl = listing.photoUrls?.[0] || null;
 
@@ -100,7 +100,7 @@ export class ListingMapper {
           latitude:  listing.location.coordinates[1] }
       : null;
     dto.pricings = listing.pricings.map(p => ({
-      price: Number(p.price),
+      price: p.price,
       pricePeriod: p.pricePeriod
     }));
 

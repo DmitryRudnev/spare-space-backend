@@ -51,7 +51,7 @@ export class ListingsControllerHandler {
       : undefined;
 
     const listing = await this.listingsService.findByIdWithCache(listingId);
-    if (listing.status !== ListingStatus.ACTIVE && currentUserId !== Number(listing.user.id) && !isFavorite) {
+    if (listing.status !== ListingStatus.ACTIVE && currentUserId !== listing.user.id && !isFavorite) {
       throw new UnauthorizedException('Not authorized to see this listing');
     }
 

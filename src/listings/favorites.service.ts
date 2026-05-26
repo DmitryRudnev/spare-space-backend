@@ -53,7 +53,7 @@ export class FavoritesService {
   async create(listingId: number, userId: number): Promise<Favorite> {
     // Проверяем существование и активность объявления
     const listing = await this.listingsService.findById(listingId);
-    if (Number(listing.user.id) === userId) {
+    if (listing.user.id === userId) {
       throw new ConflictException('Нельзя добавлять свои объявления в избранное');
     }
     if (listing.status !== ListingStatus.ACTIVE) {

@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, Param, Patch, Delete, Query, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param, Patch, Delete, Query, UseGuards, HttpCode, HttpStatus, ParseIntPipe } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -69,10 +69,10 @@ export class ListingsController {
   @ApiParam({ type: Number, name: 'id', description: 'ID пользователя' })
   @ApiOkResponse({ type: ListingListResponseDto, description: 'Пагинированный список объявлений пользователя' })
   async findByUser(
-    @Param('id') targetUserId: string,
+    @Param('id', ParseIntPipe) targetUserId: number,
     @Query() searchDto: SearchListingsDto,
   ): Promise<ListingListResponseDto> {
-    const result = await this.handler.findByUser(searchDto, Number(targetUserId));
+    const result = await this.handler.findByUser(searchDto, targetUserId);
     return ListingMapper.toListResponseDto(
       result.listings,
       result.total,
@@ -110,10 +110,10 @@ export class ListingsController {
   @ApiOkResponse({ type: ListingDetailResponseDto, description: 'Объявление найдено' })
   @ApiNotFoundResponse({ description: 'Объявление не найдено' })
   async findOne(
-    @Param('id') listingId: string, 
+    @Param('id', ParseIntPipe) listingId: number, 
     @User('userId') userId?: number
   ): Promise<ListingDetailResponseDto> {
-    const { listing, isFavorite } = await this.handler.findById(Number(listingId), userId);
+    const { listing, isFavorite } = await this.handler.findById(listingId, userId);
     return ListingMapper.toDetailResponseDto(listing, isFavorite);
   }
   
@@ -145,11 +145,11 @@ export class ListingsController {
   @ApiNotFoundResponse({ description: 'Объявление не найдено' })
   @ApiBadRequestResponse({ description: 'Некорректные данные запроса' })
   async update(
-    @Param('id') listingId: string,
+    @Param('id', ParseIntPipe) listingId: number,
     @Body() updateListingDto: UpdateListingDto,
     @User('userId') userId: number
   ): Promise<ListingDetailResponseDto> {
-    const listing = await this.handler.update(Number(listingId), updateListingDto, userId);
+    const listing = await this.handler.update(listingId, updateListingDto, userId);
     return ListingMapper.toDetailResponseDto(listing);
   }
 
@@ -162,7 +162,10 @@ export class ListingsController {
   @ApiNoContentResponse({ description: 'Объявление успешно удалено' })
   @ApiUnauthorizedResponse({ description: 'Не авторизован' })
   @ApiNotFoundResponse({ description: 'Объявление не найдено' })
-  async delete(@Param('id') listingId: string, @User('userId') userId: number): Promise<void> {
-    await this.handler.delete(Number(listingId), userId);
+  async delete(@Param(
+    'id', ParseIntPipe) listingId: number,
+    @User('userId') userId: number
+  ): Promise<void> {
+    await this.handler.delete(listingId, userId);
   }
 }
