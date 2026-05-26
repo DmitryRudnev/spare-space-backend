@@ -228,42 +228,6 @@ describe('ListingsService (Integration)', () => {
     });
   });
 
-  describe('updateAvailabilityAfterBooking', () => {
-    it('should throw if no availability periods exist', async () => {
-      listingRepo.findOne.mockResolvedValueOnce({ ...mockListing, availabilityPeriodDates: [] });
-      await expect(
-        service.updateAvailabilityAfterBooking(1, new Date(), new Date())
-      ).rejects.toThrow('Listing has no availability periods');
-    });
-
-    it('should throw if booking period is not contained in any slot', async () => {
-      const period = { start: new Date('2025-01-01'), end: new Date('2025-01-10') };
-      listingRepo.findOne.mockResolvedValueOnce({ ...mockListing, availabilityPeriodDates: [period] });
-      await expect(
-        service.updateAvailabilityAfterBooking(1, new Date('2025-01-05'), new Date('2025-01-15'))
-      ).rejects.toThrow('Booking period is not contained in any availability slot');
-    });
-
-    it('should successfully split containing period and invalidate caches', async () => {
-      const period = { start: new Date('2025-01-01T00:00:00Z'), end: new Date('2025-01-10T00:00:00Z') };
-      const listing = { ...mockListing, availabilityPeriodDates: [period], availability: [] };
-      listingRepo.findOne.mockResolvedValueOnce(listing);
-
-      const bookStart = new Date('2025-01-04T00:00:00Z');
-      const bookEnd = new Date('2025-01-06T00:00:00Z');
-
-      await service.updateAvailabilityAfterBooking(1, bookStart, bookEnd);
-
-      expect(listing.availability).toHaveLength(2);
-      expect(listing.availability[0]).toBe('[2025-01-01T00:00:00.000Z,2025-01-04T00:00:00.000Z)');
-      expect(listing.availability[1]).toBe('[2025-01-06T00:00:00.000Z,2025-01-10T00:00:00.000Z)');
-      
-      expect(listingRepo.save).toHaveBeenCalledWith(listing);
-      expect(redisService.delete).toHaveBeenCalledWith('listing:1');
-      expect(redisService.deleteByPattern).toHaveBeenCalledWith('user:2:listings:active:*');
-    });
-  });
-
   describe('Utility Methods (exists, validateExistence, countByUser)', () => {
     it('exists should return boolean flag', async () => {
       listingRepo.existsBy.mockResolvedValueOnce(true);

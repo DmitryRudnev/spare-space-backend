@@ -176,61 +176,6 @@ export class ListingsService {
     }
   }
 
-  // Неправильный подход. Временно. listing.availability менять нельзя. Настоящие периоды
-  // доступности объекта должны вычисляться на сервере исходя из listing.availability и всех
-  // бронирований со статусами PENDING/CONFIRMED/ACTIVE по этому объявлению - то есть надо будет
-  // аналогично(примерно) применить алгоритм, опсианный ниже, для вычета всех периодов бронирований
-  // из периодов listing.availability.
-  // В общем в ListingDetailResponseDto поле availability должно быть как раз вот этими
-  // "настоящими" периодами доступности.
-  async updateAvailabilityAfterBooking(
-    listingId: number,
-    bookingStart: Date,
-    bookingEnd: Date,
-  ): Promise<void> {
-    const listing = await this.findById(listingId);
-
-    // Получить периоды доступности
-    const availabilityDates = listing.availabilityPeriodDates;
-    if (availabilityDates.length === 0) {
-      throw new Error('Listing has no availability periods');
-    }
-
-    // Найти содержащий период
-    let containingIndex = availabilityDates.findIndex(period => 
-      bookingStart >= period.start && bookingEnd <= period.end
-    );
-    if (containingIndex === -1) {
-      throw new Error('Booking period is not contained in any availability slot');
-    }
-
-    const containingPeriod = availabilityDates[containingIndex];
-    const newPeriods: {start: Date, end: Date}[] = [...availabilityDates];
-
-    // Разделить содержащий период
-    const beforeFragment = { start: containingPeriod.start, end: bookingStart };
-    const afterFragment = { start: bookingEnd, end: containingPeriod.end };
-
-    // Заменить содержащий период на фрагменты (пропустить пустые)
-    newPeriods.splice(containingIndex, 1);
-    if (beforeFragment.end > beforeFragment.start) {
-      newPeriods.splice(containingIndex, 0, beforeFragment);
-      containingIndex++; // Корректировка для вставленного "до"
-    }
-    if (afterFragment.end > afterFragment.start) {
-      newPeriods.splice(containingIndex, 0, afterFragment);
-    }
-
-    // Конвертировать обратно в строки
-    listing.availability = newPeriods.map(p => `[${p.start.toISOString()},${p.end.toISOString()})`);
-
-    await this.listingRepository.save(listing);
-
-    // Инвалидировать кэши 
-    await this.redisService.delete(this.getListingCacheKey(listingId));
-    await this.redisService.deleteByPattern(this.getUserActiveListingsPattern(listing.user.id));
-  }
-
   async countByUser(
     userId: number,
     statuses?: ListingStatus[],
