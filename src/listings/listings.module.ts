@@ -6,6 +6,7 @@ import { ListingsService } from './listings.service';
 import { FavoritesService } from './favorites.service';
 import { ListingsController } from './listings.controller';
 import { FavoritesController } from './favorites.controller';
+import { ListingsAdminController } from './listings-admin.controller';
 import { ListingsControllerHandler } from './listings.controller-handler';
 import { Listing } from '../entities/listing.entity';
 import { ListingPricing } from '../entities/listing-pricing.entity';
@@ -21,7 +22,7 @@ import { RedisModule } from '../common/redis/redis.module';
     UsersModule,
     RedisModule,
   ],
-  controllers: [ListingsController, FavoritesController],
+  controllers: [ListingsController, FavoritesController, ListingsAdminController],
   providers: [ListingsService, FavoritesService, ListingsControllerHandler],
   exports: [ListingsService, FavoritesService],
 })
