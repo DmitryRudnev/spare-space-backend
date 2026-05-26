@@ -51,7 +51,7 @@ export class BookingsHandler {
 
   async updatePeriod(userId: number, bookingId: number, updateDto: UpdateBookingPeriodDto) {
     const booking = await this.bookingsService.findById(bookingId);
-    if (userId !== Number(booking.renter.id)) throw new UnauthorizedException(`Only renter can update period`);
+    if (userId !== booking.renter.id) throw new UnauthorizedException(`Only renter can update period`);
     if (booking.status !== BookingStatus.PENDING) throw new BadRequestException(`Only pending booking can be updated`);
 
     const prevPeriod = booking.periodDates;
@@ -71,12 +71,12 @@ export class BookingsHandler {
 
   async cancel(userId: number, bookingId: number) {
     const booking = await this.bookingsService.findById(bookingId);
-    if (userId !== Number(booking.renter.id)) throw new UnauthorizedException('Only renter can cancel');
+    if (userId !== booking.renter.id) throw new UnauthorizedException('Only renter can cancel');
     if (booking.status !== BookingStatus.PENDING) throw new BadRequestException('Only pending booking can be cancelled');
     if (booking.periodDates.start < new Date()) throw new BadRequestException('Booking start date cannot be in past');
 
     const cancelledBooking = await this.bookingsService.updateStatus(bookingId, BookingStatus.CANCELLED);
-    await this.walletsService.processRefund(Number(cancelledBooking.renter.id), cancelledBooking.id, cancelledBooking.totalPrice);
+    await this.walletsService.processRefund(cancelledBooking.renter.id, cancelledBooking.id, cancelledBooking.totalPrice);
     
     this.eventEmitter.emit('booking.cancelled', cancelledBooking);
     return cancelledBooking;
@@ -84,7 +84,7 @@ export class BookingsHandler {
 
   async confirm(userId: number, bookingId: number) {
     const booking = await this.bookingsService.findById(bookingId);
-    if (userId !== Number(booking.listing.user.id)) throw new UnauthorizedException('Only landlord can confirm');
+    if (userId !== booking.listing.user.id) throw new UnauthorizedException('Only landlord can confirm');
     if (booking.status !== BookingStatus.PENDING) throw new BadRequestException('Only pending booking can be confirmed');
     if (booking.periodDates.start < new Date()) throw new BadRequestException('Booking start date cannot be in past');
 
@@ -95,12 +95,12 @@ export class BookingsHandler {
 
   async reject(userId: number, bookingId: number) {
     const booking = await this.bookingsService.findById(bookingId);
-    if (userId !== Number(booking.listing.user.id)) throw new UnauthorizedException('Only landlord can reject');
+    if (userId !== booking.listing.user.id) throw new UnauthorizedException('Only landlord can reject');
     if (booking.status !== BookingStatus.PENDING) throw new BadRequestException('Only pending booking can be rejected');
     if (booking.periodDates.start < new Date()) throw new BadRequestException('Booking start date cannot be in past');
 
     const rejectedBooking = await this.bookingsService.updateStatus(bookingId, BookingStatus.REJECTED);
-    await this.walletsService.processRefund(Number(rejectedBooking.renter.id), rejectedBooking.id, rejectedBooking.totalPrice);
+    await this.walletsService.processRefund(rejectedBooking.renter.id, rejectedBooking.id, rejectedBooking.totalPrice);
     
     this.eventEmitter.emit('booking.rejected', rejectedBooking);
     return rejectedBooking;

@@ -29,11 +29,11 @@ export class BookingMapper {
     const dto = new BookingDetailResponseDto();
     Object.assign(dto, baseDto);
 
-    dto.appliedPrice = Number(booking.price);
+    dto.appliedPrice = booking.price;
     dto.appliedPricePeriod = booking.pricePeriod;
     
     dto.listingPricings = booking.listing.pricings?.map(p => ({
-      price: Number(p.price),
+      price: p.price,
       pricePeriod: p.pricePeriod,
     })) || [];
     dto.listingSize = booking.listing.size;

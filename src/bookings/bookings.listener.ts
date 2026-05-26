@@ -88,13 +88,13 @@ export class BookingsListener {
 
   @OnEvent('booking.cancelled')
   async handleBookingCancelled(booking: Booking) {
-    this.emitStatusChangeNotification(booking, Number(booking.listing.user.id), NotificationType.BOOKING_CANCELLED);
+    this.emitStatusChangeNotification(booking, booking.listing.user.id, NotificationType.BOOKING_CANCELLED);
     await this.bookingStartQueue.remove(`start-${booking.id}`);
   }
 
   @OnEvent('booking.rejected')
   async handleBookingRejected(booking: Booking) {
-    this.emitStatusChangeNotification(booking, Number(booking.renter.id), NotificationType.BOOKING_REJECTED);
+    this.emitStatusChangeNotification(booking, booking.renter.id, NotificationType.BOOKING_REJECTED);
     await this.bookingStartQueue.remove(`start-${booking.id}`);
   }
 

@@ -46,7 +46,7 @@ export class BookingCompletionProcessor extends WorkerHost {
 
       // Начисляем средства владельцу
       await this.walletsService.processBookingPayout(
-        Number(booking.listing.user.id), 
+        booking.listing.user.id, 
         booking.id, 
         booking.totalPrice
       );

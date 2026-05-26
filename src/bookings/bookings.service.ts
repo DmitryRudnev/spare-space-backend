@@ -83,7 +83,7 @@ export class BookingsService {
 
     const listing = await this.listingsService.findByIdWithCache(listingId);
     if (listing.status !== ListingStatus.ACTIVE) throw new BadRequestException('Cannot book an inactive listing');
-    if (renterId === Number(listing.user.id)) throw new BadRequestException('Cannot book owned listing');
+    if (renterId === listing.user.id) throw new BadRequestException('Cannot book owned listing');
     
     if (startDate.getSeconds() !== 0 || startDate.getMilliseconds() !== 0) {
       throw new BadRequestException('Start date must be a multiple of one minute (no seconds or milliseconds allowed)');
@@ -97,7 +97,7 @@ export class BookingsService {
       throw new BadRequestException(`Listing does not support ${createDto.pricePeriod} pricing`);
     }
 
-    const totalPrice = Number(selectedPricing.price) * periodsCount;
+    const totalPrice = selectedPricing.price * periodsCount;
     const period = `[${startDate.toISOString()},${endDate.toISOString()})`;
 
     const booking = this.bookingRepository.create({
@@ -133,7 +133,7 @@ export class BookingsService {
     await this.validateBookingDates(startDate, endDate, booking.listing.id, booking.listing.availability, bookingId);
 
     booking.period = `[${startDate.toISOString()},${endDate.toISOString()})`;
-    booking.totalPrice = Number(booking.price) * periodsCount;
+    booking.totalPrice = booking.price * periodsCount;
 
     return this.bookingRepository.save(booking);
   }
@@ -150,8 +150,8 @@ export class BookingsService {
 
   async validateUserParticipation(bookingId: number, userId: number): Promise<void> {
     const booking = await this.findById(bookingId);
-    const isRenter = Number(booking.renter.id) === userId;
-    const isLandlord = Number(booking.listing.user.id) === userId;
+    const isRenter = booking.renter.id === userId;
+    const isLandlord = booking.listing.user.id === userId;
 
     if (!isRenter && !isLandlord) {
       throw new UnauthorizedException('User is not a participant of this booking');
