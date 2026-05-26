@@ -27,7 +27,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException('Invalid token payload');
     }
 
-    await this.userService.validateExistence(userId);
+    const user = await this.userService.findById(userId);
+    if (user.isBanned) {
+      throw new UnauthorizedException('Account is banned');
+    }
+    
     const roles = await this.userService.getUserRoles(userId);
     if (!roles?.length) {
       throw new UnauthorizedException('User has no assigned roles');

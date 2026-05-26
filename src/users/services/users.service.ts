@@ -43,6 +43,7 @@ export class UsersService {
           telegramId: true,
           telegramChatId: true,
           verified: true,
+          isBanned: true,
           twoFaEnabled: true,
           twoFaSecret: true,
           twoFaRecoveryCodesHashes: true,
@@ -172,6 +173,18 @@ export class UsersService {
       }
     );
     await this.redisService.delete(`${this.USER_STATUS_CACHE_PREFIX}${userId}`);
+  }
+
+  async updateVerifiedStatus(userId: number, verified: boolean): Promise<void> {
+    await this.validateExistence(userId);
+    await this.userRepository.update({ id: userId }, { verified });
+    await this.redisService.delete(`${this.USER_PROFILE_CACHE_PREFIX}${userId}`);
+  }
+  
+  async updateBanStatus(userId: number, isBanned: boolean): Promise<void> {
+    await this.validateExistence(userId);
+    await this.userRepository.update({ id: userId }, { isBanned });
+    await this.redisService.delete(`${this.USER_PROFILE_CACHE_PREFIX}${userId}`);
   }
 
   // ==========================================================================

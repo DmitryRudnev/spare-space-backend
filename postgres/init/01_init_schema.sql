@@ -74,6 +74,7 @@ CREATE TABLE users (
     telegram_chat_id BIGINT,
     telegram_username VARCHAR(64),
     verified BOOLEAN NOT NULL DEFAULT FALSE,
+    is_banned BOOLEAN NOT NULL DEFAULT FALSE,
     two_fa_enabled BOOLEAN NOT NULL DEFAULT FALSE,
     two_fa_secret TEXT,
     two_fa_recovery_codes_hashes JSONB,

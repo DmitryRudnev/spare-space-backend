@@ -6,8 +6,9 @@ import {
   Param,
   UseGuards,
   HttpCode,
-  UnauthorizedException,
+  NotFoundException,
   HttpStatus,
+  ParseIntPipe,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -54,8 +55,11 @@ export class UsersController {
   @ApiParam({ type: Number, name: 'id', description: 'ID пользователя' })
   @ApiOkResponse({ type: UserPublicResponseDto, description: 'Публичный профиль пользователя' })
   @ApiNotFoundResponse({ description: 'Пользователь не найден' })
-  async findOne(@Param('id') id: string): Promise<UserPublicResponseDto> {
-    const user = await this.usersService.findById(+id);
+  async findOne(@Param('id', ParseIntPipe) id: number): Promise<UserPublicResponseDto> {
+    const user = await this.usersService.findById(id);
+    if (user.isBanned) {
+      throw new NotFoundException('User not found');
+    }
     return UserMapper.toPublicResponseDto(user);
   }
 

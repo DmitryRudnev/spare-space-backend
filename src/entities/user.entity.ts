@@ -46,11 +46,14 @@ export class User {
   @Column({ type: 'bigint', nullable: true })
   telegramChatId: number | null;
 
-  @Column({ type: 'bigint', nullable: true })
+  @Column({ type: 'varchar', length: 64, nullable: true })
   telegramUsername: string | null;
 
   @Column({ default: false })
   verified: boolean;
+
+  @Column({ default: false })
+  isBanned: boolean;
 
   @Column({ default: false })
   twoFaEnabled: boolean;
