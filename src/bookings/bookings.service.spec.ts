@@ -37,13 +37,14 @@ describe('BookingsService (Integration)', () => {
         {
           provide: getRepositoryToken(Booking),
           useValue: {
-            create: jest.fn().mockReturnValue(mockBooking),
+            create: jest.fn().mockImplementation((dto) => ({ ...mockBooking, ...dto })),
             save: jest.fn().mockImplementation((entity) => Promise.resolve(entity)),
             findOne: jest.fn().mockResolvedValue(mockBooking),
             findAndCount: jest.fn().mockResolvedValue([[mockBooking], 1]),
             query: jest.fn().mockResolvedValue([{ contained: true }]),
             exists: jest.fn().mockResolvedValue(false),
             remove: jest.fn().mockResolvedValue(mockBooking),
+            find: jest.fn(),
           },
         },
         {
@@ -186,6 +187,88 @@ describe('BookingsService (Integration)', () => {
       } as any);
       await expect(service.create(1, createDto)).rejects.toThrow(BadRequestException);
     });
+
+    it('should calculate end date correctly for HOUR pricing period', async () => {
+      usersService.hasRole.mockResolvedValue(true);
+      const futureStart = getFutureStartDate();
+
+      listingsService.findByIdWithCache.mockResolvedValue({
+        id: 50,
+        status: ListingStatus.ACTIVE,
+        user: { id: 2 },
+        pricings: [{ pricePeriod: ListingPeriodType.HOUR, price: 100 }],
+        availability: ['[2026-01-01,2026-12-31)']
+      } as any);
+
+      repo.query.mockResolvedValueOnce([{ contained: true }]);
+
+      const hourDto = { ...createDto, pricePeriod: ListingPeriodType.HOUR, startDate: futureStart, periodsCount: 3 };
+      await service.create(1, hourDto);
+      
+      const savedBooking = repo.save.mock.calls[repo.save.mock.calls.length - 1][0];
+      const expectedEnd = new Date(futureStart.getTime());
+      expectedEnd.setHours(expectedEnd.getHours() + 3);
+      expect(savedBooking.period).toContain(expectedEnd.toISOString());
+    });
+
+    it('should calculate end date correctly for WEEK pricing period', async () => {
+      usersService.hasRole.mockResolvedValue(true);
+      const futureStart = getFutureStartDate();
+
+      listingsService.findByIdWithCache.mockResolvedValue({
+        id: 50,
+        status: ListingStatus.ACTIVE,
+        user: { id: 2 },
+        pricings: [{ pricePeriod: ListingPeriodType.WEEK, price: 1000 }],
+        availability: ['[2026-01-01,2026-12-31)']
+      } as any);
+
+      repo.query.mockResolvedValueOnce([{ contained: true }]);
+
+      const weekDto = { ...createDto, pricePeriod: ListingPeriodType.WEEK, startDate: futureStart, periodsCount: 2 };
+      await service.create(1, weekDto);
+
+      const savedBooking = repo.save.mock.calls[repo.save.mock.calls.length - 1][0];
+      const expectedEnd = new Date(futureStart.getTime());
+      expectedEnd.setDate(expectedEnd.getDate() + 14);
+      expect(savedBooking.period).toContain(expectedEnd.toISOString());
+    });
+
+    it('should calculate end date correctly for MONTH pricing period', async () => {
+      usersService.hasRole.mockResolvedValue(true);
+      const futureStart = getFutureStartDate();
+
+      listingsService.findByIdWithCache.mockResolvedValue({
+        id: 50,
+        status: ListingStatus.ACTIVE,
+        user: { id: 2 },
+        pricings: [{ pricePeriod: ListingPeriodType.MONTH, price: 5000 }],
+        availability: ['[2026-01-01,2026-12-31)']
+      } as any);
+
+      repo.query.mockResolvedValueOnce([{ contained: true }]);
+
+      const monthDto = { ...createDto, pricePeriod: ListingPeriodType.MONTH, startDate: futureStart, periodsCount: 1 };
+      await service.create(1, monthDto);
+
+      const savedBooking = repo.save.mock.calls[repo.save.mock.calls.length - 1][0];
+      const expectedEnd = new Date(futureStart.getTime());
+      expectedEnd.setMonth(expectedEnd.getMonth() + 1);
+      expect(savedBooking.period).toContain(expectedEnd.toISOString());
+    });
+
+    it('should throw BadRequestException for unknown price period', async () => {
+      usersService.hasRole.mockResolvedValue(true);
+      listingsService.findByIdWithCache.mockResolvedValue({
+        id: 50,
+        status: ListingStatus.ACTIVE,
+        user: { id: 2 },
+        pricings: [{ pricePeriod: 'INVALID' as any, price: 1000 }]
+      } as any);
+
+      const invalidDto = { ...createDto, pricePeriod: 'INVALID' as any };
+      await expect(service.create(1, invalidDto)).rejects.toThrow(BadRequestException);
+    });
   });
 
   describe('Update and Delete Logic', () => {
@@ -231,6 +314,76 @@ describe('BookingsService (Integration)', () => {
       
       const savedBooking = repo.save.mock.calls[repo.save.mock.calls.length - 1][0];
       expect(savedBooking.totalPrice).toBe(5000); 
+    });
+  });
+
+  describe('getListingAvailability', () => {
+    it('should return trimmed availability and safely subtract overlapping bookings', async () => {
+      const futureStart = new Date();
+      futureStart.setFullYear(futureStart.getFullYear() + 1);
+      futureStart.setHours(0, 0, 0, 0);
+
+      const futureEnd = new Date(futureStart);
+      futureEnd.setDate(futureEnd.getDate() + 10);
+
+      // Настройка мока объявления с периодом доступности в будущем
+      const mockListingWithAvailability = {
+        id: 50,
+        availabilityPeriodDates: [{ start: futureStart, end: futureEnd }]
+      };
+      listingsService.findByIdWithCache.mockResolvedValue(mockListingWithAvailability as any);
+
+      // Настройка пересекающегося бронирования посередине
+      const bStart = new Date(futureStart);
+      bStart.setDate(bStart.getDate() + 3);
+      const bEnd = new Date(futureStart);
+      bEnd.setDate(bEnd.getDate() + 5);
+
+      repo.find.mockResolvedValue([
+        {
+          id: 200,
+          periodDates: { start: bStart, end: bEnd }
+        }
+      ]);
+
+      const result = await service.getListingAvailability(50);
+
+      expect(result.length).toBe(2);
+      expect(result[0].start.getTime()).toBe(futureStart.getTime());
+      expect(result[0].end.getTime()).toBe(bStart.getTime());
+      expect(result[1].start.getTime()).toBe(bEnd.getTime());
+      expect(result[1].end.getTime()).toBe(futureEnd.getTime());
+    });
+
+    it('should exclude specified booking from subtraction logic', async () => {
+      const futureStart = new Date();
+      futureStart.setFullYear(futureStart.getFullYear() + 1);
+      futureStart.setHours(0, 0, 0, 0);
+
+      const futureEnd = new Date(futureStart);
+      futureEnd.setDate(futureEnd.getDate() + 10);
+
+      const mockListingWithAvailability = {
+        id: 50,
+        availabilityPeriodDates: [{ start: futureStart, end: futureEnd }]
+      };
+      listingsService.findByIdWithCache.mockResolvedValue(mockListingWithAvailability as any);
+
+      repo.find.mockResolvedValue([]); // Эмулируем, что других бронирований, кроме исключенного, нет
+
+      const result = await service.getListingAvailability(50, 200);
+
+      // Проверяем, что запрос на поиск бронирований исключал ID 200
+      expect(repo.find).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            id: expect.anything()
+          })
+        })
+      );
+      expect(result.length).toBe(1);
+      expect(result[0].start.getTime()).toBe(futureStart.getTime());
+      expect(result[0].end.getTime()).toBe(futureEnd.getTime());
     });
   });
 });
