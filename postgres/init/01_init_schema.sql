@@ -31,6 +31,7 @@ CREATE TYPE notification_type AS ENUM (
     'BOOKING_REMINDER',  -- Напоминание о предстоящей брони
     'BOOKING_EXPIRING',  -- Бронь скоро истечет (неоплачена/неподтверждена)
     'BOOKING_COMPLETED', -- Бронь завершена
+    'BOOKING_PERIOD_UPDATED', -- Арендатор изменил дату брони
     
     -- Объявления
     'LISTING_APPROVED',  -- Объявление прошло модерацию
