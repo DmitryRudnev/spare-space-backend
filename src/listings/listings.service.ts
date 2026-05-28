@@ -37,8 +37,9 @@ export class ListingsService {
     return `listing:${listingId}`;
   }
 
-  private getTypeListingsCacheKey(type: ListingType, limit: number, offset: number): string {
-    return `listings:${type}:limit:${limit}:offset:${offset}`;
+  private getTypeListingsCacheKey(types: ListingType[], limit: number, offset: number): string {
+    const sortedTypes = [...types].sort().join('-');
+    return `listings:${sortedTypes}:limit:${limit}:offset:${offset}`;
   }
 
   private getUserActiveListingsCacheKey(userId: number, limit: number, offset: number): string {
@@ -70,7 +71,7 @@ export class ListingsService {
     // Кэш для активных объявлений с единственным фильтром - типом
     if (this.canCacheTypeListings(userId, searchDto)) {
       return this.redisService.getOrSet(
-        this.getTypeListingsCacheKey(searchDto.type!, searchDto.limit, searchDto.offset),
+        this.getTypeListingsCacheKey(searchDto.types!, searchDto.limit, searchDto.offset),
         this.LISTINGS_LIST_CACHE_TTL_SEC,
         () => this.findAll(searchDto, userId),
         PaginatedListingsDto
@@ -234,8 +235,8 @@ export class ListingsService {
     query: SelectQueryBuilder<T>,
     searchDto: SearchListingsDto,
   ): SelectQueryBuilder<T> {
-    if (searchDto.type !== undefined) {
-      query.andWhere(`listing.type = :type`, { type: searchDto.type });
+    if (searchDto.types && searchDto.types.length > 0) {
+      query.andWhere(`listing.type IN (:...types)`, { types: searchDto.types });
     }
     if (searchDto.pricePeriod !== undefined) {
       query.andWhere(`pricing.pricePeriod = :pricePeriod`, { pricePeriod: searchDto.pricePeriod });
@@ -257,7 +258,7 @@ export class ListingsService {
       );
     }
     if (searchDto.amenities && searchDto.amenities.length > 0) {
-      query.andWhere(`listing.amenities @> :amenities::varchar[]`, { amenities: searchDto.amenities });
+      query.andWhere(`listing.amenities @> :amenities::space_amenity[]`, { amenities: searchDto.amenities });
     }
     if (searchDto.title) {
       query
@@ -352,7 +353,7 @@ export class ListingsService {
   }
 
   private hasOnlyTypeFilter(dto: SearchListingsDto): boolean {
-    const { limit, offset, status, type, ...rest } = dto;
-    return type !== undefined && Object.values(rest).every(val => val === undefined);
+    const { limit, offset, status, types, ...rest } = dto;
+    return types !== undefined && types.length > 0 && Object.values(rest).every(val => val === undefined);
   }
 }

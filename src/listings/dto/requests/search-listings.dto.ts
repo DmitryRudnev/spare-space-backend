@@ -40,12 +40,28 @@ export class SearchListingsDto {
   
   @ApiPropertyOptional({
     enum: ListingType,
-    description: 'Тип объявления',
-    example: ListingType.PARKING
+    isArray: true,
+    description: 'Типы объявлений (массив, строка через запятую или JSON)',
+    example: [ListingType.PARKING, ListingType.GARAGE]
   })
   @IsOptional()
-  @IsEnum(ListingType)
-  type?: ListingType;
+  @Transform(({ value }) => {
+    if (!value) return undefined;
+    if (typeof value === 'string') {
+      if (value.startsWith('[') && value.endsWith(']')) {
+        try {
+          return JSON.parse(value);
+        } catch {
+          return [value];
+        }
+      }
+      return value.split(',').map((item) => item.trim());
+    }
+    return Array.isArray(value) ? value : [value];
+  })
+  @IsArray()
+  @IsEnum(ListingType, { each: true })
+  types?: ListingType[];
 
   @ApiPropertyOptional({
     type: Number,
