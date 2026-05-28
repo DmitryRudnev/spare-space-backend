@@ -6,6 +6,8 @@ INSERT INTO users (phone, email, first_name, last_name, patronymic, password_has
 ('+79000000004', 'user4@example.com', 'Михаил', 'Зубенко', 'Петрович', '$2b$12$0INxsLXfDmt0tkr9u4H28e8pWS.EtA.D7D6Ao.ZH4rUDYzuienbXG', 4.0, false, false, NOW() - INTERVAL '15 days'),
 ('+79000000005', 'user5@example.com', 'Валерий', 'Жмышенко', 'Альбертович', '$2b$12$0INxsLXfDmt0tkr9u4H28e8pWS.EtA.D7D6Ao.ZH4rUDYzuienbXG', 4.6, false, true, NOW() - INTERVAL '10 days');
 
+
+
 -- USER_ROLES
 INSERT INTO user_roles (user_id, role, assigned_at) VALUES
 (1, 'RENTER', NOW()),
@@ -19,79 +21,132 @@ INSERT INTO user_roles (user_id, role, assigned_at) VALUES
 (4, 'LANDLORD', NOW()),
 (5, 'LANDLORD', NOW());
 
--- УДАЛИТЬ price И price_period из listings - в новую таблицу. И amenities тоже изменить
+
 
 -- LISTINGS
-INSERT INTO listings (user_id, type, title, description, price, price_period, location, address, size, photo_urls, amenities, availability, status, views_count, reposts_count, favorites_count, created_at, updated_at) VALUES
+INSERT INTO listings (user_id, type, title, description, location, address, size, photo_urls, amenities, availability, status, views_count, reposts_count, favorites_count, created_at, updated_at) VALUES
 -- Объявления пользователя 1 (13 объявления)
-(1, 'GARAGE', 'Теплый гараж в центре', 'Просторный гараж с отоплением и охраной', 1500.00, 'DAY', ST_GeomFromText('POINT(37.6175 55.7558)', 4326), 'Москва, ул. Тверская, 1', 25.0, '["https://img.dmclk.ru/c960x640q80/vitrina/owner/71/73/7173292f47c947bb8e49c47797e8ef7e.jpg"]', '{"security": true, "electricity": true}', ARRAY['[2026-01-01, 2026-01-15)', '[2026-01-20, 2026-02-20)', '[2026-02-25, 2026-03-31)', '[2026-06-15, 2026-08-10)']::tstzrange[], 'ACTIVE', 45, 3, 7, NOW() - INTERVAL '25 days', NOW()),
-(1, 'PARKING', 'Парковочное место подземное', 'Охраняемая парковка в бизнес-центре', 500.00, 'DAY', ST_GeomFromText('POINT(37.6095 55.7539)', 4326), 'Москва, Пресненская наб., 12', 12.5, '["https://protectof.by/image/catalog/2023/znaki/20180622_120514.jpg"]', '{"security": true, "cctv": true}', ARRAY['[2025-12-15, 2026-02-10)', '[2026-03-01, 2026-05-20)']::tstzrange[], 'ACTIVE', 23, 1, 3, NOW() - INTERVAL '20 days', NOW()),
-(1, 'STORAGE', 'Кладовка в жилом комплексе', 'Сухое помещение для хранения вещей', 300.00, 'MONTH', ST_GeomFromText('POINT(37.6254 55.7580)', 4326), 'Москва, ул. Новый Арбат, 15', 8.0, '["https://cdn.pronovostroy.ru/object/2021-10-12/616583ad64d1e413b747c50d/images/61658449d55a2.jpeg"]', '{"dry": true}', ARRAY['[2026-02-28, 2026-04-05)', '[2026-05-01, 2026-06-25)']::tstzrange[], 'INACTIVE', 12, 0, 1, NOW() - INTERVAL '15 days', NOW()),
-(1, 'GARAGE', 'Гараж с подвалом в САО', 'Просторный гараж с дополнительным подвальным помещением для хранения. Ворота автоматические.', 1800.00, 'DAY', ST_GeomFromText('POINT(37.5113 55.8387)', 4326), 'Москва, Коровинское шоссе, 35', 32.0, '["https://img.dmclk.ru/c960x640q80/vitrina/7e/c2/7ec22430e9f54d5f9e8992d571e46734199c4217.jpg"]', '{"security": true, "electricity": true, "heating": true, "automatic_gate": true}', ARRAY['[2026-01-10, 2026-02-10)', '[2026-02-15, 2026-03-01)', '[2026-03-05, 2026-03-20)', '[2026-05-01, 2026-07-15)']::tstzrange[], 'ACTIVE', 67, 2, 12, NOW() - INTERVAL '40 days', NOW()),
-(1, 'PARKING', 'Уличное парковочное место у метро', 'Наземное место на охраняемой территории. Круглосуточный доступ. Видеонаблюдение.', 400.00, 'DAY', ST_GeomFromText('POINT(37.5832 55.7066)', 4326), 'Москва, ул. Профсоюзная, 98', 12.0, '["https://s15.stc.yc.kpcdn.net/share/i/12/8784984/wr-960.webp"]', '{"security": true, "cctv": true, "lighting": true}', ARRAY['[2025-11-20, 2026-01-25)', '[2026-03-01, 2026-05-10)']::tstzrange[], 'ACTIVE', 89, 5, 15, NOW() - INTERVAL '35 days', NOW()),
-(1, 'STORAGE', 'Отапливаемый склад в промзоне', 'Помещение для хранения товаров или оборудования. Высокие потолки, грузовой лифт, пандус.', 25000.00, 'MONTH', ST_GeomFromText('POINT(37.7430 55.7068)', 4326), 'Московская обл., г. Реутов, ул. Победы, 12', 120.0, '["https://skladoiskatel.ru/images/sobipro/entries/159665/img_IMG_20240619_125331.jpg"]', '{"heating": true, "dry": true, "ventilation": true, "cargo_elevator": true}', ARRAY['[2026-02-15, 2026-04-30)', '[2026-06-10, 2026-08-20)']::tstzrange[], 'PENDING_APPROVAL', 154, 8, 22, NOW() - INTERVAL '50 days', NOW()),
-(1, 'GARAGE', 'Эконом гараж в кооперативе "Мотор"', 'Без дополнительных удобств, но надежно. Общее ограждение по периметру, шлагбаум.', 800.00, 'DAY', ST_GeomFromText('POINT(37.4237 55.6767)', 4326), 'Москва, поселение Внуковское, Гаражный кооператив "Мотор"', 18.0, '["https://i2.olan.ru/system/photos/entity/001/537/564/735/medium/img.jpg"]', '{"fence": true}', ARRAY['[2025-12-01, 2026-02-20)', '[2026-02-25, 2026-02-28)', '[2026-04-01, 2026-04-10)', '[2026-04-15, 2026-06-01)']::tstzrange[], 'ACTIVE', 33, 1, 5, NOW() - INTERVAL '10 days', NOW()),
-(1, 'PARKING', 'Крытый бокс в многоуровневом паркинге', 'Защищенное от осадков место на -2 уровне. Прямой доступ к лифтам в офисный центр.', 750.00, 'DAY', ST_GeomFromText('POINT(37.5352 55.7004)', 4326), 'Москва, Ленинский проспект, 123', 13.5, '["https://бесплатныеобъявления.рф/photos/395626_1_b.JPG"]', '{"security": true, "cctv": true, "covered": true, "elevator": true}', ARRAY['[2026-03-05, 2026-05-15)', '[2026-07-01, 2026-09-10)']::tstzrange[], 'ACTIVE', 121, 6, 31, NOW() - INTERVAL '60 days', NOW()),
-(1, 'STORAGE', 'Малая кладовая в центре', 'Идеально для сезонных вещей или документов. Внутри сухого офисного здания.', 2000.00, 'MONTH', ST_GeomFromText('POINT(37.6029 55.7598)', 4326), 'Москва, ул. Большая Дмитровка, 10', 5.0, '["https://safe-box.ru/upload/iblock/745/ho2uf1wo3h7n8tl8v4qjhbi2x8viixmn.JPG"]', '{"dry": true, "security": true, "fire_alarm": true}', ARRAY['[2026-02-20, 2026-04-01)', '[2026-05-15, 2026-07-20)']::tstzrange[], 'INACTIVE', 45, 0, 8, NOW() - INTERVAL '70 days', NOW()),
-(1, 'GARAGE', 'Гараж-мастерская с 380В', 'Отличный вариант для автослесаря или любителя. Подведено 3-фазное электричество, смотровая яма.', 2200.00, 'DAY', ST_GeomFromText('POINT(37.8565 55.3795)', 4326), 'Московская обл., г. Подольск, ул. Заводская, 7', 40.0, '["https://sankt-peterburg.garage.doorhan.ru/assets/img/sale/garazh-masterskaya-6m.jpg"]', '{"electricity_3phase": true, "work_pit": true, "water_supply": true, "heating": false}', ARRAY['[2025-11-05, 2026-01-10)', '[2026-02-20, 2026-04-25)']::tstzrange[], 'ACTIVE', 187, 12, 45, NOW() - INTERVAL '55 days', NOW()),
-(1, 'PARKING', 'Гостевой паркинг в ЖК "Солнечный"', 'Свободное место на придомовой территории. Разрешение от УК. Помесячная оплата.', 7000.00, 'MONTH', ST_GeomFromText('POINT(37.3908 55.9036)', 4326), 'Москва, р-н Митино, ул. Дубравная, 41', 15.0, '["https://blog.idn500.ru/upload/iblock/4f4/gsxmudwjr70mhbgt1aclv1htqw0wtsgi/organizatsiya_gostevykh_parkovok_na_pridomovykh_territoriyakh_2_.jpg"]', '{"lighting": true}', ARRAY['[2026-03-01, 2026-04-10)', '[2026-07-01, 2026-08-15)']::tstzrange[], 'ACTIVE', 56, 3, 9, NOW() - INTERVAL '30 days', NOW()),
-(1, 'STORAGE', 'Холодильный склад для продуктов', 'Помещение с поддержанием температуры +2..+6 °C. Подойдет для хранения цветов или небольших партий товара.', 45000.00, 'MONTH', ST_GeomFromText('POINT(37.4714 55.8231)', 4326), 'Москва, ул. Пришвина, 22', 25.0, '["https://www.shutterstock.com/image-illustration/refrigeration-warehouse-food-metal-shelves-260nw-2628019579.jpg"]', '{"refrigeration": true, "security": true, "dry": true}', ARRAY['[2026-03-15, 2026-05-20)', '[2026-07-01, 2026-09-05)']::tstzrange[], 'PENDING_APPROVAL', 92, 4, 18, NOW() - INTERVAL '45 days', NOW()),
-(1, 'PARKING', 'Эксклюзивное место под навесом', 'Рядом с коттеджем, частная территория, навес защищает от снега и сосулек. Полная конфиденциальность.', 1000.00, 'DAY', ST_GeomFromText('POINT(37.2632 55.7426)', 4326), 'Московская обл., Одинцовский р-н, с. Немчиновка', 16.0, '["https://v-besedke.com/upload/iblock/d15/duq7hthtvymbjgqawpdetffbj51ewe38/naves_minimalizm_iz_dereva_otto_n_34.JPG"]', '{"covered": true, "private": true, "lighting": true}', ARRAY['[2025-12-10, 2026-01-10)', '[2026-02-10, 2026-02-15)', '[2026-04-01, 2026-06-10)']::tstzrange[], 'ACTIVE', 23, 1, 4, NOW() - INTERVAL '5 days', NOW()),
+(1, 'GARAGE', 'Теплый гараж в центре', 'Просторный гараж с отоплением и охраной', ST_GeomFromText('POINT(37.6175 55.7558)', 4326), 'Москва, ул. Тверская, 1', 25.0, '["https://img.dmclk.ru/c960x640q80/vitrina/owner/71/73/7173292f47c947bb8e49c47797e8ef7e.jpg"]', ARRAY['SECURITY', 'ELECTRICITY']::space_amenity[], ARRAY['[2026-01-01, 2026-01-15)', '[2026-01-20, 2026-02-20)', '[2026-02-25, 2026-03-31)', '[2026-06-15, 2026-08-10)']::tstzrange[], 'ACTIVE', 45, 3, 7, NOW() - INTERVAL '25 days', NOW()),
+(1, 'PARKING', 'Парковочное место подземное', 'Охраняемая парковка в бизнес-центре', ST_GeomFromText('POINT(37.6095 55.7539)', 4326), 'Москва, Пресненская наб., 12', 12.5, '["https://protectof.by/image/catalog/2023/znaki/20180622_120514.jpg"]', ARRAY['SECURITY', 'VIDEO_SURVEILLANCE']::space_amenity[], ARRAY['[2025-12-15, 2026-02-10)', '[2026-03-01, 2026-05-20)']::tstzrange[], 'ACTIVE', 23, 1, 3, NOW() - INTERVAL '20 days', NOW()),
+(1, 'STORAGE', 'Кладовка в жилом комплексе', 'Сухое помещение для хранения вещей', ST_GeomFromText('POINT(37.6254 55.7580)', 4326), 'Москва, ул. Новый Арбат, 15', 8.0, '["https://cdn.pronovostroy.ru/object/2021-10-12/616583ad64d1e413b747c50d/images/61658449d55a2.jpeg"]', ARRAY['VENTILATION']::space_amenity[], ARRAY['[2026-02-28, 2026-04-05)', '[2026-05-01, 2026-06-25)']::tstzrange[], 'INACTIVE', 12, 0, 1, NOW() - INTERVAL '15 days', NOW()),
+(1, 'GARAGE', 'Гараж с подвалом в САО', 'Просторный гараж с дополнительным подвальным помещением для хранения. Ворота автоматические.', ST_GeomFromText('POINT(37.5113 55.8387)', 4326), 'Москва, Коровинское шоссе, 35', 32.0, '["https://img.dmclk.ru/c960x640q80/vitrina/7e/c2/7ec22430e9f54d5f9e8992d571e46734199c4217.jpg"]', ARRAY['SECURITY', 'ELECTRICITY', 'HEATING']::space_amenity[], ARRAY['[2026-01-10, 2026-02-10)', '[2026-02-15, 2026-03-01)', '[2026-03-05, 2026-03-20)', '[2026-05-01, 2026-07-15)']::tstzrange[], 'ACTIVE', 67, 2, 12, NOW() - INTERVAL '40 days', NOW()),
+(1, 'PARKING', 'Уличное парковочное место у метро', 'Наземное место на охраняемой территории. Круглосуточный доступ. Видеонаблюдение.', ST_GeomFromText('POINT(37.5832 55.7066)', 4326), 'Москва, ул. Профсоюзная, 98', 12.0, '["https://s15.stc.yc.kpcdn.net/share/i/12/8784984/wr-960.webp"]', ARRAY['SECURITY', 'VIDEO_SURVEILLANCE', 'ELECTRICITY']::space_amenity[], ARRAY['[2025-11-20, 2026-01-25)', '[2026-03-01, 2026-05-10)']::tstzrange[], 'ACTIVE', 89, 5, 15, NOW() - INTERVAL '35 days', NOW()),
+(1, 'STORAGE', 'Отапливаемый склад в промзоне', 'Помещение для хранения товаров или оборудования. Высокие потолки, грузовой лифт, пандус.', ST_GeomFromText('POINT(37.7430 55.7068)', 4326), 'Московская обл., г. Реутов, ул. Победы, 12', 120.0, '["https://skladoiskatel.ru/images/sobipro/entries/159665/img_IMG_20240619_125331.jpg"]', ARRAY['HEATING', 'VENTILATION']::space_amenity[], ARRAY['[2026-02-15, 2026-04-30)', '[2026-06-10, 2026-08-20)']::tstzrange[], 'PENDING_APPROVAL', 154, 8, 22, NOW() - INTERVAL '50 days', NOW()),
+(1, 'GARAGE', 'Эконом гараж в кооперативе "Мотор"', 'Без дополнительных удобств, но надежно. Общее ограждение по периметру, шлагбаум.', ST_GeomFromText('POINT(37.4237 55.6767)', 4326), 'Москва, поселение Внуковское, Гаражный кооператив "Мотор"', 18.0, '["https://i2.olan.ru/system/photos/entity/001/537/564/735/medium/img.jpg"]', ARRAY['SECURITY']::space_amenity[], ARRAY['[2025-12-01, 2026-02-20)', '[2026-02-25, 2026-02-28)', '[2026-04-01, 2026-04-10)', '[2026-04-15, 2026-06-01)']::tstzrange[], 'ACTIVE', 33, 1, 5, NOW() - INTERVAL '10 days', NOW()),
+(1, 'PARKING', 'Крытый бокс в многоуровневом паркинге', 'Защищенное от осадков место на -2 уровне. Прямой доступ к лифтам в офисный центр.', ST_GeomFromText('POINT(37.5352 55.7004)', 4326), 'Москва, Ленинский проспект, 123', 13.5, '["https://бесплатныеобъявления.рф/photos/395626_1_b.JPG"]', ARRAY['SECURITY', 'VIDEO_SURVEILLANCE']::space_amenity[], ARRAY['[2026-03-05, 2026-05-15)', '[2026-07-01, 2026-09-10)']::tstzrange[], 'ACTIVE', 121, 6, 31, NOW() - INTERVAL '60 days', NOW()),
+(1, 'STORAGE', 'Малая кладовая в центре', 'Идеально для сезонных вещей или документов. Внутри сухого офисного здания.', ST_GeomFromText('POINT(37.6029 55.7598)', 4326), 'Москва, ул. Большая Дмитровка, 10', 5.0, '["https://safe-box.ru/upload/iblock/745/ho2uf1wo3h7n8tl8v4qjhbi2x8viixmn.JPG"]', ARRAY['SECURITY', 'VENTILATION']::space_amenity[], ARRAY['[2026-02-20, 2026-04-01)', '[2026-05-15, 2026-07-20)']::tstzrange[], 'INACTIVE', 45, 0, 8, NOW() - INTERVAL '70 days', NOW()),
+(1, 'GARAGE', 'Гараж-мастерская с 380В', 'Отличный вариант для автослесаря или любителя. Подведено 3-фазное электричество, смотровая яма.', ST_GeomFromText('POINT(37.8565 55.3795)', 4326), 'Московская обл., г. Подольск, ул. Заводская, 7', 40.0, '["https://sankt-peterburg.garage.doorhan.ru/assets/img/sale/garazh-masterskaya-6m.jpg"]', ARRAY['ELECTRICITY', 'WATER_SUPPLY']::space_amenity[], ARRAY['[2025-11-05, 2026-01-10)', '[2026-02-20, 2026-04-25)']::tstzrange[], 'ACTIVE', 187, 12, 45, NOW() - INTERVAL '55 days', NOW()),
+(1, 'PARKING', 'Гостевой паркинг в ЖК "Солнечный"', 'Свободное место на придомовой территории. Разрешение от УК. Помесячная оплата.', ST_GeomFromText('POINT(37.3908 55.9036)', 4326), 'Москва, р-н Митино, ул. Дубравная, 41', 15.0, '["https://blog.idn500.ru/upload/iblock/4f4/gsxmudwjr70mhbgt1aclv1htqw0wtsgi/organizatsiya_gostevykh_parkovok_na_pridomovykh_territoriyakh_2_.jpg"]', ARRAY['ELECTRICITY']::space_amenity[], ARRAY['[2026-03-01, 2026-04-10)', '[2026-07-01, 2026-08-15)']::tstzrange[], 'ACTIVE', 56, 3, 9, NOW() - INTERVAL '30 days', NOW()),
+(1, 'STORAGE', 'Холодильный склад для продуктов', 'Помещение с поддержанием температуры +2..+6 °C. Подойдет для хранения цветов или небольших партий товара.', ST_GeomFromText('POINT(37.4714 55.8231)', 4326), 'Москва, ул. Пришвина, 22', 25.0, '["https://www.shutterstock.com/image-illustration/refrigeration-warehouse-food-metal-shelves-260nw-2628019579.jpg"]', ARRAY['SECURITY', 'VENTILATION']::space_amenity[], ARRAY['[2026-03-15, 2026-05-20)', '[2026-07-01, 2026-09-05)']::tstzrange[], 'PENDING_APPROVAL', 92, 4, 18, NOW() - INTERVAL '45 days', NOW()),
+(1, 'PARKING', 'Эксклюзивное место под навесом', 'Рядом с коттеджем, частная территория, навес защищает от снега и сосулек. Полная конфиденциальность.', ST_GeomFromText('POINT(37.2632 55.7426)', 4326), 'Московская обл., Одинцовский р-н, с. Немчиновка', 16.0, '["https://v-besedke.com/upload/iblock/d15/duq7hthtvymbjgqawpdetffbj51ewe38/naves_minimalizm_iz_dereva_otto_n_34.JPG"]', ARRAY['SECURITY', 'ELECTRICITY']::space_amenity[], ARRAY['[2025-12-10, 2026-01-10)', '[2026-02-10, 2026-02-15)', '[2026-04-01, 2026-06-10)']::tstzrange[], 'ACTIVE', 23, 1, 4, NOW() - INTERVAL '5 days', NOW()),
 
 -- Объявления пользователя 2 (2 объявления)
-(2, 'GARAGE', 'Гараж в спальном районе', 'Небольшой гараж для легкового автомобиля', 800.00, 'DAY', ST_GeomFromText('POINT(37.7000 55.8000)', 4326), 'Москва, р-н Митино', 18.0, '["https://cdn.esoft.digital/320240/cluster/photos/cc/a0/ae619a08ffa2a301aaeb8d0146ec1dd146a8a0cc.jpeg"]', '{"lighting": true}', ARRAY['[2026-01-05, 2026-01-20)', '[2026-01-25, 2026-02-20)', '[2026-02-25, 2026-03-15)', '[2026-05-01, 2026-07-10)']::tstzrange[], 'ACTIVE', 34, 2, 5, NOW() - INTERVAL '18 days', NOW()),
-(2, 'PARKING', 'Уличная парковка', 'Открытое парковочное место во дворе', 200.00, 'DAY', ST_GeomFromText('POINT(37.7100 55.8100)', 4326), 'Москва, р-н Отрадное', 15.0, '["https://img.freepik.com/free-photo/empty-parking-lot-parking-lane-outdoor-public-park_1127-3309.jpg"]', '{}', ARRAY['[2026-02-20, 2026-04-25)', '[2026-06-10, 2026-08-20)']::tstzrange[], 'PENDING_APPROVAL', 8, 0, 0, NOW() - INTERVAL '10 days', NOW()),
+(2, 'GARAGE', 'Гараж в спальном районе', 'Небольшой гараж для легкового автомобиля', ST_GeomFromText('POINT(37.7000 55.8000)', 4326), 'Москва, р-н Митино', 18.0, '["https://cdn.esoft.digital/320240/cluster/photos/cc/a0/ae619a08ffa2a301aaeb8d0146ec1dd146a8a0cc.jpeg"]', ARRAY['ELECTRICITY']::space_amenity[], ARRAY['[2026-01-05, 2026-01-20)', '[2026-01-25, 2026-02-20)', '[2026-02-25, 2026-03-15)', '[2026-05-01, 2026-07-10)']::tstzrange[], 'ACTIVE', 34, 2, 5, NOW() - INTERVAL '18 days', NOW()),
+(2, 'PARKING', 'Уличная парковка', 'Открытое парковочное место во дворе', ST_GeomFromText('POINT(37.7100 55.8100)', 4326), 'Москва, р-н Отрадное', 15.0, '["https://img.freepik.com/free-photo/empty-parking-lot-parking-lane-outdoor-public-park_1127-3309.jpg"]', NULL, ARRAY['[2026-02-20, 2026-04-25)', '[2026-06-10, 2026-08-20)']::tstzrange[], 'PENDING_APPROVAL', 8, 0, 0, NOW() - INTERVAL '10 days', NOW()),
 
 -- Объявления пользователя 3 (4 объявления)
-(3, 'STORAGE', 'Складское помещение', 'Помещение для хранения товаров', 2000.00, 'MONTH', ST_GeomFromText('POINT(37.6500 55.7000)', 4326), 'Москва, промзона Юг', 50.0, '["https://minisklad.storage.yandexcloud.net/store/infopage/81/headline_image/8d1fbf1236beaf3fe5dec293327e92b6.jpg"]', '{"security": true, "electricity": true, "heating": true}', ARRAY['[2025-11-15, 2026-01-20)', '[2026-03-01, 2026-05-10)']::tstzrange[], 'ACTIVE', 67, 5, 12, NOW() - INTERVAL '22 days', NOW()),
-(3, 'GARAGE', 'Гаражный бокс премиум', 'Большой гараж для двух автомобилей', 2500.00, 'DAY', ST_GeomFromText('POINT(37.6200 55.7500)', 4326), 'Москва, Ленинский пр-т', 35.0, '["https://rusnavesy.ru/upload/resize_cache/iblock/2e6/rtv9hyrxftgt18wse91p9dw6djcgcxge/1920_1080_126cda647948cbc99274de399e36e8734/1_02.jpg"]', '{"security": true, "electricity": true, "water": true}', ARRAY['[2026-03-01, 2026-05-10)', '[2026-06-20, 2026-08-30)']::tstzrange[], 'REJECTED', 15, 0, 2, NOW() - INTERVAL '17 days', NOW()),
-(3, 'PARKING', 'Парковка у метро', 'Удобное место рядом со станцией метро', 400.00, 'DAY', ST_GeomFromText('POINT(37.6300 55.7600)', 4326), 'Москва, возле м. Проспект Мира', 10.0, '["https://s09.stc.yc.kpcdn.net/share/i/12/12944116/wr-960.webp"]', '{"cctv": true}', ARRAY['[2026-04-01, 2026-06-10)', '[2026-07-20, 2026-09-30)']::tstzrange[], 'ACTIVE', 89, 7, 15, NOW() - INTERVAL '12 days', NOW()),
-(3, 'STORAGE', 'Небольшая кладовая', 'Для сезонных вещей и спортивного инвентаря', 150.00, 'MONTH', ST_GeomFromText('POINT(37.6400 55.7700)', 4326), 'Москва, р-н Коньково', 5.0, '["https://newphoto.club/uploads/posts/2022-11/1668321056_2-newphoto-club-p-obustroit-kladovku-v-kvartire-svoimi-rukam-2.jpg"]', '{}', ARRAY['[2026-01-15, 2026-03-20)', '[2026-05-01, 2026-07-15)']::tstzrange[], 'DRAFT', 3, 0, 0, NOW() - INTERVAL '5 days', NOW()),
+(3, 'STORAGE', 'Складское помещение', 'Помещение для хранения товаров', ST_GeomFromText('POINT(37.6500 55.7000)', 4326), 'Москва, промзона Юг', 50.0, '["https://minisklad.storage.yandexcloud.net/store/infopage/81/headline_image/8d1fbf1236beaf3fe5dec293327e92b6.jpg"]', ARRAY['SECURITY', 'ELECTRICITY', 'HEATING']::space_amenity[], ARRAY['[2025-11-15, 2026-01-20)', '[2026-03-01, 2026-05-10)']::tstzrange[], 'ACTIVE', 67, 5, 12, NOW() - INTERVAL '22 days', NOW()),
+(3, 'GARAGE', 'Гаражный бокс премиум', 'Большой гараж для двух автомобилей', ST_GeomFromText('POINT(37.6200 55.7500)', 4326), 'Москва, Ленинский пр-т', 35.0, '["https://rusnavesy.ru/upload/resize_cache/iblock/2e6/rtv9hyrxftgt18wse91p9dw6djcgcxge/1920_1080_126cda647948cbc99274de399e36e8734/1_02.jpg"]', ARRAY['SECURITY', 'ELECTRICITY', 'WATER_SUPPLY']::space_amenity[], ARRAY['[2026-03-01, 2026-05-10)', '[2026-06-20, 2026-08-30)']::tstzrange[], 'REJECTED', 15, 0, 2, NOW() - INTERVAL '17 days', NOW()),
+(3, 'PARKING', 'Парковка у метро', 'Удобное место рядом со станцией метро', ST_GeomFromText('POINT(37.6300 55.7600)', 4326), 'Москва, возле м. Проспект Мира', 10.0, '["https://s09.stc.yc.kpcdn.net/share/i/12/12944116/wr-960.webp"]', ARRAY['VIDEO_SURVEILLANCE']::space_amenity[], ARRAY['[2026-04-01, 2026-06-10)', '[2026-07-20, 2026-09-30)']::tstzrange[], 'ACTIVE', 89, 7, 15, NOW() - INTERVAL '12 days', NOW()),
+(3, 'STORAGE', 'Небольшая кладовая', 'Для сезонных вещей и спортивного инвентаря', ST_GeomFromText('POINT(37.6400 55.7700)', 4326), 'Москва, р-н Коньково', 5.0, '["https://newphoto.club/uploads/posts/2022-11/1668321056_2-newphoto-club-p-obustroit-kladovku-v-kvartire-svoimi-rukam-2.jpg"]', NULL, ARRAY['[2026-01-15, 2026-03-20)', '[2026-05-01, 2026-07-15)']::tstzrange[], 'DRAFT', 3, 0, 0, NOW() - INTERVAL '5 days', NOW()),
 
 -- Объявления пользователя 4 (1 объявление)
-(4, 'GARAGE', 'Эконом гараж', 'Бюджетный вариант для длительной аренды', 600.00, 'DAY', ST_GeomFromText('POINT(37.5800 55.7400)', 4326), 'Москва, р-н Бирюлево', 16.0, '["https://skoggy.ru/sites/default/files/inline-images/1634.jpg"]', '{}', ARRAY['[2026-02-10, 2026-04-15)', '[2026-06-01, 2026-08-10)']::tstzrange[], 'ACTIVE', 28, 1, 4, NOW() - INTERVAL '14 days', NOW()),
+(4, 'GARAGE', 'Эконом гараж', 'Бюджетный вариант для длительной аренды', ST_GeomFromText('POINT(37.5800 55.7400)', 4326), 'Москва, р-н Бирюлево', 16.0, '["https://skoggy.ru/sites/default/files/inline-images/1634.jpg"]', '{}', ARRAY['[2026-02-10, 2026-04-15)', '[2026-06-01, 2026-08-10)']::tstzrange[], 'ACTIVE', 28, 1, 4, NOW() - INTERVAL '14 days', NOW()),
 
 -- Объявления пользователя 5 (5 объявлений)
-(5, 'PARKING', 'VIP парковка', 'Привилегированное место с персональным обслуживанием', 1000.00, 'DAY', ST_GeomFromText('POINT(37.6000 55.7400)', 4326), 'Москва, р-н Хамовники', 14.0, '["https://images.squarespace-cdn.com/content/v1/590af64b37c581152910bea4/1541507974932-WJ140BH28H7FNNEI05WT/WN9A0023.jpg"]', '{"security": true, "valet": true, "washing": true}', ARRAY['[2025-12-20, 2026-02-25)', '[2026-04-10, 2026-06-20)']::tstzrange[], 'ACTIVE', 156, 12, 28, NOW() - INTERVAL '28 days', NOW()),
-(5, 'STORAGE', 'Термосклад', 'Помещение с контролем температуры', 3500.00, 'MONTH', ST_GeomFromText('POINT(37.5900 55.7300)', 4326), 'Москва, промзона Запад', 40.0, '["https://www.rsholod.ru/images/stroitelstvo-mini-skladov-rsholod-4-s.jpg"]', '{"temperature_control": true, "security": true}', ARRAY['[2026-03-20, 2026-05-25)', '[2026-07-10, 2026-09-20)']::tstzrange[], 'ACTIVE', 72, 4, 9, NOW() - INTERVAL '21 days', NOW()),
-(5, 'GARAGE', 'Гараж с мастерской', 'Идеально для авторемонтных работ', 1800.00, 'DAY', ST_GeomFromText('POINT(37.6100 55.7200)', 4326), 'Москва, р-н Нагатино', 30.0, '["https://modul-ug.ru/upload/media/content/muzhskoe-delo-garazh-i-masterskaja.jpg"]', '{"electricity": true, "tools": true, "compressor": true}', ARRAY['[2026-01-25, 2026-04-05)', '[2026-05-20, 2026-07-30)']::tstzrange[], 'ACTIVE', 94, 6, 11, NOW() - INTERVAL '16 days', NOW()),
-(5, 'PARKING', 'Ночная парковка', 'Специальное предложение для ночной аренды', 150.00, 'HOUR', ST_GeomFromText('POINT(37.6200 55.7100)', 4326), 'Москва, р-н Донской', 11.0, '["https://i.pinimg.com/736x/c9/22/2b/c9222b63d6c8696105a37504ac163b2c.jpg"]', '{"lighting": true}', ARRAY['[2025-11-25, 2026-01-30)', '[2026-03-15, 2026-05-25)']::tstzrange[], 'INACTIVE', 41, 2, 6, NOW() - INTERVAL '9 days', NOW()),
-(5, 'STORAGE', 'Архивное хранение', 'Для документов и архивных материалов', 800.00, 'MONTH', ST_GeomFromText('POINT(37.6300 55.7000)', 4326), 'Москва, бизнес-центр Север', 12.0, '["https://minisklad.storage.yandexcloud.net/store/infopage/39/headline_image/b17d3b82aba26c72e244102c622c68b9.jpg"]', '{"fireproof": true, "dry": true}', ARRAY['[2025-01-01, 2025-03-01)', '[2025-04-01, 2025-06-01)']::tstzrange[], 'PENDING_APPROVAL', 19, 1, 3, NOW() - INTERVAL '3 days', NOW());
+(5, 'PARKING', 'VIP парковка', 'Привилегированное место с персональным обслуживанием', ST_GeomFromText('POINT(37.6000 55.7400)', 4326), 'Москва, р-н Хамовники', 14.0, '["https://images.squarespace-cdn.com/content/v1/590af64b37c581152910bea4/1541507974932-WJ140BH28H7FNNEI05WT/WN9A0023.jpg"]', ARRAY['SECURITY', 'WATER_SUPPLY']::space_amenity[], ARRAY['[2025-12-20, 2026-02-25)', '[2026-04-10, 2026-06-20)']::tstzrange[], 'ACTIVE', 156, 12, 28, NOW() - INTERVAL '28 days', NOW()),
+(5, 'STORAGE', 'Термосклад', 'Помещение с контролем температуры', ST_GeomFromText('POINT(37.5900 55.7300)', 4326), 'Москва, промзона Запад', 40.0, '["https://www.rsholod.ru/images/stroitelstvo-mini-skladov-rsholod-4-s.jpg"]', ARRAY['HEATING', 'VENTILATION', 'SECURITY']::space_amenity[], ARRAY['[2026-03-20, 2026-05-25)', '[2026-07-10, 2026-09-20)']::tstzrange[], 'ACTIVE', 72, 4, 9, NOW() - INTERVAL '21 days', NOW()),
+(5, 'GARAGE', 'Гараж с мастерской', 'Идеально для авторемонтных работ', ST_GeomFromText('POINT(37.6100 55.7200)', 4326), 'Москва, р-н Нагатино', 30.0, '["https://modul-ug.ru/upload/media/content/muzhskoe-delo-garazh-i-masterskaja.jpg"]', ARRAY['SECURITY', 'ELECTRICITY', 'WATER_SUPPLY']::space_amenity[], ARRAY['[2026-01-25, 2026-04-05)', '[2026-05-20, 2026-07-30)']::tstzrange[], 'ACTIVE', 94, 6, 11, NOW() - INTERVAL '16 days', NOW()),
+(5, 'PARKING', 'Ночная парковка', 'Специальное предложение для ночной аренды', ST_GeomFromText('POINT(37.6200 55.7100)', 4326), 'Москва, р-н Донской', 11.0, '["https://i.pinimg.com/736x/c9/22/2b/c9222b63d6c8696105a37504ac163b2c.jpg"]', NULL, ARRAY['[2025-11-25, 2026-01-30)', '[2026-03-15, 2026-05-25)']::tstzrange[], 'INACTIVE', 41, 2, 6, NOW() - INTERVAL '9 days', NOW()),
+(5, 'STORAGE', 'Архивное хранение', 'Для документов и архивных материалов', ST_GeomFromText('POINT(37.6300 55.7000)', 4326), 'Москва, бизнес-центр Север', 12.0, '["https://minisklad.storage.yandexcloud.net/store/infopage/39/headline_image/b17d3b82aba26c72e244102c622c68b9.jpg"]', ARRAY['SECURITY', 'VIDEO_SURVEILLANCE', 'ELECTRICITY']::space_amenity[], ARRAY['[2025-01-01, 2025-03-01)', '[2025-04-01, 2025-06-01)']::tstzrange[], 'PENDING_APPROVAL', 19, 1, 3, NOW() - INTERVAL '3 days', NOW());
+
+
+
+-- LISTING_PRICINGS
+INSERT INTO listing_pricings (listing_id, price, price_period) VALUES
+-- Объявления пользователя 1
+(1, 1500.00, 'DAY'), (1, 8000.00, 'WEEK'), (1, 25000.00, 'MONTH'),
+(2, 500.00, 'DAY'), (2, 2500.00, 'WEEK'), (2, 8000.00, 'MONTH'),
+(3, 100.00, 'DAY'), (3, 500.00, 'WEEK'), (3, 1800.00, 'MONTH'),
+(4, 1800.00, 'DAY'), (4, 9000.00, 'WEEK'), (4, 28000.00, 'MONTH'),
+(5, 400.00, 'DAY'), (5, 2000.00, 'WEEK'), (5, 7000.00, 'MONTH'),
+(6, 1000.00, 'DAY'), (6, 6000.00, 'WEEK'), (6, 20000.00, 'MONTH'),
+(7, 800.00, 'DAY'), (7, 4000.00, 'WEEK'), (7, 12000.00, 'MONTH'),
+(8, 750.00, 'DAY'), (8, 3500.00, 'WEEK'), (8, 12000.00, 'MONTH'),
+(9, 150.00, 'DAY'), (9, 700.00, 'WEEK'), (9, 2000.00, 'MONTH'),
+(10, 2200.00, 'DAY'), (10, 11000.00, 'WEEK'), (10, 35000.00, 'MONTH'),
+(11, 400.00, 'DAY'), (11, 2000.00, 'WEEK'), (11, 7000.00, 'MONTH'),
+(12, 2000.00, 'DAY'), (12, 12000.00, 'WEEK'), (12, 45000.00, 'MONTH'),
+(13, 1000.00, 'DAY'), (13, 5000.00, 'WEEK'), (13, 15000.00, 'MONTH'),
+-- Объявления пользователя 2
+(14, 800.00, 'DAY'), (14, 4000.00, 'WEEK'), (14, 14000.00, 'MONTH'),
+(15, 200.00, 'DAY'), (15, 1000.00, 'WEEK'), (15, 3500.00, 'MONTH'),
+-- Объявления пользователя 3
+(16, 600.00, 'WEEK'), (16, 2000.00, 'MONTH'),
+(17, 2500.00, 'DAY'), (17, 15000.00, 'WEEK'), (17, 45000.00, 'MONTH'),
+(18, 400.00, 'DAY'), (18, 2000.00, 'WEEK'),
+(19, 50.00, 'WEEK'), (19, 150.00, 'MONTH'),
+-- Объявления пользователя 4
+(20, 600.00, 'DAY'), (20, 3000.00, 'WEEK'), (20, 10000.00, 'MONTH'),
+-- Объявления пользователя 5
+(21, 1000.00, 'DAY'), (21, 5000.00, 'WEEK'), (21, 18000.00, 'MONTH'),
+(22, 1000.00, 'WEEK'), (22, 3500.00, 'MONTH'),
+(23, 1800.00, 'DAY'), (23, 9000.00, 'WEEK'),
+(24, 150.00, 'HOUR'), (24, 1000.00, 'DAY'),
+(25, 250.00, 'WEEK'), (25, 800.00, 'MONTH');
 
 
 
 -- BOOKINGS
-INSERT INTO bookings (listing_id, renter_id, period, total_price, status, created_at, updated_at) VALUES
--- Бронирования пользователя 1 (2 бронирования) для listing 4 и 7
-(4, 1, '[2026-02-10, 2026-02-15)'::tstzrange, 9000.00, 'COMPLETED', NOW() - INTERVAL '20 days', NOW() - INTERVAL '20 days'),
-(4, 1, '[2026-03-01, 2026-03-05)'::tstzrange, 7200.00, 'CONFIRMED', NOW() - INTERVAL '15 days', NOW() - INTERVAL '15 days'),
-(7, 1, '[2026-02-20, 2026-02-25)'::tstzrange, 4000.00, 'COMPLETED', NOW() - INTERVAL '10 days', NOW() - INTERVAL '10 days'),
-(7, 1, '[2026-04-10, 2026-04-15)'::tstzrange, 4000.00, 'CANCELLED', NOW() - INTERVAL '8 days', NOW() - INTERVAL '8 days'),
+INSERT INTO bookings (listing_id, renter_id, period, total_price, price, price_period, status, created_at, updated_at) VALUES
+-- Старые брони пользователя 1 (id 1-4)
+(4, 1, '[2026-02-10, 2026-02-15)'::tstzrange, 9000.00, 1800.00, 'DAY', 'COMPLETED', NOW() - INTERVAL '20 days', NOW() - INTERVAL '20 days'),
+(4, 1, '[2026-03-01, 2026-03-05)'::tstzrange, 7200.00, 1800.00, 'DAY', 'CONFIRMED', NOW() - INTERVAL '15 days', NOW() - INTERVAL '15 days'),
+(7, 1, '[2026-02-20, 2026-02-25)'::tstzrange, 4000.00, 800.00, 'DAY', 'COMPLETED', NOW() - INTERVAL '10 days', NOW() - INTERVAL '10 days'),
+(7, 1, '[2026-04-10, 2026-04-15)'::tstzrange, 4000.00, 800.00, 'DAY', 'CANCELLED', NOW() - INTERVAL '8 days', NOW() - INTERVAL '8 days'),
+-- Старые брони пользователя 2 (id 5-6)
+(1, 2, '[2026-01-15, 2026-01-20)'::tstzrange, 7500.00, 1500.00, 'DAY', 'COMPLETED', NOW() - INTERVAL '18 days', NOW() - INTERVAL '18 days'),
+(1, 2, '[2026-02-20, 2026-02-25)'::tstzrange, 7500.00, 1500.00, 'DAY', 'CONFIRMED', NOW() - INTERVAL '12 days', NOW() - INTERVAL '12 days'),
+-- Старые брони пользователя 3 (id 7-12)
+(11, 3, '[2026-02-01, 2026-03-01)'::tstzrange, 7000.00, 7000.00, 'MONTH', 'COMPLETED', NOW() - INTERVAL '16 days', NOW() - INTERVAL '16 days'),
+(11, 3, '[2026-06-01, 2026-07-01)'::tstzrange, 7000.00, 7000.00, 'MONTH', 'CONFIRMED', NOW() - INTERVAL '5 days', NOW() - INTERVAL '5 days'),
+(13, 3, '[2026-01-10, 2026-02-10)'::tstzrange, 31000.00, 1000.00, 'DAY', 'COMPLETED', NOW() - INTERVAL '20 days', NOW() - INTERVAL '20 days'),
+(13, 3, '[2026-04-01, 2026-05-01)'::tstzrange, 30000.00, 1000.00, 'DAY', 'CONFIRMED', NOW() - INTERVAL '8 days', NOW() - INTERVAL '8 days'),
+(14, 3, '[2026-01-20, 2026-01-25)'::tstzrange, 4000.00, 800.00, 'DAY', 'COMPLETED', NOW() - INTERVAL '5 days', NOW() - INTERVAL '5 days'),
+(14, 3, '[2026-02-20, 2026-02-25)'::tstzrange, 4000.00, 800.00, 'DAY', 'CANCELLED', NOW() - INTERVAL '10 days', NOW() - INTERVAL '1 day'),
+-- Старая бронь пользователя 5 (id 13)
+(9, 5, '[2026-01-20, 2026-02-20)'::tstzrange, 2000.00, 2000.00, 'MONTH', 'COMPLETED', NOW() - INTERVAL '8 days', NOW() - INTERVAL '8 days'),
+-- НОВЫЕ БРОНИ
+-- Пользователь 2 арендует у пользователей 4 и 5 (id 14-15)
+(20, 2, '[2026-01-01, 2026-01-08)'::tstzrange, 3000.00, 3000.00, 'WEEK', 'COMPLETED', NOW() - INTERVAL '30 days', NOW() - INTERVAL '30 days'),
+(21, 2, '[2026-01-10, 2026-01-12)'::tstzrange, 2000.00, 1000.00, 'DAY', 'COMPLETED', NOW() - INTERVAL '25 days', NOW() - INTERVAL '25 days'),
+-- Пользователь 3 арендует у пользователя 2 (id 16)
+(15, 3, '[2026-02-01, 2026-03-01)'::tstzrange, 3500.00, 3500.00, 'MONTH', 'COMPLETED', NOW() - INTERVAL '15 days', NOW() - INTERVAL '15 days'),
+-- Пользователь 4 арендует у пользователей 1, 3, 5 (id 17-19)
+(2, 4, '[2026-02-10, 2026-02-17)'::tstzrange, 2500.00, 2500.00, 'WEEK', 'COMPLETED', NOW() - INTERVAL '12 days', NOW() - INTERVAL '12 days'),
+(16, 4, '[2026-03-01, 2026-04-01)'::tstzrange, 2000.00, 2000.00, 'MONTH', 'CONFIRMED', NOW() - INTERVAL '5 days', NOW() - INTERVAL '5 days'),
+(23, 4, '[2026-01-15, 2026-01-18)'::tstzrange, 5400.00, 1800.00, 'DAY', 'COMPLETED', NOW() - INTERVAL '28 days', NOW() - INTERVAL '28 days'),
+-- Пользователь 5 арендует у пользователей 2, 4 (id 20-21)
+(14, 5, '[2026-01-20, 2026-02-03)'::tstzrange, 8000.00, 4000.00, 'WEEK', 'COMPLETED', NOW() - INTERVAL '22 days', NOW() - INTERVAL '22 days'),
+(20, 5, '[2026-02-01, 2026-02-06)'::tstzrange, 3000.00, 600.00, 'DAY', 'COMPLETED', NOW() - INTERVAL '10 days', NOW() - INTERVAL '10 days');
 
--- Бронирования пользователя 2 (1 бронирование) для listing 1
-(1, 2, '[2026-01-15, 2026-01-20)'::tstzrange, 7500.00, 'COMPLETED', NOW() - INTERVAL '18 days', NOW() - INTERVAL '18 days'),
-(1, 2, '[2026-02-20, 2026-02-25)'::tstzrange, 7500.00, 'CONFIRMED', NOW() - INTERVAL '12 days', NOW() - INTERVAL '12 days'),
-
--- Бронирования пользователя 3 (3 бронирования) для listing 11,13,14
-(11, 3, '[2026-02-01, 2026-03-01)'::tstzrange, 7000.00, 'COMPLETED', NOW() - INTERVAL '16 days', NOW() - INTERVAL '16 days'),
-(11, 3, '[2026-06-01, 2026-07-01)'::tstzrange, 7000.00, 'CONFIRMED', NOW() - INTERVAL '5 days', NOW() - INTERVAL '5 days'),
-(13, 3, '[2026-01-10, 2026-02-10)'::tstzrange, 31000.00, 'COMPLETED', NOW() - INTERVAL '20 days', NOW() - INTERVAL '20 days'),
-(13, 3, '[2026-04-01, 2026-05-01)'::tstzrange, 30000.00, 'CONFIRMED', NOW() - INTERVAL '8 days', NOW() - INTERVAL '8 days'),
-(14, 3, '[2026-01-20, 2026-01-25)'::tstzrange, 4000.00, 'COMPLETED', NOW() - INTERVAL '5 days', NOW() - INTERVAL '5 days'),
-(14, 3, '[2026-02-20, 2026-02-25)'::tstzrange, 4000.00, 'CANCELLED', NOW() - INTERVAL '10 days', NOW() - INTERVAL '1 day'),
-
--- Бронирования пользователя 5 (1 бронирование) для listing 9 (INACTIVE, только прошлое)
-(9, 5, '[2026-01-20, 2026-02-20)'::tstzrange, 2000.00, 'COMPLETED', NOW() - INTERVAL '8 days', NOW() - INTERVAL '8 days');
 
 
-
+-- REVIEWS
 INSERT INTO reviews (booking_id, reviewer_id, rating, text, created_at) VALUES
+-- Старые отзывы (на арендодателя 1)
 (1, 1, 5, 'Отличный гараж, все чисто и аккуратно. Хозяин приятный в общении, помог с заселением. Рекомендую!', NOW() - INTERVAL '18 days'),
-(7, 3, 4, 'VIP парковка соответствует описанию. Место удобное, охраняемая территория. Минус - дороговато, но качество на уровне.', NOW() - INTERVAL '10 days'),
-(5, 2, 4, 'Гараж теплый, как и обещали. Небольшие проблемы с замком, но быстро починили. В целом доволен.', NOW() - INTERVAL '22 days'),
 (3, 1, 5, 'Отличная парковка у метро! Очень удобное расположение, всегда есть свободные места. 5 звезд!', NOW() - INTERVAL '12 days'),
+(5, 2, 4, 'Гараж теплый, как и обещали. Небольшие проблемы с замком, но быстро починили. В целом доволен.', NOW() - INTERVAL '22 days'),
 (9, 3, 4, 'Гараж с мастерской - то что нужно! Все инструменты в наличии, электричество стабильное. Спасибо!', NOW() - INTERVAL '8 days'),
-(13, 5, 5, 'Термосклад идеален для хранения продуктов! Температура поддерживается точно. Профессионально!', NOW() - INTERVAL '4 days');
+(13, 5, 5, 'Термосклад идеален для хранения продуктов! Температура поддерживается точно. Профессионально!', NOW() - INTERVAL '4 days'),
+-- Новые отзывы (на остальных арендодателей)
+(16, 3, 5, 'Отличная уличная парковка, чисто и безопасно.', NOW() - INTERVAL '14 days'), -- на пользователя 2
+(20, 5, 4, 'Хороший гараж, но дверь туго открывается.', NOW() - INTERVAL '20 days'), -- на пользователя 2
+(18, 4, 5, 'Отличный склад, все вещи в сохранности, сухо.', NOW() - INTERVAL '4 days'), -- на пользователя 3
+(14, 2, 4, 'Бюджетный вариант, полностью оправдывает свою цену.', NOW() - INTERVAL '28 days'), -- на пользователя 4
+(21, 5, 5, 'Нормальный гараж, хозяин адекватный и пунктуальный.', NOW() - INTERVAL '8 days'), -- на пользователя 4
+(15, 2, 5, 'Шикарное место, очень удобно парковаться на внедорожнике.', NOW() - INTERVAL '24 days'); -- на пользователя 5
 
 
 
@@ -106,11 +161,11 @@ INSERT INTO wallets (user_id, balance) VALUES
 
 
 -- SUBSCRIPTION_PLANS
-INSERT INTO subscription_plans (name, price, max_listings, priority_search, boosts_per_month, description, extra_features) VALUES
-('Basic', 0.00, 3, false, 1, 'Базовый тариф для начала работы', '{"basic_support": true}'),
-('Pro', 500.00, 10, true, 5, 'Профессиональный тариф для активных арендодателей', '{"priority_support": true, "analytics": true}'),
-('Business', 1500.00, 50, true, 20, 'Бизнес-тариф для коммерческого использования', '{"premium_support": true, "advanced_analytics": true, "api_access": true}'),
-('Crypto Pro', 2500.00, 15, true, 10, 'Про тариф с оплатой криптовалютой', '{"crypto_payments": true, "priority_support": true}');
+INSERT INTO subscription_plans (name, status, price, max_listings, priority_search, boosts_per_month, description, extra_features) VALUES
+('Start', 'ACTIVE', 0.00, 3, false, 1, 'Базовый тариф для тех, кто сдает одно-два места', '{"support_level": "basic"}'),
+('Standard', 'ACTIVE', 490.00, 10, true, 5, 'Для активных арендодателей. Включает приоритет в поиске.', '{"support_level": "priority"}'),
+('Premium', 'ACTIVE', 1490.00, 30, true, 15, 'Расширенная аналитика и премиум-размещение для инвесторов.', '{"support_level": "premium", "advanced_analytics": true}'),
+('Enterprise', 'ACTIVE', 4990.00, 100, true, 50, 'Для коммерческих сетей паркингов и складов.', '{"support_level": "personal_manager", "api_access": true}');
 
 
 
@@ -130,37 +185,42 @@ INSERT INTO user_subscriptions (user_id, plan_id, start_date, end_date, status, 
 
 
 -- TRANSACTIONS
-INSERT INTO transactions (user_id, type, amount, status, booking_id, commission, description, gateway_transaction_id, created_at) VALUES
+INSERT INTO transactions (user_id, type, status, amount, booking_id, description, gateway_transaction_id, created_at) VALUES
 -- Транзакции пользователя 1
-(1, 'DEPOSIT', 20000.00, 'SUCCESS', NULL, 0.00, 'Пополнение с банковской карты', 'card_txn_001', NOW() - INTERVAL '35 days'),
-(1, 'BOOKING_PAYMENT', 500.00, 'SUCCESS', 1, 50.00, 'Оплата подписки Pro', 'sub_txn_001', NOW() - INTERVAL '30 days'),
-(1, 'COMMISSION', 50.00, 'SUCCESS', 1, 0.00, 'Комиссия платформы за бронирование #1', 'comm_txn_001', NOW() - INTERVAL '20 days'),
-(1, 'BOOKING_PAYMENT', 3200.00, 'SUCCESS', 1, 320.00, 'Оплата бронирования #1', 'book_txn_001', NOW() - INTERVAL '20 days'),
-(1, 'DEPOSIT', 1000.00, 'SUCCESS', NULL, 100.00, 'Пополнение RUB', 'crypto_txn_001', NOW() - INTERVAL '10 days'),
+(1, 'DEPOSIT', 'SUCCESS', 20000.00, NULL, 'Пополнение с банковской карты', 'card_txn_001', NOW() - INTERVAL '35 days'),
+(1, 'WITHDRAWAL', 'SUCCESS', 500.00, NULL, 'Оплата подписки Standard', 'sub_txn_001', NOW() - INTERVAL '30 days'),
+(1, 'BOOKING_PAYMENT', 'SUCCESS', 9000.00, 1, 'Оплата бронирования #1', 'book_txn_001', NOW() - INTERVAL '20 days'),
+(1, 'COMMISSION', 'SUCCESS', 900.00, 1, 'Комиссия платформы за бронирование #1', 'comm_txn_001', NOW() - INTERVAL '20 days'),
 
 -- Транзакции пользователя 2
-(2, 'DEPOSIT', 10000.00, 'SUCCESS', NULL, 0.00, 'Пополнение через СБП', 'sbp_txn_001', NOW() - INTERVAL '65 days'),
-(2, 'BOOKING_PAYMENT', 500.00, 'SUCCESS', NULL, 0.00, 'Оплата подписки Pro', 'sub_txn_002', NOW() - INTERVAL '60 days'),
-(2, 'WITHDRAWAL', 1500.00, 'SUCCESS', NULL, 15.00, 'Вывод средств на карту', 'payout_txn_001', NOW() - INTERVAL '40 days'),
+(2, 'DEPOSIT', 'SUCCESS', 15000.00, NULL, 'Пополнение через СБП', 'sbp_txn_001', NOW() - INTERVAL '65 days'),
+(2, 'WITHDRAWAL', 'SUCCESS', 490.00, NULL, 'Оплата подписки Standard', 'sub_txn_002', NOW() - INTERVAL '60 days'),
+(2, 'BOOKING_PAYMENT', 'SUCCESS', 7500.00, 5, 'Оплата бронирования #5', 'book_txn_002', NOW() - INTERVAL '18 days'),
+(2, 'BOOKING_PAYMENT', 'SUCCESS', 3000.00, 14, 'Оплата бронирования #14', 'book_txn_003', NOW() - INTERVAL '30 days'),
+(2, 'BOOKING_PAYMENT', 'SUCCESS', 2000.00, 15, 'Оплата бронирования #15', 'book_txn_004', NOW() - INTERVAL '25 days'),
 
 -- Транзакции пользователя 3
-(3, 'DEPOSIT', 30000.00, 'SUCCESS', NULL, 0.00, 'Пополнение счета', 'card_txn_002', NOW() - INTERVAL '20 days'),
-(3, 'DEPOSIT', 2000.00, 'SUCCESS', NULL, 0.00, 'Пополнение RUB', 'crypto_txn_002', NOW() - INTERVAL '18 days'),
-(3, 'BOOKING_PAYMENT', 1500.00, 'SUCCESS', NULL, 0.00, 'Оплата подписки Business', 'sub_txn_003', NOW() - INTERVAL '15 days'),
-(3, 'COMMISSION', 100.00, 'SUCCESS', 4, 0.00, 'Комиссия за бронирование #4', 'comm_txn_002', NOW() - INTERVAL '12 days'),
-(3, 'BOOKING_PAYMENT', 1000.00, 'SUCCESS', 4, 100.00, 'Оплата бронирования #4', 'book_txn_002', NOW() - INTERVAL '12 days'),
+(3, 'DEPOSIT', 'SUCCESS', 30000.00, NULL, 'Пополнение счета', 'card_txn_002', NOW() - INTERVAL '20 days'),
+(3, 'WITHDRAWAL', 'SUCCESS', 1490.00, NULL, 'Оплата подписки Premium', 'sub_txn_003', NOW() - INTERVAL '15 days'),
+(3, 'BOOKING_PAYMENT', 'SUCCESS', 7000.00, 7, 'Оплата бронирования #7', 'book_txn_005', NOW() - INTERVAL '16 days'),
+(3, 'BOOKING_PAYMENT', 'SUCCESS', 3500.00, 16, 'Оплата бронирования #16', 'book_txn_006', NOW() - INTERVAL '15 days'),
 
--- Транзакции пользователя 4
-(4, 'DEPOSIT', 5000.00, 'SUCCESS', NULL, 0.00, 'Пополнение счета', 'card_txn_003', NOW() - INTERVAL '10 days'),
-(4, 'BOOKING_PAYMENT', 0.00, 'SUCCESS', NULL, 0.00, 'Активация Basic подписки', 'sub_txn_004', NOW() - INTERVAL '5 days'),
+-- Транзакции пользователя 4 (Расширено)
+(4, 'DEPOSIT', 'SUCCESS', 5000.00, NULL, 'Пополнение счета (карта)', 'card_txn_003', NOW() - INTERVAL '35 days'),
+(4, 'DEPOSIT', 'SUCCESS', 15000.00, NULL, 'Пополнение через СБП', 'sbp_txn_002', NOW() - INTERVAL '30 days'),
+(4, 'BOOKING_PAYMENT', 'SUCCESS', 5400.00, 19, 'Оплата бронирования #19', 'book_txn_007', NOW() - INTERVAL '28 days'),
+(4, 'COMMISSION', 'SUCCESS', 540.00, 19, 'Комиссия за бронирование #19', 'comm_txn_004', NOW() - INTERVAL '28 days'),
+(4, 'BOOKING_PAYMENT', 'SUCCESS', 2500.00, 17, 'Оплата бронирования #17', 'book_txn_008', NOW() - INTERVAL '12 days'),
+(4, 'COMMISSION', 'SUCCESS', 250.00, 17, 'Комиссия за бронирование #17', 'comm_txn_005', NOW() - INTERVAL '12 days'),
+(4, 'BOOKING_PAYMENT', 'SUCCESS', 2000.00, 18, 'Оплата бронирования #18', 'book_txn_009', NOW() - INTERVAL '5 days'),
+(4, 'COMMISSION', 'SUCCESS', 200.00, 18, 'Комиссия за бронирование #18', 'comm_txn_006', NOW() - INTERVAL '5 days'),
 
 -- Транзакции пользователя 5
-(5, 'DEPOSIT', 60000.00, 'SUCCESS', NULL, 0.00, 'Пополнение бизнес-счета', 'card_txn_004', NOW() - INTERVAL '30 days'),
-(5, 'DEPOSIT', 2000.00, 'SUCCESS', NULL, 123.45, 'Пополнение RUB', 'crypto_txn_003', NOW() - INTERVAL '25 days'),
-(5, 'BOOKING_PAYMENT', 1500.00, 'SUCCESS', NULL, 120.00, 'Оплата Crypto Pro подписки', 'sub_txn_005', NOW() - INTERVAL '7 days'),
-(5, 'COMMISSION', 400.00, 'SUCCESS', 6, 0.00, 'Комиссия за бронирование #6', 'comm_txn_003', NOW() - INTERVAL '16 days'),
-(5, 'BOOKING_PAYMENT', 4000.00, 'SUCCESS', 6, 400.00, 'Оплата бронирования #6', 'book_txn_003', NOW() - INTERVAL '16 days'),
-(5, 'WITHDRAWAL', 10000.00, 'SUCCESS', NULL, 100.00, 'Вывод дохода', 'payout_txn_002', NOW() - INTERVAL '5 days');
+(5, 'DEPOSIT', 'SUCCESS', 60000.00, NULL, 'Пополнение бизнес-счета', 'card_txn_004', NOW() - INTERVAL '30 days'),
+(5, 'WITHDRAWAL', 'SUCCESS', 4990.00, NULL, 'Оплата Enterprise подписки', 'sub_txn_005', NOW() - INTERVAL '7 days'),
+(5, 'BOOKING_PAYMENT', 'SUCCESS', 8000.00, 20, 'Оплата бронирования #20', 'book_txn_010', NOW() - INTERVAL '22 days'),
+(5, 'BOOKING_PAYMENT', 'SUCCESS', 3000.00, 21, 'Оплата бронирования #21', 'book_txn_011', NOW() - INTERVAL '10 days'),
+(5, 'WITHDRAWAL', 'SUCCESS', 10000.00, NULL, 'Вывод дохода', 'payout_txn_002', NOW() - INTERVAL '5 days');
 
 
 
