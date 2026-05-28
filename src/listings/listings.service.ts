@@ -221,9 +221,8 @@ export class ListingsService {
       return;
     }
 
-    const listing = await this.findByIdWithCache(listingId);
-    listing.viewsCount += 1;
-    await this.listingRepository.save(listing);
+    await this.listingRepository.increment({ id: listingId }, 'viewsCount', 1);
+    await this.redisService.delete(this.getListingCacheKey(listingId));
 
     await this.viewHistoryRepository.insert({ 
       user: { id: userId }, 
