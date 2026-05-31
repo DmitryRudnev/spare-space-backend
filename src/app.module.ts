@@ -24,6 +24,7 @@ import { DevicesModule } from './devices/devices.module';
 import { TwoFactorModule } from './two-factor/two-factor.module';
 import { RedisModule } from './common/redis/redis.module';
 import { BullQueueModule } from './bull/bull.module';
+import { StorageModule } from './storage/storage.module';
 
 @Module({
   imports: [
@@ -76,6 +77,7 @@ import { BullQueueModule } from './bull/bull.module';
     TwoFactorModule,
     RedisModule,
     BullQueueModule,
+    StorageModule,
   ],
 })
 export class AppModule {}
