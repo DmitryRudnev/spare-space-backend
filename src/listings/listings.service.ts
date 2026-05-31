@@ -6,10 +6,10 @@ import type { Point } from 'geojson';
 import { UsersService } from '../users/services/users.service';
 import { Listing } from '../entities/listing.entity';
 import { ViewHistory } from '../entities/view-history.entity';
-import { Favorite } from '../entities/favorite.entity';
 import { ListingStatus } from '../common/enums/listing-status.enum';
 import { ListingType } from '../common/enums/listing-type.enum';
 import { RedisService } from '../common/redis/redis.service';
+import { GeocoderService } from '../geocoder/geocoder.service';
 
 import { CreateListingDto } from './dto/requests/create-listing.dto';
 import { UpdateListingDto } from './dto/requests/update-listing.dto';
@@ -27,6 +27,7 @@ export class ListingsService {
     @InjectRepository(ViewHistory) private readonly viewHistoryRepository: Repository<ViewHistory>,
     private readonly usersService: UsersService,
     private readonly redisService: RedisService,
+    private readonly geocoderService: GeocoderService,
   ) {}
 
   // ==========================================================================
@@ -138,24 +139,41 @@ export class ListingsService {
   async create(userId: number, createDto: CreateListingDto): Promise<Listing> {
     const user = await this.usersService.findById(userId);
     const listingData = this.prepareListingData(createDto, { user, status: ListingStatus.ACTIVE });  // пока что для разработки статус ACTIVE; потом сделать DRAFT
+
+    // Если координаты не переданы, но есть адрес — запрашиваем геокодер
+    if (!listingData.location && createDto.address) {
+      const coords = await this.geocoderService.getCoordinates(createDto.address);
+      if (coords) {
+        listingData.location = {
+          type: 'Point',
+          coordinates: [coords.longitude, coords.latitude],
+        } as any;
+      }
+    }
+
     const listing = this.listingRepository.create(listingData);
-
-    // Инвалидируем кэш списка активных объявлений пользователя
     await this.redisService.deleteByPattern(this.getUserActiveListingsPattern(userId));  // удалить, когда при создании объявления будут иметь статуст DRAFT, а не ACTIVE, как это сейчас
-
     return this.listingRepository.save(listing);
   }
 
   async update(listingId: number, updateDto: UpdateListingDto): Promise<Listing> {
     const listing = await this.findByIdWithCache(listingId);
     const updatedData = this.prepareListingData(updateDto, listing);
+
+    // Если адрес изменили, а новые координаты явно не передали — обновляем координаты
+    if (updateDto.address && !updateDto.location) {
+      const coords = await this.geocoderService.getCoordinates(updateDto.address);
+      if (coords) {
+        updatedData.location = {
+          type: 'Point',
+          coordinates: [coords.longitude, coords.latitude],
+        } as any;
+      }
+    }
+
     const updatedListing = this.listingRepository.create(updatedData);
-
-    // Инвалидация конкретного объявления
-    await this.redisService.delete(this.getListingCacheKey(listingId));
-    // Инвалидация списка объявлений пользователя
-    await this.redisService.deleteByPattern(this.getUserActiveListingsPattern(listing.user.id));
-
+    await this.redisService.delete(this.getListingCacheKey(listingId));  // Инвалидация конкретного объявления
+    await this.redisService.deleteByPattern(this.getUserActiveListingsPattern(listing.user.id));  // Инвалидация списка объявлений пользователя
     return this.listingRepository.save(updatedListing);
   }
 

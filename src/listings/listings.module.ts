@@ -14,6 +14,7 @@ import { Favorite } from '../entities/favorite.entity';
 import { ViewHistory } from '../entities/view-history.entity';
 import { UsersModule } from '../users/users.module';
 import { RedisModule } from '../common/redis/redis.module';
+import { GeocoderModule } from '../geocoder/geocoder.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { RedisModule } from '../common/redis/redis.module';
     PassportModule,
     UsersModule,
     RedisModule,
+    GeocoderModule,
   ],
   controllers: [ListingsController, FavoritesController, ListingsAdminController],
   providers: [ListingsService, FavoritesService, ListingsControllerHandler],

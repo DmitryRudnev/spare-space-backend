@@ -4,6 +4,7 @@ import { Listing } from '../entities/listing.entity';
 import { ListingStatus } from '../common/enums/listing-status.enum';
 import { ListingsService } from './listings.service';
 import { FavoritesService } from './favorites.service';
+import { GeocoderService } from '../geocoder/geocoder.service';
 
 import { CreateListingDto } from './dto/requests/create-listing.dto';
 import { UpdateListingDto } from './dto/requests/update-listing.dto';
@@ -14,11 +15,13 @@ export class ListingsControllerHandler {
   constructor(
     private readonly listingsService: ListingsService,
     private readonly favoritesService: FavoritesService,
+    private readonly geocoderService: GeocoderService,
   ) {}
 
   async findAllActive(
     searchDto: SearchListingsDto,
   ): Promise<{ listings: Listing[]; total: number; limit: number; offset: number }> {
+    await this.preprocessSearchDto(searchDto);
     searchDto.status = ListingStatus.ACTIVE;
     return this.listingsService.findAllWithCache(searchDto);
   }
@@ -26,6 +29,7 @@ export class ListingsControllerHandler {
   async findGeo(
     searchDto: SearchListingsDto,
   ): Promise<{ listings: Listing[]; total: number; limit: number; offset: number }> {
+    await this.preprocessSearchDto(searchDto);
     searchDto.status = ListingStatus.ACTIVE;
     return this.listingsService.findGeo(searchDto);
   }
@@ -34,6 +38,7 @@ export class ListingsControllerHandler {
     searchDto: SearchListingsDto,
     targetUserId: number,
   ): Promise<{ listings: Listing[]; total: number; limit: number; offset: number }> {
+    await this.preprocessSearchDto(searchDto);
     searchDto.status = ListingStatus.ACTIVE;
     return this.listingsService.findAllWithCache(searchDto, targetUserId);
   }
@@ -42,6 +47,7 @@ export class ListingsControllerHandler {
     searchDto: SearchListingsDto,
     currentUserId: number,
   ): Promise<{ listings: Listing[]; total: number; limit: number; offset: number }> {
+    await this.preprocessSearchDto(searchDto);
     return this.listingsService.findAllWithCache(searchDto, currentUserId);
   }
 
@@ -74,5 +80,21 @@ export class ListingsControllerHandler {
   async delete(listingId: number, userId: number): Promise<void> {
     await this.listingsService.validateListingOwnership(listingId, userId);
     await this.listingsService.updateStatus(listingId, ListingStatus.INACTIVE);
+  }
+
+  // Приватный метод для геокодирования адреса в координаты перед поиском
+  private async preprocessSearchDto(searchDto: SearchListingsDto): Promise<void> {
+    if (
+      searchDto.address &&
+      searchDto.radius !== undefined &&
+      searchDto.longitude === undefined &&
+      searchDto.latitude === undefined
+    ) {
+      const coords = await this.geocoderService.getCoordinates(searchDto.address);
+      if (coords) {
+        searchDto.longitude = coords.longitude;
+        searchDto.latitude = coords.latitude;
+      }
+    }
   }
 }
