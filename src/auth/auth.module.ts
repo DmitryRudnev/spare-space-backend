@@ -10,6 +10,7 @@ import { JwtStrategy } from './jwt.strategy';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { OptionalJwtGuard } from './optional-jwt.guard';
 import { RedisModule } from '../common/redis/redis.module';
+import { HttpModule } from '@nestjs/axios';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { RedisModule } from '../common/redis/redis.module';
     UsersModule,
     TwoFactorModule,
     RedisModule,
+    HttpModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy, JwtAuthGuard, OptionalJwtGuard],

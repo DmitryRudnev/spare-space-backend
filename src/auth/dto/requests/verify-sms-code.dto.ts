@@ -13,12 +13,12 @@ export class VerifySmsCodeDto {
 
   @ApiProperty({
     type: String,
-    description: 'Код из SMS',
-    example: '000000',
-    minLength: 6,
-    maxLength: 6,
+    description: 'Последние 4 цифры позвонившего телефона',
+    example: '0000',
+    minLength: 4,
+    maxLength: 4,
   })
   @IsString()
-  @Length(6, 6)
+  @Length(4, 4)
   code: string;
 }

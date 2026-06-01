@@ -1,10 +1,12 @@
-import { Injectable, UnauthorizedException, ConflictException, BadRequestException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException, BadRequestException, Logger, InternalServerErrorException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { randomBytes, createHmac, randomInt } from 'node:crypto';
 import { ConfigService } from '@nestjs/config';
+import { HttpService } from '@nestjs/axios';
+import { firstValueFrom } from 'rxjs';
 
 import { UsersService } from '../users/services/users.service';
 import { TwoFactorService } from '../two-factor/two-factor.service';
@@ -21,11 +23,14 @@ import { CompleteRegistrationDto } from './dto/requests/complete-registration.dt
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
   private readonly BCRYPT_SALT_ROUNDS = 12;
   private readonly REFRESH_TOKEN_SECRET: string;
   private readonly REFRESH_TOKEN_EXPIRY_DAYS: number;  
   private readonly SMS_CODE_CACHE_PREFIX = 'sms:verify:';
   private readonly SMS_CODE_CACHE_TTL_SEC = 300;  // 5 минут
+  private readonly SMS_API_ID: string;
+  private readonly SMS_DEBUG: boolean;
 
   constructor(
     @InjectRepository(RefreshToken) private readonly tokenRepository: Repository<RefreshToken>,
@@ -33,10 +38,13 @@ export class AuthService {
     private readonly usersService: UsersService,
     private readonly twoFactorService: TwoFactorService,
     private readonly redisService: RedisService,
+    readonly httpService: HttpService,
     configService: ConfigService,
   ) {
     this.REFRESH_TOKEN_SECRET = configService.getOrThrow('REFRESH_TOKEN_SECRET');
     this.REFRESH_TOKEN_EXPIRY_DAYS = configService.getOrThrow<number>('REFRESH_TOKEN_EXPIRY_DAYS');
+    this.SMS_API_ID = configService.getOrThrow('SMS_API_ID');
+    this.SMS_DEBUG = configService.getOrThrow('SMS_DEBUG') === 'true';
   }
 
   // ==========================================================================
@@ -44,20 +52,42 @@ export class AuthService {
   // ==========================================================================
 
   async requestSmsCode(phone: string): Promise<void> {
-    // const code = randomInt(100000, 999999).toString();
-    const code = '000000';  // Заглушка
+    const cleanedPhone = this.cleanPhoneNumber(phone); // Оставляет формат +7...
+    let code: string;
 
-    const cleanedPhone = this.cleanPhoneNumber(phone);
+    if (this.SMS_DEBUG) {
+      code = '000000'; // В режиме отладки не дергаем платное API
+      this.logger.debug(`[DEBUG] Flash call requested for ${cleanedPhone}. Code: ${code}`);
+    } else {
+      // Для sms.ru убираем знак "+"
+      const phoneForApi = cleanedPhone.replace('+', '');
+      
+      try {
+        const url = `https://sms.ru/code/call?phone=${phoneForApi}&api_id=${this.SMS_API_ID}`;
+        const { data } = await firstValueFrom(this.httpService.get(url));
+
+        if (data.status !== 'OK') {
+          this.logger.error(`SMS.ru API Error: ${JSON.stringify(data)}`);
+          throw new InternalServerErrorException('Не удалось инициировать звонок');
+        }
+        
+        // SMS.ru возвращает код в поле "code"
+        code = String(data.code);
+      } catch (error) {
+        if (error instanceof InternalServerErrorException) throw error;
+        this.logger.error(`Flash call request failed: ${error.message}`);
+        throw new InternalServerErrorException('Ошибка при запросе звонка');
+      }
+    }
+
     await this.redisService.set(
       `${this.SMS_CODE_CACHE_PREFIX}${cleanedPhone}`,
       code,
       this.SMS_CODE_CACHE_TTL_SEC,
     );
-
-    // В Prod отправить уведомление через EvenEmitter2, указать канал SMS
   }
 
-
+  
   async verifySmsCode(phone: string, code: string): Promise<VerifySmsCodeResponseDto> {
     // Валидируем код
     const cleanedPhone = this.cleanPhoneNumber(phone);
