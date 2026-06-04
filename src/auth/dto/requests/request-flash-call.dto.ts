@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsString, IsPhoneNumber } from 'class-validator';
 
-export class RequestSmsCodeDto {
+export class RequestFlashCallDto {
   @ApiProperty({
     type: String,
     description: 'Номер телефона',

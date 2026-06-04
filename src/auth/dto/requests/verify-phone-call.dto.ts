@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsString, IsPhoneNumber, Length } from 'class-validator';
 
-export class VerifySmsCodeDto {
+export class VerifyFlashCallDto {
   @ApiProperty({
     type: String,
     description: 'Номер телефона',
@@ -20,5 +20,5 @@ export class VerifySmsCodeDto {
   })
   @IsString()
   @Length(4, 4)
-  code: string;
+  lastFourDigits: string;
 }

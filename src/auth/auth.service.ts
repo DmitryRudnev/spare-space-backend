@@ -18,7 +18,7 @@ import { RefreshToken } from '../entities/refresh-token.entity';
 import { LoginDto } from './dto/requests/login.dto';
 import { AuthResponseDto } from './dto/responses/auth-response.dto';
 import { LoginResponseDto } from './dto/responses/login-response.dto';
-import { VerifySmsCodeResponseDto } from './dto/responses/verify-sms-code-response.dto';
+import { VerifyFlashCallResponseDto } from './dto/responses/verify-flash-call-response.dto';
 import { CompleteRegistrationDto } from './dto/requests/complete-registration.dto';
 
 @Injectable()
@@ -27,10 +27,10 @@ export class AuthService {
   private readonly BCRYPT_SALT_ROUNDS = 12;
   private readonly REFRESH_TOKEN_SECRET: string;
   private readonly REFRESH_TOKEN_EXPIRY_DAYS: number;  
-  private readonly SMS_CODE_CACHE_PREFIX = 'sms:verify:';
-  private readonly SMS_CODE_CACHE_TTL_SEC = 300;  // 5 минут
-  private readonly SMS_API_ID: string;
-  private readonly SMS_DEBUG: boolean;
+  private readonly FLASH_CALL_CACHE_PREFIX = 'flash-call:verify:';
+  private readonly FLASH_CALL_CACHE_TTL_SEC = 300;  // 5 минут
+  private readonly FLASH_CALL_API_ID: string;
+  private readonly FLASH_CALL_DEBUG: boolean;
 
   constructor(
     @InjectRepository(RefreshToken) private readonly tokenRepository: Repository<RefreshToken>,
@@ -43,27 +43,24 @@ export class AuthService {
   ) {
     this.REFRESH_TOKEN_SECRET = configService.getOrThrow('REFRESH_TOKEN_SECRET');
     this.REFRESH_TOKEN_EXPIRY_DAYS = configService.getOrThrow<number>('REFRESH_TOKEN_EXPIRY_DAYS');
-    this.SMS_API_ID = configService.getOrThrow('SMS_API_ID');
-    this.SMS_DEBUG = configService.getOrThrow('SMS_DEBUG') === 'true';
+    this.FLASH_CALL_API_ID = configService.getOrThrow('FLASH_CALL_API_ID');
+    this.FLASH_CALL_DEBUG = configService.getOrThrow('FLASH_CALL_DEBUG') === 'true';
   }
 
-  // ==========================================================================
-  // ========================== CONTROLLER HANDLERS ===========================
-  // ==========================================================================
-
-  async requestSmsCode(phone: string): Promise<void> {
+  
+  async requestFlashCall(phone: string): Promise<void> {
     const cleanedPhone = this.cleanPhoneNumber(phone); // Оставляет формат +7...
-    let code: string;
+    let lastFourDigits: string;
 
-    if (this.SMS_DEBUG) {
-      code = '000000'; // В режиме отладки не дергаем платное API
-      this.logger.debug(`[DEBUG] Flash call requested for ${cleanedPhone}. Code: ${code}`);
+    if (this.FLASH_CALL_DEBUG) {
+      lastFourDigits = '0000'; // В режиме отладки не дергаем платное API
+      this.logger.debug(`[DEBUG] Flash call requested for ${cleanedPhone}. Code: ${lastFourDigits}`);
     } else {
       // Для sms.ru убираем знак "+"
       const phoneForApi = cleanedPhone.replace('+', '');
       
       try {
-        const url = `https://sms.ru/code/call?phone=${phoneForApi}&api_id=${this.SMS_API_ID}`;
+        const url = `https://sms.ru/code/call?phone=${phoneForApi}&api_id=${this.FLASH_CALL_API_ID}`;
         const { data } = await firstValueFrom(this.httpService.get(url));
 
         if (data.status !== 'OK') {
@@ -72,7 +69,7 @@ export class AuthService {
         }
         
         // SMS.ru возвращает код в поле "code"
-        code = String(data.code);
+        lastFourDigits = String(data.code);
       } catch (error) {
         if (error instanceof InternalServerErrorException) throw error;
         this.logger.error(`Flash call request failed: ${error.message}`);
@@ -81,21 +78,21 @@ export class AuthService {
     }
 
     await this.redisService.set(
-      `${this.SMS_CODE_CACHE_PREFIX}${cleanedPhone}`,
-      code,
-      this.SMS_CODE_CACHE_TTL_SEC,
+      `${this.FLASH_CALL_CACHE_PREFIX}${cleanedPhone}`,
+      lastFourDigits,
+      this.FLASH_CALL_CACHE_TTL_SEC,
     );
   }
 
   
-  async verifySmsCode(phone: string, code: string): Promise<VerifySmsCodeResponseDto> {
+  async verifyFlashCall(phone: string, lastFourDigits: string): Promise<VerifyFlashCallResponseDto> {
     // Валидируем код
     const cleanedPhone = this.cleanPhoneNumber(phone);
-    const cacheCode = await this.redisService.get(`${this.SMS_CODE_CACHE_PREFIX}${cleanedPhone}`);
-    if (!cacheCode || code !== cacheCode) {
-      throw new UnauthorizedException('Invalid or expired code');
+    const cacheLastFourDigits = await this.redisService.get(`${this.FLASH_CALL_CACHE_PREFIX}${cleanedPhone}`);
+    if (!cacheLastFourDigits || lastFourDigits !== cacheLastFourDigits) {
+      throw new UnauthorizedException('Invalid or expired phone verification digits');
     }
-    await this.redisService.delete(`${this.SMS_CODE_CACHE_PREFIX}${cleanedPhone}`);
+    await this.redisService.delete(`${this.FLASH_CALL_CACHE_PREFIX}${cleanedPhone}`);
 
     // Ищем пользователя с заданным номером телефона
     const user = await this.usersService.findByPhone(cleanedPhone);

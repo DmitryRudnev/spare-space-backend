@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
-export class VerifySmsCodeResponseDto {
+export class VerifyFlashCallResponseDto {
   // Если пользователь ещё НЕ зарегистрирован
   @ApiPropertyOptional({
     type: Boolean,

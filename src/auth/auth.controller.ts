@@ -2,7 +2,6 @@ import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
-  ApiBody,
   ApiCreatedResponse,
   ApiOkResponse,
   ApiNoContentResponse,
@@ -17,34 +16,34 @@ import { TokenOperationDto } from './dto/requests/token-operation.dto';
 import { AuthResponseDto } from './dto/responses/auth-response.dto';
 import { LoginResponseDto } from './dto/responses/login-response.dto';
 import { VerifyTwoFactorDto } from './dto/requests/verify-two-factor.dto';
-import { RequestSmsCodeDto } from './dto/requests/request-sms-code.dto';
-import { VerifySmsCodeDto } from './dto/requests/verify-sms-code.dto';
+import { RequestFlashCallDto } from './dto/requests/request-flash-call.dto';
+import { VerifyFlashCallDto } from './dto/requests/verify-phone-call.dto';
 import { CompleteRegistrationDto } from './dto/requests/complete-registration.dto';
-import { VerifySmsCodeResponseDto } from './dto/responses/verify-sms-code-response.dto';
+import { VerifyFlashCallResponseDto } from './dto/responses/verify-flash-call-response.dto';
 
 @ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  @Post('request-sms-code')
+  @Post('request-flash-call')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Запрос SMS-кода для входа/регистрации' })
-  @ApiOkResponse({ description: 'Код отправлен' })
-  async requestSmsCode(@Body() dto: RequestSmsCodeDto): Promise<void> {
-    await this.authService.requestSmsCode(dto.phone);
+  @ApiOperation({ summary: 'Запрос звонка-сброса для входа/регистрации' })
+  @ApiOkResponse({ description: 'Звонок успешно заказан' })
+  async requestFlashCall(@Body() dto: RequestFlashCallDto): Promise<void> {
+    await this.authService.requestFlashCall(dto.phone);
   }
 
-  @Post('verify-sms-code')
+  @Post('verify-flash-call')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Подтверждение кода' })
+  @ApiOperation({ summary: 'Подтверждение номера телефона по звонку-сбросу' })
   @ApiOkResponse({
-    type: VerifySmsCodeResponseDto,
+    type: VerifyFlashCallResponseDto,
     description: 'Вход выполнен успешно ИЛИ требуется завершение регистрации ИЛИ требуется подтверждение 2ФА',
   })
-  @ApiUnauthorizedResponse({ description: 'Неверный или просроченный код' })
-  async verifySmsCode(@Body() dto: VerifySmsCodeDto): Promise<VerifySmsCodeResponseDto> {
-    return this.authService.verifySmsCode(dto.phone, dto.code);
+  @ApiUnauthorizedResponse({ description: 'Неверные цифры звонившего номера или сессия истекла' })
+  async verifyFlashCall(@Body() dto: VerifyFlashCallDto): Promise<VerifyFlashCallResponseDto> {
+    return this.authService.verifyFlashCall(dto.phone, dto.lastFourDigits);
   }
 
   @Post('complete-registration')
