@@ -133,7 +133,7 @@ export class ReviewsService {
     const review = await this.reviewRepository.findOne({
       where: { id: reviewIid },
       relations: {
-        booking: { listing: true },
+        booking: { listing: { user: true, pricings: true } },
         reviewer: true,
       },
     });
