@@ -5,11 +5,9 @@ import {
   IsString,
   IsNumber,
   IsArray,
-  IsObject,
   IsEnum,
   IsUrl,
   Min,
-  Max,
   Length,
   MinLength,
   ArrayMinSize,
@@ -60,20 +58,10 @@ export class CreateListingDto {
   @ValidateNested({ each: true })
   pricings: PricingDto[];
 
-  @ApiPropertyOptional({ type: LocationDto, description: 'Координаты места' })
-  @IsOptional()
+  @ApiProperty({ type: LocationDto, description: 'Координаты места' })
   @Type(() => LocationDto)
   @ValidateNested()
-  location?: LocationDto;
-
-  @ApiProperty({
-    type: String,
-    description: 'Физический адрес',
-    example: 'Москва, ул. Пушкина, д. Колотушкина'
-  })
-  @IsString()
-  @Length(1, 500)
-  address: string;
+  location: LocationDto;
 
   @ApiPropertyOptional({
     type: Number,
@@ -95,7 +83,7 @@ export class CreateListingDto {
   @IsArray()
   @ArrayMinSize(1)
   @ArrayMaxSize(10)
-  // @IsUrl({}, { each: true })
+  @IsUrl({}, { each: true })
   photoUrls?: string[];
 
   @ApiPropertyOptional({

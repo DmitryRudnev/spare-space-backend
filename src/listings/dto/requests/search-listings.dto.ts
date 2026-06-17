@@ -95,16 +95,6 @@ export class SearchListingsDto {
   pricePeriod?: ListingPeriodType;
 
   @ApiPropertyOptional({
-    type: String,
-    description: 'Поиск по адресу (если переданы address и radius, но нет координат — они вычислятся автоматически)',
-    example: 'Москва, ул. Пушкина'
-  })
-  @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  address?: string;
-
-  @ApiPropertyOptional({
     type: Number,
     minimum: -180,
     maximum: 180,

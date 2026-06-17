@@ -7,67 +7,57 @@ import { firstValueFrom } from 'rxjs';
 export class GeocoderService {
   private readonly logger = new Logger(GeocoderService.name);
   private readonly apiKey: string;
-  private readonly baseUrl = 'https://geocode-maps.yandex.ru/1.x/';
+  private readonly suggestUrl = 'https://suggestions.dadata.ru/suggestions/api/4_1/rs/suggest/address';
+  private readonly geolocateUrl = 'https://suggestions.dadata.ru/suggestions/api/4_1/rs/geolocate/address';
 
   constructor(
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
   ) {
-    this.apiKey = this.configService.getOrThrow<string>('YANDEX_MAP_GEOCODER_API_KEY');
+    this.apiKey = this.configService.getOrThrow('DADATA_API_KEY');
   }
 
-  async getCoordinates(address: string): Promise<{ longitude: number; latitude: number } | null> {
+  private get headers() {
+    return {
+      Authorization: `Token ${this.apiKey}`,
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    };
+  }
+
+  async suggestAddress(query: string): Promise<Array<{ address: string; latitude: number | null; longitude: number | null }>> {
     try {
       const { data } = await firstValueFrom(
-        this.httpService.get(this.baseUrl, {
-          params: {
-            apikey: this.apiKey,
-            geocode: address,
-            format: 'json',
-            results: 1,
-          },
-        }),
+        this.httpService.post(this.suggestUrl, { query }, { headers: this.headers }),
       );
 
-      const featureMember = data?.response?.GeoObjectCollection?.featureMember;
-      if (!featureMember || featureMember.length === 0) {
-        return null; // Адрес не найден
-      }
-
-      // Яндекс возвращает координаты строкой: "Долгота Широта"
-      const pos = featureMember[0].GeoObject.Point.pos;
-      const [longitude, latitude] = pos.split(' ').map(Number);
-
-      return { longitude, latitude };
+      return data.suggestions.map((s: any) => ({
+        address: s.value,
+        latitude: s.data.geo_lat ? parseFloat(s.data.geo_lat) : null,
+        longitude: s.data.geo_lon ? parseFloat(s.data.geo_lon) : null,
+      }));
     } catch (error) {
-      this.logger.error(`Ошибка геокодирования для адреса "${address}": ${error.message}`);
-      return null;
+      this.logger.error(`Ошибка DaData подсказок для "${query}": ${error.message}`);
+      return [];
     }
   }
 
-  async getAddress(longitude: number, latitude: number): Promise<string | null> {
+  async getAddressByCoords(latitude: number, longitude: number): Promise<string | null> {
     try {
       const { data } = await firstValueFrom(
-        this.httpService.get(this.baseUrl, {
-          params: {
-            apikey: this.apiKey,
-            // Яндекс принимает координаты в формате "долгота,широта"
-            geocode: `${longitude},${latitude}`,
-            format: 'json',
-            results: 1,
-          },
-        }),
+        this.httpService.post(
+          this.geolocateUrl,
+          { lat: latitude, lon: longitude, radius_meters: 100 },
+          { headers: this.headers },
+        ),
       );
 
-      const featureMember = data?.response?.GeoObjectCollection?.featureMember;
-      if (!featureMember || featureMember.length === 0) {
-        return null;
+      if (data.suggestions && data.suggestions.length > 0) {
+        return data.suggestions[0].value;
       }
-
-      // Извлекаем полный отформатированный адрес
-      return featureMember[0].GeoObject.metaDataProperty.GeocoderMetaData.text;
+      return null;
     } catch (error) {
-      this.logger.error(`Ошибка обратного геокодирования для [${longitude}, ${latitude}]: ${error.message}`);
+      this.logger.error(`Ошибка DaData обратного геокодирования для [${latitude}, ${longitude}]: ${error.message}`);
       return null;
     }
   }

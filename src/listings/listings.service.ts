@@ -140,16 +140,14 @@ export class ListingsService {
     const user = await this.usersService.findById(userId);
     const listingData = this.prepareListingData(createDto, { user, status: ListingStatus.ACTIVE });  // пока что для разработки статус ACTIVE; потом сделать DRAFT
 
-    // Если координаты не переданы, но есть адрес — запрашиваем геокодер
-    if (!listingData.location && createDto.address) {
-      const coords = await this.geocoderService.getCoordinates(createDto.address);
-      if (coords) {
-        listingData.location = {
-          type: 'Point',
-          coordinates: [coords.longitude, coords.latitude],
-        } as any;
-      }
+    const address = await this.geocoderService.getAddressByCoords(
+      createDto.location.latitude,
+      createDto.location.longitude,
+    );
+    if (!address) {
+      throw new BadRequestException('Не удалось определить корректный адрес по указанным координатам. Выберите другую точку.');
     }
+    listingData.address = address;
 
     const listing = this.listingRepository.create(listingData);
     await this.redisService.deleteByPattern(this.getUserActiveListingsPattern(userId));  // удалить, когда при создании объявления будут иметь статуст DRAFT, а не ACTIVE, как это сейчас
@@ -160,15 +158,15 @@ export class ListingsService {
     const listing = await this.findByIdWithCache(listingId);
     const updatedData = this.prepareListingData(updateDto, listing);
 
-    // Если адрес изменили, а новые координаты явно не передали — обновляем координаты
-    if (updateDto.address && !updateDto.location) {
-      const coords = await this.geocoderService.getCoordinates(updateDto.address);
-      if (coords) {
-        updatedData.location = {
-          type: 'Point',
-          coordinates: [coords.longitude, coords.latitude],
-        } as any;
+    if (updateDto.location) {
+      const address = await this.geocoderService.getAddressByCoords(
+        updateDto.location.latitude,
+        updateDto.location.longitude,
+      );
+      if (!address) {
+        throw new BadRequestException('Не удалось определить корректный адрес по указанным координатам.');
       }
+      updatedData.address = address;
     }
 
     const updatedListing = this.listingRepository.create(updatedData);
@@ -328,7 +326,6 @@ export class ListingsService {
       data.pricings = dto.pricings as any; // TypeORM сам замапит массив объектов в сущности из-за cascade: true
     }
     
-    if (dto.address !== undefined) data.address = dto.address;
     if (dto.size !== undefined) data.size = dto.size;
     if (dto.photoUrls !== undefined) data.photoUrls = dto.photoUrls;
     if (dto.location !== undefined) {
