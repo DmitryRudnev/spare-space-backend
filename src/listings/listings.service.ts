@@ -128,6 +128,7 @@ export class ListingsService {
       'listing.size',
       'listing.location',
       'listing.photoUrls',
+      'listing.updatedAt',
       'pricing.id',
       'pricing.price',
       'pricing.pricePeriod',
