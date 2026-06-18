@@ -133,6 +133,11 @@ export class ListingsService {
       'pricing.price',
       'pricing.pricePeriod',
     ]);
+
+    if (searchDto.title) {
+      query.addSelect('word_similarity(:title, listing.title)', 'listing_similarity_score');
+    }
+    
     const [listings, total] = await query.getManyAndCount();
     return { listings, total, limit: searchDto.limit, offset: searchDto.offset };
   }
@@ -279,8 +284,8 @@ export class ListingsService {
     if (searchDto.title) {
       query
         .andWhere(`:title <% listing.title`, { title: searchDto.title })
-        .addSelect('word_similarity(:title, listing.title)', 'similarity_score')
-        .orderBy('similarity_score', 'DESC');
+        .addSelect('word_similarity(:title, listing.title)', 'listing_similarity_score')
+        .orderBy('listing_similarity_score', 'DESC');
     }
     return query.take(searchDto.limit).skip(searchDto.offset);
   }
