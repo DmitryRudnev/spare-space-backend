@@ -199,9 +199,8 @@ export class ChatService {
    * @param dto - DTO с данными для создания беседы
    * @returns Созданная беседа
    * @throws BadRequestException при попытке создать беседу с собой
-   * @throws ConflictException если беседа уже существует
    */
-  async createConversation(
+  async getOrCreateConversation(
     currentUserId: number,
     companionId: number,
     listingId?: number,
@@ -220,13 +219,13 @@ export class ChatService {
       }
     }
 
-    const conversationExists = await this.checkConversationExists(
+    const existingConversation = await this.findExistingConversation(
       currentUserId, 
       companionId, 
       listingId
     );
-    if (conversationExists) {
-      throw new ConflictException('Conversation already exists');
+    if (existingConversation) {
+      return this.getConversationPreview(existingConversation.id, currentUserId);
     }
 
     const conversation = this.conversationRepository.create({
@@ -503,14 +502,14 @@ export class ChatService {
   // ==================== SHARED PRIVATE METHODS ====================
 
   /**
-   * Проверка существования беседы между пользователями
+   * Поиск существующей беседы между пользователями
    * @private
    */
-  private async checkConversationExists(
+  private async findExistingConversation(
     user1Id: number, 
     user2Id: number, 
     listingId?: number
-  ): Promise<boolean> {
+  ): Promise<Conversation | null> {
     const listingCondition = listingId ? { id: listingId } : IsNull() as FindOperator<any>;
 
     const conditions = [
@@ -526,10 +525,6 @@ export class ChatService {
       }
     ];
 
-    const count = await this.conversationRepository.count({
-      where: conditions
-    });
-
-    return count > 0;
+    return this.conversationRepository.findOne({ where: conditions });
   }
 }

@@ -113,15 +113,15 @@ export class ChatController {
   }
 
   @Post('conversations')
-  @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Создание новой беседы' })
-  @ApiCreatedResponse({ type: ConversationResponseDto, description: 'Беседа успешно создана' })
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Создание новой или получение существующей беседы' })
+  @ApiOkResponse({ type: ConversationResponseDto, description: 'Беседа успешно создана или получена' })
   @ApiBadRequestResponse({ description: 'Некорректные данные запроса' })
-  async createConversation(
+  async getOrCreateConversation(
     @Body() createConversationDto: CreateConversationDto,
     @User('userId') currentUserId: number
   ): Promise<ConversationResponseDto> {
-    const preview = await this.chatService.createConversation(
+    const preview = await this.chatService.getOrCreateConversation(
       currentUserId,
       createConversationDto.participantId,
       createConversationDto.listingId
