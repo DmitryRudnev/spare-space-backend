@@ -26,6 +26,9 @@ export class User {
 
   @Column({ type: 'varchar', length: 50, nullable: true })
   patronymic: string | null;
+  
+  @Column({ type: 'text', nullable: true })
+  avatarUrl: string | null;
 
   @Column({ type: 'varchar', length: 255 })
   passwordHash: string;

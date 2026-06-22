@@ -38,6 +38,7 @@ export class UsersService {
           firstName: true,
           lastName: true,
           patronymic: true,
+          avatarUrl: true,
           passwordHash: true,
           rating: true,
           telegramId: true,

@@ -13,6 +13,9 @@ export class UserPublicResponseDto {
   @ApiProperty({ type: String, nullable: true, description: 'Отчество', example: 'Иванович' })
   patronymic: string | null;
 
+  @ApiProperty({ type: String, nullable: true, description: 'Ссылка на фотографию профиля', example: 'https://example.com/avatar1.jpg' })
+  avatarUrl: string | null;
+
   @ApiProperty({ type: Number, nullable: true, description: 'Рейтинг', example: 4.8 })
   rating: number | null;
 

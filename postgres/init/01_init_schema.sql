@@ -67,6 +67,7 @@ CREATE TABLE users (
     first_name VARCHAR(50) NOT NULL,
     last_name VARCHAR(50) NOT NULL, 
     patronymic VARCHAR(50),
+    avatar_url TEXT,
     password_hash VARCHAR(255) NOT NULL,
     rating DECIMAL(3,2),
     is_online BOOLEAN NOT NULL DEFAULT FALSE,

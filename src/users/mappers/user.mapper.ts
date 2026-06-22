@@ -10,6 +10,7 @@ export class UserMapper {
     dto.firstName = user.firstName;
     dto.lastName = user.lastName;
     dto.patronymic = user.patronymic;
+    dto.avatarUrl = user.avatarUrl;
     dto.rating = user.rating;
     dto.verified = user.verified;
     dto.createdAt = user.createdAt.toISOString();
