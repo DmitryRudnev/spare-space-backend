@@ -1,6 +1,6 @@
 -- USERS
 INSERT INTO users (phone, email, first_name, last_name, patronymic, password_hash, rating, two_fa_enabled, verified, created_at, avatar_url) VALUES
-('+79000000001', 'user1@example.com', 'Данил', 'Джонсон', 'Скала', '$2b$12$0INxsLXfDmt0tkr9u4H28e8pWS.EtA.D7D6Ao.ZH4rUDYzuienbXG', 4.5, false, true, NOW() - INTERVAL '30 days', 'https://downloader.disk.yandex.ru/preview/2069a3643f3804ae30b1eaec70aae5d684ccfd052a9b4d118594fef19f9aa0e0/6a395527/8OgFmXBb1lfT8Z6SA4IRWnz0bcICof7tXpKV4EBuLkPD4TSiRsOgJ3ZpstrCmQCt-2Hcyc5pFwRfwZoQkkw5qQ%3D%3D?uid=0&filename=%D0%A1%D0%BA%D0%B0%D0%BB%D0%B0.png&disposition=inline&hash=&limit=0&content_type=image%2Fpng&owner_uid=0&tknv=v3&is_direct_zip_experiment=1&size=1910x992'),
+('+79000000001', 'user1@example.com', 'Данил', 'Джонсон', 'Скала', '$2b$12$0INxsLXfDmt0tkr9u4H28e8pWS.EtA.D7D6Ao.ZH4rUDYzuienbXG', 4.5, false, true, NOW() - INTERVAL '30 days', 'https://downloader.disk.yandex.ru/preview/95e63ad90f594474691f2c4476a793f2b0d8b1a1649ecf71779bf5483e0969c4/6a396ea6/qsHx75m4M-xqjM56GRq7exrAuziLAQGWgoGKCzMkK_4xhn5TF3hYUZX2dYj4lgpOE-MKoceUSG3PTbkUuijX5Q%3D%3D?uid=0&filename=%D0%A1%D0%BA%D0%B0%D0%BB%D0%B0.jpg&disposition=inline&hash=&limit=0&content_type=image%2Fjpeg&owner_uid=0&tknv=v3&is_direct_zip_experiment=1&size=1910x992'),
 ('+79000000002', 'user2@example.com', 'Тимур', 'Круз', 'Итанович', '$2b$12$0INxsLXfDmt0tkr9u4H28e8pWS.EtA.D7D6Ao.ZH4rUDYzuienbXG', 4.2, false, false, NOW() - INTERVAL '25 days', 'https://downloader.disk.yandex.ru/preview/0284e628e435a51a21ded7727645016f0d6d3154b15f03b82be8cfd3fbf20445/6a395527/5JbPLJ2xt-tzNJOhkCIRxXz0bcICof7tXpKV4EBuLkOA4GrFEjR0nXCCt7uwwO2sUdxhfnB7QO-Pimld0OlQSg%3D%3D?uid=0&filename=%D0%9A%D1%80%D1%83%D0%B7.jpg&disposition=inline&hash=&limit=0&content_type=image%2Fjpeg&owner_uid=0&tknv=v3&is_direct_zip_experiment=1&size=1910x992'),
 ('+79000000003', 'user3@example.com', 'Меган', 'Фокс', 'Эдуардовна', '$2b$12$0INxsLXfDmt0tkr9u4H28e8pWS.EtA.D7D6Ao.ZH4rUDYzuienbXG', 4.8, false, true, NOW() - INTERVAL '20 days', 'https://downloader.disk.yandex.ru/preview/b82412bbdef37b4c2d1a125d4664faef46d03c885d02808bedc4082b959bdda2/6a395527/8XSxrSkIlpQ7hw91Te1PsXz0bcICof7tXpKV4EBuLkOzs8d_wtNmC25OvYuc7xobqcaY5mLNYnGiiKcC8O1NdA%3D%3D?uid=0&filename=%D0%9C%D0%B5%D0%B3%D0%B0%D0%BD.jpg&disposition=inline&hash=&limit=0&content_type=image%2Fjpeg&owner_uid=0&tknv=v3&is_direct_zip_experiment=1&size=1910x992'),
 ('+79000000004', 'user4@example.com', 'Женя', 'Керри', 'Труманович', '$2b$12$0INxsLXfDmt0tkr9u4H28e8pWS.EtA.D7D6Ao.ZH4rUDYzuienbXG', 4.0, false, false, NOW() - INTERVAL '15 days', 'https://downloader.disk.yandex.ru/preview/6fed2ad019fd6be05022e460aa121686014d4835f8096303519df16052a506f6/6a395527/iI8agNbVfQi8ectyKkxtrHz0bcICof7tXpKV4EBuLkOJUFiG_3m-rBV1y8UjyCwJ6c0s-71MqgbStnhTj9zCJw%3D%3D?uid=0&filename=%D0%9A%D0%B5%D1%80%D1%80%D0%B8.jpg&disposition=inline&hash=&limit=0&content_type=image%2Fjpeg&owner_uid=0&tknv=v3&is_direct_zip_experiment=1&size=1910x992'),
@@ -227,15 +227,15 @@ INSERT INTO transactions (user_id, type, status, amount, booking_id, description
 -- CONVERSATIONS
 INSERT INTO conversations (participant1_id, participant2_id, listing_id, last_message_at, created_at, updated_at) VALUES
 -- Чат между пользователем 1 и пользователем 2 по бронированию гаража
-(1, 2, 4, NOW() - INTERVAL '18 days', NOW() - INTERVAL '20 days', NOW() - INTERVAL '18 days'),
+(1, 2, 14, NOW() - INTERVAL '18 days', NOW() - INTERVAL '20 days', NOW() - INTERVAL '18 days'),
 -- Чат между пользователем 1 и пользователем 3 по парковке у метро
-(1, 3, 9, NOW() - INTERVAL '10 days', NOW() - INTERVAL '15 days', NOW() - INTERVAL '10 days'),
+(1, 3, 18, NOW() - INTERVAL '10 days', NOW() - INTERVAL '15 days', NOW() - INTERVAL '10 days'),
 -- Чат между пользователем 2 и пользователем 5 по термоскладу
-(2, 5, 13, NOW() - INTERVAL '3 days', NOW() - INTERVAL '12 days', NOW() - INTERVAL '3 days'),
+(2, 5, 22, NOW() - INTERVAL '3 days', NOW() - INTERVAL '12 days', NOW() - INTERVAL '3 days'),
 -- Чат между пользователем 3 и пользователем 5 по VIP парковке
-(3, 5, 11, NOW() - INTERVAL '8 days', NOW() - INTERVAL '18 days', NOW() - INTERVAL '8 days'),
+(3, 5, 21, NOW() - INTERVAL '8 days', NOW() - INTERVAL '18 days', NOW() - INTERVAL '8 days'),
 -- Чат между пользователем 4 и пользователем 5 по гаражу с мастерской
-(4, 5, 12, NOW() - INTERVAL '5 days', NOW() - INTERVAL '10 days', NOW() - INTERVAL '5 days'),
+(4, 5, 23, NOW() - INTERVAL '5 days', NOW() - INTERVAL '10 days', NOW() - INTERVAL '5 days'),
 -- Чат между пользователем 1 и пользователем 5 (общий, без привязки к объявлению)
 (1, 5, NULL, NOW() - INTERVAL '2 days', NOW() - INTERVAL '25 days', NOW() - INTERVAL '2 days');
 
