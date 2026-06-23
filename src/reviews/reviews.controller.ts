@@ -8,6 +8,7 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  ParseIntPipe,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -43,20 +44,11 @@ export class ReviewsController {
   @ApiOkResponse({ type: ReviewListResponseDto, description: 'Список отзывов' })
   @ApiNotFoundResponse({ description: 'Объявление не найдено' })
   async findByListing(
-    @Param('id') listingId: string,
-    @Query() paginationDto: PaginationDto,
+    @Param('id', ParseIntPipe) listingId: number,
+    @Query() dto: PaginationDto,
   ): Promise<ReviewListResponseDto> {
-    const result = await this.reviewsService.findByListingWithCache(
-      Number(listingId),
-      paginationDto.limit,
-      paginationDto.offset,
-    );
-    return ReviewMapper.toListResponseDto(
-      result.reviews,
-      result.total,
-      result.limit,
-      result.offset,
-    );
+    const result = await this.reviewsService.findByListingWithCache(listingId, dto.limit, dto.offset);
+    return ReviewMapper.toListResponseDto(result.reviews, result.total, result.limit, result.offset);
   }
 
   @Get('user/:id')
@@ -66,20 +58,11 @@ export class ReviewsController {
   @ApiOkResponse({ type: ReviewListResponseDto, description: 'Список отзывов' })
   @ApiNotFoundResponse({ description: 'Пользователь не найден' })
   async findByUser(
-    @Param('id') userId: string,
-    @Query() paginationDto: PaginationDto,
+    @Param('id', ParseIntPipe) userId: number,
+    @Query() dto: PaginationDto,
   ): Promise<ReviewListResponseDto> {
-    const result = await this.reviewsService.findByUserWithCache(
-      Number(userId),
-      paginationDto.limit,
-      paginationDto.offset,
-    );
-    return ReviewMapper.toListResponseDto(
-      result.reviews,
-      result.total,
-      result.limit,
-      result.offset,
-    );
+    const result = await this.reviewsService.findByUserWithCache(userId, dto.limit, dto.offset);
+    return ReviewMapper.toListResponseDto(result.reviews, result.total, result.limit, result.offset);
   }
 
   @Get(':id')
@@ -88,9 +71,24 @@ export class ReviewsController {
   @ApiParam({ name: 'id', description: 'ID отзыва', type: Number })
   @ApiOkResponse({ type: ReviewResponseDto, description: 'Информация об отзыве' })
   @ApiNotFoundResponse({ description: 'Отзыв не найден' })
-  async findOne(@Param('id') reviewId: string): Promise<ReviewResponseDto> {
-    const review = await this.reviewsService.findById(Number(reviewId));
+  async findById(@Param('id', ParseIntPipe) reviewId: number): Promise<ReviewResponseDto> {
+    const review = await this.reviewsService.findById(reviewId);
     return ReviewMapper.toResponseDto(review);
+  }
+  
+  @Get('booking/:bookingId')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Получить мой отзыв по ID бронирования' })
+  @ApiParam({ type: Number, name: 'bookingId', description: 'ID бронирования' })
+  @ApiOkResponse({ type: ReviewResponseDto, description: 'Отзыв пользователя или null' })
+  async findByBooking(
+    @Param('bookingId', ParseIntPipe) bookingId: number,
+    @User('userId') userId: number,
+  ): Promise<ReviewResponseDto | null> {
+    const review = await this.reviewsService.findByBooking(bookingId, userId);
+    return review === null ? null : ReviewMapper.toResponseDto(review);
   }
 
   @Post()

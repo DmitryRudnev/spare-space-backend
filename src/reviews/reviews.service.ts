@@ -113,7 +113,7 @@ export class ReviewsService {
     const [reviews, total] = await this.reviewRepository.findAndCount({
       where,
       relations: {
-        booking: { listing: { user: true } },
+        booking: { listing: { user: true, pricings: true }, renter: true },
         reviewer: true,
       },
       order: { createdAt: 'DESC' },
@@ -129,11 +129,11 @@ export class ReviewsService {
     });
   }
 
-  async findById(reviewIid: number): Promise<Review> {
+  async findById(reviewId: number): Promise<Review> {
     const review = await this.reviewRepository.findOne({
-      where: { id: reviewIid },
+      where: { id: reviewId },
       relations: {
-        booking: { listing: { user: true, pricings: true } },
+        booking: { listing: { user: true, pricings: true }, renter: true },
         reviewer: true,
       },
     });
@@ -141,6 +141,19 @@ export class ReviewsService {
       throw new NotFoundException('Review not found');
     }
     return review;
+  }
+
+  async findByBooking(bookingId: number, reviewerId: number): Promise<Review | null> {
+    return this.reviewRepository.findOne({
+      where: {
+        booking: { id: bookingId },
+        reviewer: { id: reviewerId },
+      },
+      relations: {
+        booking: { listing: { user: true, pricings: true }, renter: true },
+        reviewer: true,
+      },
+    });
   }
 
   async create(reviewerId: number, dto: CreateReviewDto): Promise<Review> {
@@ -173,9 +186,7 @@ export class ReviewsService {
     // Обновляем рейтинг пользователя
     const userId = review.booking.listing.user.id;
     const newRating = await this.calculateRatingForUser(userId);
-    await this.usersService.update(userId, {
-      rating: newRating
-    });
+    await this.usersService.update(userId, { rating: newRating });
     
     // Эмитим уведомление
     this.eventEmitter.emit('notification.signal', {
