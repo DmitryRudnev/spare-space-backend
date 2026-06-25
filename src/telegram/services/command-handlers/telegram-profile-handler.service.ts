@@ -1,6 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { UsersService } from '../../../users/services/users.service';
-import { ReviewsService } from '../../../reviews/reviews.service';
 import { TelegramSenderService } from '../telegram-sender.service';
 
 @Injectable()
@@ -9,20 +8,21 @@ export class TelegramProfileHandlerService {
   constructor(
     private readonly telegramSenderService: TelegramSenderService,
     private readonly usersService: UsersService,
-    private readonly reviewsService: ReviewsService,
   ) {}
 
 
   async handle(chatId: number, userId: number): Promise<void> {
     try {
       const user = await this.usersService.findById(userId);
-      const rating = await this.getRatingString(user.rating, user.id);
+      const renterRating = await this.getRatingString(user.renterRating, user.renterReviewCount);
+      const landlordRating = await this.getRatingString(user.landlordRating, user.landlordReviewCount);
 
       const message = `📋 *Ваш профиль*\n\n` +
         `👤 Имя: ${user.firstName} ${user.lastName}\n` +
         `📞 Телефон: ${user.phone}\n` +
         `📧 Email: ${user.email}\n` +
-        `⭐ Рейтинг: ${rating}\n` +
+        `⭐ Рейтинг арендатора: ${renterRating}\n` +
+        `🏡 Рейтинг владельца: ${landlordRating}\n` +
         `🔐 2FA: ${user.twoFaEnabled ? '🟢 Включена' : '🔴 Выключена'}\n` +
         `🆔 Верифицирован: ${user.verified ? '✅ Да' : '❌ Нет'}`;
 
@@ -39,24 +39,30 @@ export class TelegramProfileHandlerService {
   // ==========================================================================
 
 
-  private async getRatingString(rating: number | null, userId: number): Promise<string> {
+  private async getRatingString(rating: number | null, reviewCount: number): Promise<string> {
     if (rating) {
-      const reviewsCount = await this.reviewsService.countByUser(userId);
-      const reviewsWord = this.getReviewsWord(reviewsCount);
-      return `${rating} (${reviewsCount} ${reviewsWord})`;
+      const reviewWord = this.getReviewWord(reviewCount);
+      return `${rating} (${reviewCount} ${reviewWord})`;
     }
-    return "ещё нет оценок";
+    return "нет отзывов";
   }
 
   
-  private getReviewsWord(reviewsCount: number): string {
-    const reviewsWord = 'отзыв';
-    const count100 = reviewsCount % 100;
-    if (11 <= count100 && count100 <= 14)  return reviewsWord+'ов';
+  private getReviewWord(reviewCount: number): string {
+    const reviewWord = 'отзыв';
     
-    const count = reviewsCount % 10;
-    if (count === 1)  return reviewsWord;
-    if (2 <= count && count <= 4)  return reviewsWord+'a';
-    return reviewsWord+'ов';
+    const count100 = reviewCount % 100;
+    if (11 <= count100 && count100 <= 14) {
+      return reviewWord + 'ов';
+    }
+    
+    const count = reviewCount % 10;
+    if (count === 1) {
+      return reviewWord;
+    }
+    if (2 <= count && count <= 4) {
+      return reviewWord + 'a';
+    }
+    return reviewWord + 'ов';
   }
 }

@@ -34,7 +34,16 @@ export class User {
   passwordHash: string;
 
   @Column({ type: 'decimal', precision: 3, scale: 2, nullable: true })
-  rating: number | null;
+  renterRating: number | null;
+
+  @Column({ type: 'decimal', precision: 3, scale: 2, nullable: true })
+  landlordRating: number | null;
+
+  @Column({ default: 0 })
+  renterReviewCount: number;
+
+  @Column({ default: 0 })
+  landlordReviewCount: number;
 
   @Column({ default: false })
   isOnline: boolean;

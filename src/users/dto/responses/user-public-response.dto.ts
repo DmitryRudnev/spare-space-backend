@@ -16,8 +16,17 @@ export class UserPublicResponseDto {
   @ApiProperty({ type: String, nullable: true, description: 'Ссылка на фотографию профиля', example: 'https://example.com/avatar1.jpg' })
   avatarUrl: string | null;
 
-  @ApiProperty({ type: Number, nullable: true, description: 'Рейтинг', example: 4.8 })
-  rating: number | null;
+  @ApiProperty({ type: Number, nullable: true, description: 'Рейтинг в роли арендатора', example: 4.8 })
+  renterRating: number | null;
+
+  @ApiProperty({ type: Number, nullable: true, description: 'Рейтинг в роли арендодателя', example: 4.7 })
+  landlordRating: number | null;
+
+  @ApiProperty({ type: Number, description: 'Количество отзывов, как об арендаторе', example: 26 })
+  renterReviewCount: number;
+
+  @ApiProperty({ type: Number, description: 'Количество отзывов, как об арендодателе', example: 32 })
+  landlordReviewCount: number;
 
   @ApiProperty({ type: Boolean, description: 'Верифицирован ли пользователь', example: true })
   verified: boolean;

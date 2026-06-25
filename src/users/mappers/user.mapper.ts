@@ -11,7 +11,10 @@ export class UserMapper {
     dto.lastName = user.lastName;
     dto.patronymic = user.patronymic;
     dto.avatarUrl = user.avatarUrl;
-    dto.rating = user.rating;
+    dto.renterRating = user.renterRating;
+    dto.landlordRating = user.landlordRating;
+    dto.renterReviewCount = user.renterReviewCount;
+    dto.landlordReviewCount = user.landlordReviewCount;
     dto.verified = user.verified;
     dto.createdAt = user.createdAt.toISOString();
     

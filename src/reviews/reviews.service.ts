@@ -89,6 +89,7 @@ export class ReviewsService {
     return this.findAll(where, limit, offset);
   }
   
+  // Ищет отзывы о пользователе, только как о владельце
   async findByUser(
     userId: number,
     limit: number,
@@ -121,12 +122,6 @@ export class ReviewsService {
       skip: offset,
     });
     return { reviews, total, limit, offset };
-  }
-
-  async countByUser(userId: number): Promise<number> {
-    return this.reviewRepository.count({
-      where: { booking: { listing: { user: { id: userId } } } }
-    });
   }
 
   async findById(reviewId: number): Promise<Review> {
@@ -183,14 +178,16 @@ export class ReviewsService {
     await this.reviewRepository.save(reviewEntity);
     const review = await this.findById(reviewEntity.id);
 
-    // Обновляем рейтинг пользователя
-    const userId = review.booking.listing.user.id;
-    const newRating = await this.calculateRatingForUser(userId);
-    await this.usersService.update(userId, { rating: newRating });
+    // Обновляем рейтинг пользователю
+    const isReviewForLandlord = reviewerId === booking.renter.id;
+    const targetUserId = isReviewForLandlord
+      ? booking.listing.user.id
+      : booking.renter.id;
+    await this.updateRatingForUser(targetUserId, isReviewForLandlord);
     
     // Эмитим уведомление
     this.eventEmitter.emit('notification.signal', {
-      userId,
+      targetUserId,
       type: NotificationType.REVIEW_NEW,
       referenceId: review.id,
       payload: {
@@ -203,9 +200,11 @@ export class ReviewsService {
       },
     });
 
-    // Инвалидируем кеш для listingId и userId (владельца объявления)
-    await this.invalidateListingCache(review.booking.listing.id);
-    await this.invalidateUserCache(userId);
+    // Инвалидируем кеш для userId и listingId
+    await this.invalidateUserCache(targetUserId);
+    if (isReviewForLandlord) {
+      await this.invalidateListingCache(review.booking.listing.id);
+    }
 
     return review;
   }
@@ -214,19 +213,32 @@ export class ReviewsService {
   // ================================ PRIVATE =================================
   // ==========================================================================
 
-  private async calculateRatingForUser(userId: number): Promise<number> {
-    const ratings = await this.reviewRepository.find({
-      where: { booking: { listing: { user: { id: userId } } } },
-      select: { rating: true }
-    });
+  private async updateRatingForUser(userId: number, isReviewForLandlord: boolean): Promise<void> {
+    const ratings = isReviewForLandlord
+      ? await this.reviewRepository.find({
+          where: { reviewer: { id: Not(userId) }, booking: { listing: { user: { id: userId } } } },
+          select: { rating: true }
+        })
+      : await this.reviewRepository.find({
+          where: { reviewer: { id: Not(userId) }, booking: { renter: { id: userId } } },
+          select: { rating: true }
+        })
+      ;
+
     if (ratings.length === 0) {
-      return 0;
+      return;
     }
 
     let sum = 0;
     for (const r of ratings) {
       sum += r.rating;
     }
-    return sum / ratings.length;
+    const newRating = sum / ratings.length;
+
+    if (isReviewForLandlord) {
+      await this.usersService.update(userId, { landlordRating: newRating });
+    } else {
+      await this.usersService.update(userId, { renterRating: newRating });
+    }
   }
 }
