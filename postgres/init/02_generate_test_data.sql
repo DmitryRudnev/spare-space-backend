@@ -100,22 +100,22 @@ INSERT INTO listing_pricings (listing_id, price, price_period) VALUES
 -- BOOKINGS
 INSERT INTO bookings (listing_id, renter_id, period, total_price, price, price_period, status, created_at, updated_at) VALUES
 -- Старые брони пользователя 1 (id 1-4)
-(4, 1, '[2026-02-10, 2026-02-15)'::tstzrange, 9000.00, 1800.00, 'DAY', 'COMPLETED', NOW() - INTERVAL '20 days', NOW() - INTERVAL '20 days'),
-(4, 1, '[2026-03-01, 2026-03-05)'::tstzrange, 7200.00, 1800.00, 'DAY', 'CONFIRMED', NOW() - INTERVAL '15 days', NOW() - INTERVAL '15 days'),
-(7, 1, '[2026-02-20, 2026-02-25)'::tstzrange, 4000.00, 800.00, 'DAY', 'COMPLETED', NOW() - INTERVAL '10 days', NOW() - INTERVAL '10 days'),
-(7, 1, '[2026-04-10, 2026-04-15)'::tstzrange, 4000.00, 800.00, 'DAY', 'CANCELLED', NOW() - INTERVAL '8 days', NOW() - INTERVAL '8 days'),
+(14, 1, '[2026-02-10, 2026-02-15)'::tstzrange, 9000.00, 1800.00, 'DAY', 'COMPLETED', NOW() - INTERVAL '20 days', NOW() - INTERVAL '20 days'),
+(14, 1, '[2026-03-01, 2026-03-05)'::tstzrange, 7200.00, 1800.00, 'DAY', 'CONFIRMED', NOW() - INTERVAL '15 days', NOW() - INTERVAL '15 days'),
+(18, 1, '[2026-02-20, 2026-02-25)'::tstzrange, 4000.00, 800.00, 'DAY', 'COMPLETED', NOW() - INTERVAL '10 days', NOW() - INTERVAL '10 days'),
+(18, 1, '[2026-04-10, 2026-04-15)'::tstzrange, 4000.00, 800.00, 'DAY', 'CANCELLED', NOW() - INTERVAL '8 days', NOW() - INTERVAL '8 days'),
 -- Старые брони пользователя 2 (id 5-6)
 (1, 2, '[2026-01-15, 2026-01-20)'::tstzrange, 7500.00, 1500.00, 'DAY', 'COMPLETED', NOW() - INTERVAL '18 days', NOW() - INTERVAL '18 days'),
 (1, 2, '[2026-02-20, 2026-02-25)'::tstzrange, 7500.00, 1500.00, 'DAY', 'CONFIRMED', NOW() - INTERVAL '12 days', NOW() - INTERVAL '12 days'),
 -- Старые брони пользователя 3 (id 7-12)
 (11, 3, '[2026-02-01, 2026-03-01)'::tstzrange, 7000.00, 7000.00, 'MONTH', 'COMPLETED', NOW() - INTERVAL '16 days', NOW() - INTERVAL '16 days'),
 (11, 3, '[2026-06-01, 2026-07-01)'::tstzrange, 7000.00, 7000.00, 'MONTH', 'CONFIRMED', NOW() - INTERVAL '5 days', NOW() - INTERVAL '5 days'),
-(13, 3, '[2026-01-10, 2026-02-10)'::tstzrange, 31000.00, 1000.00, 'DAY', 'COMPLETED', NOW() - INTERVAL '20 days', NOW() - INTERVAL '20 days'),
-(13, 3, '[2026-04-01, 2026-05-01)'::tstzrange, 30000.00, 1000.00, 'DAY', 'CONFIRMED', NOW() - INTERVAL '8 days', NOW() - INTERVAL '8 days'),
+(10, 3, '[2026-01-10, 2026-02-10)'::tstzrange, 31000.00, 1000.00, 'DAY', 'COMPLETED', NOW() - INTERVAL '20 days', NOW() - INTERVAL '20 days'),
+(10, 3, '[2026-04-01, 2026-05-01)'::tstzrange, 30000.00, 1000.00, 'DAY', 'CONFIRMED', NOW() - INTERVAL '8 days', NOW() - INTERVAL '8 days'),
 (14, 3, '[2026-01-20, 2026-01-25)'::tstzrange, 4000.00, 800.00, 'DAY', 'COMPLETED', NOW() - INTERVAL '5 days', NOW() - INTERVAL '5 days'),
 (14, 3, '[2026-02-20, 2026-02-25)'::tstzrange, 4000.00, 800.00, 'DAY', 'CANCELLED', NOW() - INTERVAL '10 days', NOW() - INTERVAL '1 day'),
 -- Старая бронь пользователя 5 (id 13)
-(9, 5, '[2026-01-20, 2026-02-20)'::tstzrange, 2000.00, 2000.00, 'MONTH', 'COMPLETED', NOW() - INTERVAL '8 days', NOW() - INTERVAL '8 days'),
+(12, 5, '[2026-01-20, 2026-02-20)'::tstzrange, 2000.00, 2000.00, 'MONTH', 'COMPLETED', NOW() - INTERVAL '8 days', NOW() - INTERVAL '8 days'),
 -- НОВЫЕ БРОНИ
 -- Пользователь 2 арендует у пользователей 4 и 5 (id 14-15)
 (20, 2, '[2026-01-01, 2026-01-08)'::tstzrange, 3000.00, 3000.00, 'WEEK', 'COMPLETED', NOW() - INTERVAL '30 days', NOW() - INTERVAL '30 days'),
