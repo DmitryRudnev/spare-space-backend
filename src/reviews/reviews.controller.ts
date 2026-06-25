@@ -25,6 +25,7 @@ import {
 
 import { ReviewsService } from './reviews.service';
 import { CreateReviewDto } from './dto/requests/create-review.dto';
+import { GetUserReviewsDto } from './dto/requests/get-user-reviews.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import { ReviewResponseDto } from './dto/responses/review-response.dto';
 import { ReviewListResponseDto } from './dto/responses/review-list-response.dto';
@@ -59,9 +60,9 @@ export class ReviewsController {
   @ApiNotFoundResponse({ description: 'Пользователь не найден' })
   async findByUser(
     @Param('id', ParseIntPipe) userId: number,
-    @Query() dto: PaginationDto,
+    @Query() dto: GetUserReviewsDto,
   ): Promise<ReviewListResponseDto> {
-    const result = await this.reviewsService.findByUserWithCache(userId, dto.limit, dto.offset);
+    const result = await this.reviewsService.findByUserWithCache(userId, dto.limit, dto.offset, dto.role);
     return ReviewMapper.toListResponseDto(result.reviews, result.total, result.limit, result.offset);
   }
 

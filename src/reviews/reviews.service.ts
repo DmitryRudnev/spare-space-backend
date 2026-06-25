@@ -10,6 +10,7 @@ import { BookingsService } from '../bookings/bookings.service';
 import { ListingsService } from '../listings/listings.service';
 import { UsersService } from '../users/services/users.service';
 import { NotificationType } from '../common/enums/notification-type.enum';
+import { UserRoleType } from '../common/enums/user-role-type.enum';
 import { RedisService } from '../common/redis/redis.service';
 import { PaginatedReviewsDto } from './dto/paginated-reviews.dto';
 
@@ -36,8 +37,8 @@ export class ReviewsService {
     return `${this.REVIEWS_LISTING_CACHE_PREFIX}${listingId}:limit:${limit}:offset:${offset}`;
   }
 
-  private getUserCacheKey(userId: number, limit: number, offset: number): string {
-    return `${this.REVIEWS_USER_CACHE_PREFIX}${userId}:limit:${limit}:offset:${offset}`;
+  private getUserCacheKey(userId: number, limit: number, offset: number, role?: UserRoleType): string {
+    return `${this.REVIEWS_USER_CACHE_PREFIX}${userId}:limit:${limit}:offset:${offset}:role:${role || 'all'}`;
   }
 
   private async invalidateListingCache(listingId: number): Promise<void> {
@@ -67,11 +68,12 @@ export class ReviewsService {
     userId: number,
     limit: number,
     offset: number,
+    role?: UserRoleType,
   ): Promise<PaginatedReviewsDto> {
     return this.redisService.getOrSet(
-      this.getUserCacheKey(userId, limit, offset),
+      this.getUserCacheKey(userId, limit, offset, role),
       this.REVIEWS_CACHE_TTL_SEC,
-      () => this.findByUser(userId, limit, offset),
+      () => this.findByUser(userId, limit, offset, role),
       PaginatedReviewsDto
     );
   }
@@ -94,11 +96,20 @@ export class ReviewsService {
     userId: number,
     limit: number,
     offset: number,
+    role?: UserRoleType,
   ): Promise<PaginatedReviewsDto> {
-    const where: FindOptionsWhere<Review> = {
-      booking: { listing: { user: { id: userId } } },
-      reviewer: Not(userId),
-    };
+    const asLandlord = { booking: { listing: { user: { id: userId } } }, reviewer: { id: Not(userId) } };
+    const asRenter = { booking: { renter: { id: userId } }, reviewer: { id: Not(userId) } };
+
+    let where: FindOptionsWhere<Review> | FindOptionsWhere<Review>[];
+    if (role === UserRoleType.LANDLORD) {
+      where = asLandlord;
+    } else if (role === UserRoleType.RENTER) {
+      where = asRenter;
+    } else {
+      where = [asLandlord, asRenter];
+    }
+
     return this.findAll(where, limit, offset);
   }
 
@@ -107,7 +118,7 @@ export class ReviewsService {
   // ==========================================================================
 
   async findAll(
-    where: FindOptionsWhere<Review>,
+    where: FindOptionsWhere<Review> | FindOptionsWhere<Review>[],
     limit: number,
     offset: number,
   ): Promise<PaginatedReviewsDto> {
@@ -236,9 +247,15 @@ export class ReviewsService {
     const newRating = sum / ratings.length;
 
     if (isReviewForLandlord) {
-      await this.usersService.update(userId, { landlordRating: newRating });
+      await this.usersService.update(userId, { 
+        landlordRating: newRating,
+        landlordReviewCount: ratings.length 
+      });
     } else {
-      await this.usersService.update(userId, { renterRating: newRating });
+      await this.usersService.update(userId, { 
+        renterRating: newRating,
+        renterReviewCount: ratings.length 
+      });
     }
   }
 }
