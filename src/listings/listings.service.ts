@@ -222,12 +222,18 @@ export class ListingsService {
     }
   }
 
+  async isListingOwner(listingId: number, userId: number): Promise<boolean> {
+    return this.listingRepository.exists({ 
+      where: {
+        id: listingId,
+        user: { id: userId },
+      }
+    });
+  }
+
   async validateListingOwnership(listingId: number, userId: number): Promise<void> {
-    const exists = await this.listingRepository.exists({ where: {
-      id: listingId,
-      user: { id: userId },
-    }});
-    if (!exists) {
+    const isOwner = await this.isListingOwner(listingId, userId);
+    if (!isOwner) {
       throw new UnauthorizedException('Not authorized to modify this listing');
     }
   }

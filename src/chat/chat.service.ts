@@ -212,10 +212,11 @@ export class ChatService {
     }
 
     if (listingId) {
-      try {
-        await this.listingsService.validateListingOwnership(listingId, companionId);
-      } catch (error) {
-        throw new BadRequestException('Companion must be the listing owner');
+      const isCompanionOwner = await this.listingsService.isListingOwner(listingId, companionId);
+      const isCurrentUserOwner = await this.listingsService.isListingOwner(listingId, currentUserId);
+
+      if (!isCompanionOwner && !isCurrentUserOwner) {
+        throw new BadRequestException('At least one of the participants must be the listing owner');
       }
     }
 
